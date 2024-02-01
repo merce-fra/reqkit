@@ -1,0 +1,20 @@
+Input x0000 IS bool
+Input x0001 IS bool
+Input x0002 IS bool
+Input x0003 IS bool
+Input x0004 IS bool
+Input x0005 IS bool
+Input x0006 IS bool
+Input x0007 IS bool
+Input x0008 IS bool
+Input x0009 IS bool
+Input x0010 IS bool
+Input x0011 IS bool
+ID1: Globally, it is always the case that if "x0000" holds, then "x0001" previously held.
+ID2: Globally, it is always the case that  "x0002" holds.
+ID3: Globally, it is always the case that if "!x0003" holds, then "x0004"  holds after at most 10 time units.
+ID4: Globally, it is always the case that if "x0005" holds, then "x0006"  holds as well.
+ID5: Globally, it is always the case that if "!x0007 || !x0008" holds, then "!x0005"  holds after at most 100 time units.
+ID6: After "x0004" until "x0004", it is always the case that "x0004"  holds.
+ID7: Globally, it is always the case that if "x0009" holds, then "!x0010" holds as well.
+ID8: Globally, it is always the case that if "!x0011" holds, then "x0010" holds as well.

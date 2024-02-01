@@ -1,0 +1,220 @@
+CONST x00070 IS 50.0
+CONST x00018 IS 2
+CONST x00034 IS 0
+CONST x00042 IS 3
+CONST x00041 IS 1
+CONST x00036 IS 0
+CONST x00035 IS 1
+CONST x00031 IS 15
+CONST x00017 IS 14
+CONST x00033 IS 0
+CONST x00032 IS 1
+CONST x00015 IS 14
+CONST x00010 IS 1
+CONST x00009 IS 2
+CONST x00008 IS 0
+CONST x00000 IS 1
+CONST x00012 IS 3
+CONST x00001 IS 5
+CONST x00011 IS 3
+
+Input x00059 IS bool
+Input x00023 IS bool
+Input x00060 IS int
+Input x00040 IS bool
+Input x00022 IS bool
+Input x00064 IS real
+Input x00054 IS bool
+Input x00071 IS bool
+Input x00058 IS bool
+Input x00057 IS bool
+Input x00067 IS bool
+Input x00063 IS bool
+Input x00069 IS bool
+Input x00068 IS bool
+Input x00002 IS bool
+Input x00006 IS bool
+Input x00014 IS bool
+Input x00004 IS bool
+Input x00003 IS bool
+Input x00027 IS bool
+Input x00025 IS bool
+Input x00007 IS bool
+Input x00052 IS bool
+Input x00056 IS bool
+Input x00051 IS bool
+Input x00061 IS bool
+Input x00062 IS bool
+Input x00044 IS bool
+Input x00053 IS bool
+Input x00039 IS int
+Input x00037 IS int
+Input x00013 IS int
+Input x00019 IS int
+Input x00016 IS bool
+Input x00024 IS bool
+Input x00055 IS real
+Input x00043 IS bool
+Input x00038 IS bool
+Input x00030 IS bool
+Input x00029 IS bool
+Input x00026 IS bool
+Input x00021 IS int
+Input x00020 IS int
+Input x00005 IS bool
+Input x00028 IS bool
+Input x00066 IS bool
+Input x00065 IS bool
+Input x00050 IS bool
+Input x00049 IS bool
+Input x00048 IS bool
+Input x00047 IS bool
+Input x00046 IS bool
+Input x00045 IS bool
+
+ID_00000: Globally, it is always the case that "x00060 >= 0 && x00060 <= 3" holds
+ID_00001: Globally, it is always the case that "x00037 == 0 || x00037 == 1 || x00037 == 14" holds
+ID_00002: Globally, it is always the case that "x00020 >= 0 && x00020 <= 6" holds
+
+ID_00003: Globally, it is always the case that if "(x00060 == x00034)
+|| (x00060 == x00042)
+|| (x00067)
+|| (x00063)
+|| (x00068)" holds, then "(x00053)" holds after at most "x00070" time units
+ID_00004: Globally, it is always the case that if "!((x00060 == x00034)
+|| (x00060 == x00042)
+|| (x00067)
+|| (x00063)
+|| (x00068))" holds, then "(!x00053)" holds after at most "x00070" time units
+ID_00005: After "x00060 != x00034 
+&& !x00058", it is always the case that if "x00060 != x00034 
+&& x00058" holds, then "(!x00050) 
+&& (!x00048) 
+&& (!x00049) 
+&& (!x00047 )" holds after at most "x00070 " time units
+ID_00006: Globally, it is always the case that if "(x00060 == x00018)" holds, then "(x00048)
+&& (x00047)" holds after at most "x00070" time units
+ID_00007: Globally, it is always the case that if "(x00060 != x00034)" holds, then "(x00050)
+&& (x00049)" holds after at most "x00070" time units
+ID_00008: Globally, it is always the case that if "(x00060 == x00034)" holds, then "(!x00066)
+&& (!x00065)
+&&(!x00005)
+&& (!x00069)" holds after at most "x00070" time units
+ID_00009: Globally, it is always the case that if "(x00014)
+|| (x00003)
+|| (x00002)
+|| (x00027)
+|| (x00025)
+|| (x00007)" holds, then "(x00054)
+" holds after at most "x00070" time units
+ID_00010: Globally, it is always the case that if "!((x00014)
+|| (x00003)
+|| (x00002)
+|| (x00027)
+|| (x00025)
+|| (x00007))" holds, then "(!x00054)" holds after at most "x00070" time units
+ID_00011: Globally, it is always the case that if " (x00054) 
+&& (x00069) 
+&& (x00051 || ((x00061 || x00062) && x00059))" holds, then "x00028" holds after at most "x00070 " time units
+ID_00012: Globally, it is always the case that if "(x00071) 
+&& (x00054) 
+&& (x00069) 
+&& (x00051 || ((x00061 || x00062) && x00059) )" holds, then "x00028" holds after at most "x00070 " time units
+ID_00013: After "x00028
+&& x00054
+&& !x00051", it is always the case that if "x00028
+&& x00054
+&& x00051" holds, then "x00055 == 0.0 && !x00028" holds after at most "x00070 " time units
+ID_00014: After "x00028
+&& x00054
+&& !x00061 && x00059", it is always the case that if "x00028
+&& x00054
+&& x00061 && x00059" holds, then "x00055 == 0.0 && !x00028" holds after at most "x00070 " time units
+ID_00015: After "x00028
+&& x00054
+&& !x00062 && x00059", it is always the case that if "x00028
+&& x00054
+&& x00062 && x00059" holds, then "x00055 == 0.0 && !x00028" holds after at most "x00070 " time units
+ID_00016: Globally, it is always the case that if "(x00055 > x00064)" holds, then "(x00055 == 0.0)
+&& (x00028)" holds after at most "x00070" time units
+ID_00017: After "x00071", it is always the case that if "!x00071" holds, then "!x00028 " holds after at most "x00070 " time units
+ID_00018: After "!x00058", it is always the case that if "x00058" holds, then "!x00028" holds after at most "x00070 " time units
+ID_00019: Globally, it is always the case that if "(x00060 == x00034)
+|| (x00063)" holds, then "(x00044)" holds after at most "x00070" time units
+ID_00020: Globally, it is always the case that if "!((x00060 == x00034)
+|| (x00063))" holds, then " (!x00044)" holds after at most "x00070" time units
+ID_00021: After "!x00058", it is always the case that if "x00058" holds, then "!x00046 
+&& !x00045" holds after at most "x00070 " time units
+ID_00022: Globally, it is always the case that if "(x00014)
+|| (x00003)
+|| (x00006)
+|| (x00004)" holds, then "(x00057)" holds after at most "x00070" time units
+ID_00023: Globally, it is always the case that if "!((x00014)
+|| (x00003)
+|| (x00006)
+|| (x00004))" holds, then "(!x00057)" holds after at most "x00070" time units
+ID_00024: Globally, it is always the case that if "(x00071)
+&& (x00057)" holds, then "(x00046)
+&& (x00045)" holds after at most "x00070" time units
+ID_00025: After "x00071", it is always the case that if "!x00071" holds, then "!x00046
+&& !x00045" holds after at most "x00070 " time units
+ID_00026: Globally, it is always the case that if "x00060 == x00018 " holds, then "x00020 == x00011" holds after at most "x00070 " time units
+ID_00027: Globally, it is always the case that if "x00060 == x00018 
+&& !x00040
+&& x00019 == 0
+" holds, then " x00026" holds after at most "x00070 " time units
+ID_00028: Globally, it is always the case that if "!(x00060 == x00018 
+&& !x00040)
+" holds, then " x00026" holds after at most "x00070 " time units
+ID_00029: Globally, it is always the case that if "x00060 == x00018 
+&& !x00040
+&& x00019 != 0
+" holds, then "!x00026" holds after at most "x00070 " time units
+ID_00030: Globally, it is always the case that if "x00060 == x00018 " holds, then "(x00052==x00016)" holds after at most "x00070 " time units
+ID_00031: Globally, it is always the case that if "x00060 != x00018 " holds, then "!x00052" holds after at most "x00070 " time units
+ID_00032: Globally, it is always the case that if "(x00060 == x00018)
+&& (x00040 == x00022)" holds, then "(x00056==x00024)&&(!x00056)" holds after at most "x00070" time units
+ID_00033: Globally, it is always the case that if "x00060 == x00018
+&& (!x00038) 
+&& (x00030) " holds, then "x00039 == x00036 " holds after at most "x00070 " time units
+ID_00034: Globally, it is always the case that if "(x00060 == x00041)
+&& (!x00063)" holds, then "(x00039 == x00036)" holds after at most "x00070" time units
+ID_00035: Globally, it is always the case that if "(x00060 == x00018)
+&& (x00038 || x00030)" holds, then "(x00039 == x00035)" holds after at most "x00070" time units
+ID_00036: Globally, it is always the case that if "(x00060 == x00041)
+&& (x00063)" holds, then "(x00039 == x00035)" holds after at most "x00070" time units
+ID_00037: Globally, it is always the case that if "(x00060 == x00018)
+&& (x00038 == x00029)" holds, then "(x00039 == x00031)" holds after at most "x00070" time units
+ID_00038: Globally, it is always the case that if "(x00060 == x00041)
+&& (x00069)" holds, then "(x00039 == x00031)" holds after at most "x00070" time units
+ID_00039: Globally, it is always the case that if "(x00060 != x00018)
+&& (x00060 != x00041)" holds, then "x00039 == x00017" holds after at most "x00070 " time units
+ID_00040: Globally, it is always the case that if "x00060 == x00018 
+&& x00043" holds, then "x00037 == x00033 " holds after at most "x00070 " time units
+ID_00041: Globally, it is always the case that if "(x00060 == x00041)
+&& (!x00063)" holds, then "(x00037 == x00033)" holds after at most "x00070" time units
+ID_00042: Globally, it is always the case that if "x00060 == x00018 
+&& !x00043" holds, then "x00037 == x00032 " holds after at most "x00070 " time units
+ID_00043: Globally, it is always the case that if "(x00060 == x00041)
+&& (x00063)" holds, then "(x00037 == x00032)" holds after at most "x00070" time units
+ID_00044: Globally, it is always the case that if "(x00060 != x00018)
+&& (x00060 != x00041)" holds, then "(x00037 == x00015)" holds after at most "x00070" time units
+ID_00045: Globally, it is always the case that if "x00060 == x00018 
+&& !x00023
+&& x00013 == x00008" holds, then "x00021 == x00001 
+" holds after at most "x00070 " time units
+ID_00046: Globally, it is always the case that if "x00060 == x00018 
+&& !x00023
+&& x00013 == x00010" holds, then "x00021 == x00012 " holds after at most "x00070 " time units
+ID_00047: Globally, it is always the case that if "x00060 == x00018 
+&& !x00023
+&& x00013 == x00009" holds, then "x00021 == x00000 
+" holds after at most "x00070 " time units
+ID_00048: Globally, it is always the case that if "x00060 == x00018 
+&& !x00023
+&& x00013 != x00008
+&& x00013 != x00010
+&& x00013 != x00009" holds, then "x00021 == x00012 " holds after at most "x00070 " time units
+ID_00049: Globally, it is always the case that if "x00060 != x00018 
+&& !x00040" holds, then "!x00048 && !x00047" holds after at most "x00070 " time units
+

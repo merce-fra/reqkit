@@ -1,0 +1,109 @@
+CONST x00011 IS 1
+CONST x00024 IS 1
+CONST x00014 IS 1
+CONST x00023 IS 1
+CONST x00013 IS 0
+CONST x00008 IS 1
+CONST x00007 IS 2
+CONST x00034 IS 1
+CONST x00020 IS 1
+CONST x00051 IS 50
+CONST x00031 IS 126
+CONST x00001 IS 1
+CONST x00006 IS 3
+CONST x00000 IS 5
+CONST x00005 IS 6
+CONST x00003 IS 4
+CONST x00002 IS 2
+CONST x00027 IS 1
+
+Output x00045 IS bool
+Input x00030 IS int
+Output x00019 IS bool
+Output x00010 IS bool
+Output x00004 IS bool
+Output x00017 IS bool
+Output x00016 IS bool
+Input x00042 IS int
+Input x00026 IS bool
+Output x00050 IS bool
+Output x00037 IS bool
+Input x00033 IS int
+Input x00032 IS bool
+Input x00041 IS int
+Internal x00025 IS int
+Input x00040 IS int
+Input x00036 IS int
+Input x00022 IS bool
+Output x00049 IS bool
+Output x00043 IS bool
+Output x00044 IS bool
+Input x00047 IS int
+Input x00021 IS int
+Output x00046 IS bool
+Output x00048 IS bool
+Output x00018 IS bool
+Output x00015 IS bool
+Output x00035 IS bool
+Output x00012 IS bool
+Input x00009 IS int
+Input x00029 IS int
+Output x00039 IS bool
+Internal x00038 IS bool
+internal x00028 IS bool
+
+ID_00000: Globally, it is always the case that "x00030 >= 0 && x00030 <= 3" holds
+ID_00001: Globally, it is always the case that "x00042 >= 0 && x00042 <= 3" holds
+ID_00002: Globally, it is always the case that "x00033 >= 0 && x00033 <= 3" holds
+ID_00003: Globally, it is always the case that "x00041 >= 0  && x00041 <= 3" holds
+ID_00004: Globally, it is always the case that "x00025 >= 0 && x00025 <= 2" holds
+ID_00005: Globally, it is always the case that "x00040 >= 0 && x00040 <= 3" holds
+ID_00006: Globally, it is always the case that "x00036 >= 0 && x00036 <= 3" holds
+ID_00007: Globally, it is always the case that "x00047 == -125 || x00047 == 126 || x00047 == 127" holds
+ID_00008: Globally, it is always the case that "x00021 >= 0 && x00021 <= 2" holds
+ID_00009: Globally, it is always the case that "(x00009 >= 0  && x00009 <= 15)" holds
+ID_00010: Globally, it is always the case that "x00029 >= 0 && x00029 <= 3" holds
+
+ID_00011: Globally, it is always the case that if "(x00009 != x00006  && x00009 != x00005) || !x00026 " holds, then "!x00050 " holds as well
+ID_00012: Globally, it is always the case that if "!((x00009 != x00006  && x00009 != x00005) || !x00026) " holds, then "x00050" holds as well
+ID_00013: Globally, it is always the case that if "x00050 " holds, then "x00019 " holds as well
+ID_00014: Globally, it is always the case that if "!x00050" holds, then "!x00019" holds as well
+ID_00015: Globally, it is always the case that if "!x00050" holds then "x00042 == x00024" toggles "x00050" at most "x00051 " time units later
+ID_00016: Globally, it is always the case that if "x00050 " holds then "x00042 == x00024" toggles "!x00050" at most "x00051 " time units later
+ID_00017: Globally, it is always the case that if "x00025 == x00013" holds then "x00041 == x00023" toggles "x00025 == x00008 && x00028" at most "x00051" time units later
+ID_00018: Globally, it is always the case that if "x00025 == x00008 && x00028" holds then "x00041 == x00023" toggles "x00025 == x00007" at most "x00051" time units later
+ID_00019: Globally, it is always the case that if "x00025 == x00007" holds then "x00041 == x00023" toggles "x00025 == x00008 && !x00028" at most "x00051" time units later
+ID_00020: Globally, it is always the case that if "x00025 == x00008 && !x00028" holds then "x00041 == x00023" toggles "x00025 == x00013" at most "x00051" time units later
+ID_00021: Globally, it is always the case that if "(x00009 == x00006  || x00009 == x00003  || x00009 == x00000  || x00009 == x00005)  &&  (x00025 == x00008  || x00025 == x00007)  " holds, then "x00044" holds after at most "x00051 " time units
+ID_00022: Globally, it is always the case that if "!((x00009 == x00006  || x00009 == x00003  || x00009 == x00000  || x00009 == x00005)  &&  (x00025 == x00008  || x00025 == x00007)  )" holds, then "!x00044" holds after at most "x00051 " time units
+ID_00023: Globally, it is always the case that if "x00044" holds, then " x00017" holds as well
+ID_00024: Globally, it is always the case that if " !x00044" holds, then "x00004" holds as well
+ID_00025: Globally, it is always the case that if "(x00009 == x00006  || x00009 == x00005) && x00025 == x00007 " holds, then "x00043" holds as well
+ID_00026: Globally, it is always the case that if "!((x00009 == x00006  || x00009 == x00005) && x00025 == x00007)" holds, then "!x00043" holds as well
+ID_00027: Globally, it is always the case that if "x00043" holds, then "x00004" holds as well
+ID_00028: Globally, it is always the case that if "!x00043" holds, then "!x00004" holds as well
+ID_00029: Globally, it is always the case that if "x00049" holds then "x00036 == x00020" toggles "!x00049" at most "x00051 " time units later
+ID_00030: Globally, it is always the case that if "!x00049" holds then "x00036 == x00020" toggles "x00049" at most "x00051 " time units later
+ID_00031: Globally, it is always the case that if "(      x00009 == x00002    || x00009 == x00006    || x00009 == x00000    || x00009 == x00005 ) &&  (   x00022 )" holds, then "x00049" holds as well
+ID_00032: Globally, it is always the case that if "!((      x00009 == x00002    || x00009 == x00006    || x00009 == x00000    || x00009 == x00005 ) &&  (   x00022 ))" holds, then "!x00049" holds as well
+ID_00033: Globally, it is always the case that if "x00049 " holds, then "x00016" holds as well
+ID_00034: Globally, it is always the case that if "!x00049" holds, then "!x00016" holds as well
+ID_00035: Globally, it is always the case that if "(x00009 == x00006  ||  x00009 == x00005) && x00025 == x00007  && x00043  && x00040 == x00034" holds, then "x00039" holds as well
+ID_00036: Globally, it is always the case that if "!((x00009 == x00006      || x00009 == x00005)      && x00029 == x00027) &&  !((x00009 == x00006  ||  x00009 == x00005) && x00025 == x00007  && x00043  && x00040 == x00034)" holds, then "!x00039" holds as well
+ID_00037: Globally, it is always the case that if "x00039" holds, then "x00038" holds as well
+ID_00038: Globally, it is always the case that if "!x00039" holds, then "!x00038" holds as well
+ID_00039: Globally, it is always the case that if "(x00009 == x00002  || x00009 == x00006  || x00009 == x00003  ||x00009 == x00000  || x00009 == x00005)" holds, then "x00037" holds as well
+ID_00040: Globally, it is always the case that if "!(x00009 == x00002  || x00009 == x00006  || x00009 == x00003  ||x00009 == x00000  || x00009 == x00005)" holds, then "!x00037" holds as well
+ID_00041: Globally, it is always the case that if "(x00009 == x00002  || x00009 == x00006  || x00009 == x00003  || x00009 == x00000  || x00009 == x00005) && (x00030 == x00011)" holds, then "x00048" holds as well
+ID_00042: Globally, it is always the case that if "!((x00009 == x00002  || x00009 == x00006  || x00009 == x00003  || x00009 == x00000  || x00009 == x00005) && (x00030 == x00011))" holds, then "!x00048" holds as well
+ID_00043: Globally, it is always the case that if "(x00009 ==x00002  || x00009 ==x00006  || x00009 ==x00003  || x00009 ==x00000  || x00009 ==x00005 ) && x00047 == x00031 " holds, then "x00045" holds as well
+ID_00044: Globally, it is always the case that if "!((x00009 ==x00002  || x00009 ==x00006  || x00009 ==x00003  || x00009 ==x00000  || x00009 ==x00005 ) && x00047 == x00031 )" holds, then "!x00045" holds as well
+ID_00045: Globally, it is always the case that if " x00021 ==  x00001" holds, then "x00046" holds as well
+ID_00046: Globally, it is always the case that if " x00021 !=  x00001" holds, then "!x00046" holds as well
+ID_00047: Globally, it is always the case that if "!x00010" holds then "x00033 == x00014" toggles "x00010" at most "x00051 " time units later
+ID_00048: Globally, it is always the case that if "x00010" holds then "x00033 == x00014" toggles "!x00010 " at most "x00051 " time units later
+ID_00049: Globally, it is always the case that "x00035 == x00012" holds
+ID_00050: Globally, it is always the case that "x00018 == x00015" holds
+ID_00051: Globally, it is always the case that if "x00032" holds, then "x00010 == x00035" holds as well
+ID_00052: Globally, it is always the case that if "(x00009 == x00006  || x00009 == x00005)   && x00029 == x00027" holds, then "x00039" holds as well
+

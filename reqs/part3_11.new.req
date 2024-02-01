@@ -1,0 +1,7 @@
+Input x0000 IS bool
+Input x0001 IS bool
+Input x0002 IS bool
+Input x0003 IS bool
+ID1: After "x0000" until "x0001", it is always the case that "x0002" holds
+ID2: Globally, it is always the case that if "x0000 ∧ x0001" holds, then "x0003" holds after at most "20" time units
+ID3: Globally, it is always the case that if "x0000" holds, then "x0002" holds after at most "10" time units
