@@ -35,3 +35,5 @@ type t = {
 
 val of_file: string -> t (* parse a file of name [string] and return
                             its content as [t] *)
+
+val print: t -> unit (* print [t] to stdout *)
