@@ -1,0 +1,14 @@
+;(ocamllex
+;  (modules lexer)
+;)
+
+;(menhir
+;  (modules parser)
+;  (flags -la 2)
+;)
+
+(library
+  (name req2something)
+  (modules_without_implementation parse util)
+)
+
