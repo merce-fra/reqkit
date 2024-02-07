@@ -16,6 +16,7 @@ The project has the folowing dependancies:
 - merlin
 - alcotest
 - ppx_inline_test
+- bisect_ppx
 
 To install them, run the script "./scripts/install.sh" in the project directory
 
@@ -23,9 +24,13 @@ To install them, run the script "./scripts/install.sh" in the project directory
 
 Run the command "dune build" in the project directory
 
-## How to run tests
+## How to run unit tests
 
 Run the command "dune runtest" in the project directory
+
+## How to run on all requirements file
+
+Run the script ./scripts/test_all.sh
 
 ## How to use the tool
 

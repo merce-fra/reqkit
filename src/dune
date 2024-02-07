@@ -1,14 +1,16 @@
-;(ocamllex
-;  (modules lexer)
-;)
+(ocamllex
+  (modules lexer)
+)
 
-;(menhir
-;  (modules parser)
-;  (flags -la 2)
-;)
+(menhir
+  (modules parser)
+  (flags --table --explain )
+)
 
 (library
-  (name req2something)
-  (modules_without_implementation parse util)
+  (name src)
+  (modules_without_implementation util)
+   (instrumentation (backend bisect_ppx))
+  (libraries menhirLib)
 )
 

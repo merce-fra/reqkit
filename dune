@@ -6,7 +6,7 @@
 
 (executables
   (names req2something )
-  (libraries req2something)
+  (libraries src)
   (modes byte exe)
 
 )
