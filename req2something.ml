@@ -22,7 +22,9 @@ let () =
   |Some f -> 
     begin
     try 
-      ignore (Src.Parse.of_file f (*"/home/cellier/req2something/test.req"*) );
+      let t =  (Src.Parse.of_file f (*"/home/cellier/req2something/test.req"*) ) in 
+      let fmt = Format.get_std_formatter () in 
+      Src.Parse.pretty_print fmt t;
       Format.printf "Success@."
     with Src.Parse.ParseException msg -> Format.printf "%s@." msg 
   end

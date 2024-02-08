@@ -86,6 +86,7 @@ hold:
 | HOLDS; AND2; IS_SUCCEEDED_BY; e1_ = exp; {Holds_end_succeded_by(e1_)}
 | PREVIOUSLY_HELD; { Previously_held }
 | TOGGLES; e1_ =exp; AT_MOST; e2_=exp; TIME_UNITS; LATER; { Toggles_at_most (e1_ , e2_)}
+;
 
 exp_hold :
 | DOUBLE_QUOTE; e1_ = exp; DOUBLE_QUOTE; h_ = hold; { Prop (e1_, h_) }
