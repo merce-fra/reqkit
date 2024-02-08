@@ -1,13 +1,14 @@
 (** need the --table option : usefull for parsing error messages *)
 module I = Parser.MenhirInterpreter
+open Ast_types
 
 exception ParseException of string
 
 type t = {
-    vars: (string, Ast_types.declaration) Hashtbl.t;
+    vars: (string, declaration) Hashtbl.t;
       (* "CONST" [string] "IS" [var_or_const_type]
          or "Input" [string] "IS" [var_or_const_type] *)
-    reqs: (string, Ast_types.req) Hashtbl.t (* [string] ":" [req] *)
+    reqs: (string, req) Hashtbl.t (* [string] ":" [req] *)
   }
 
 (** syntax error description *)
@@ -38,7 +39,7 @@ let get_parse_error env =
         | Not_found -> "invalid syntax (no specific message for this eror)"
 
 (** recursive method that parse the lexbuf *)
-let rec parse_ lexbuf (checkpoint : Ast_types.prog I.checkpoint) =
+let rec parse_ lexbuf (checkpoint : prog I.checkpoint) =
   match checkpoint with
   | I.InputNeeded _env ->
       let token = Lexer.token lexbuf in
@@ -100,17 +101,17 @@ let of_file filename =
       let reqs = Hashtbl.create 20 in
       let aux1 node =
         match node with 
-        | Ast_types.Constant (name ,_ ) ->   Hashtbl.add vars name node
-        | Ast_types.Input (name, _ ) -> Hashtbl.add vars name node
-        | Ast_types.Output (name, _ ) -> Hashtbl.add vars name node
-        | Ast_types.Internal (name, _ ) -> Hashtbl.add vars name node
+        | Constant (name ,_ ) ->   Hashtbl.add vars name node
+        | Input (name, _ ) -> Hashtbl.add vars name node
+        | Output (name, _ ) -> Hashtbl.add vars name node
+        | Internal (name, _ ) -> Hashtbl.add vars name node
       in
       let aux2 node =
         match node with 
-        |  Ast_types.Req (name,req) ->  Hashtbl.add reqs name req
+        |  Req (name,req) ->  Hashtbl.add reqs name req
       in
       match ast_ with 
-      | Ast_types.Prog (decl_list, req_with_id_list) ->
+      | Prog (decl_list, req_with_id_list) ->
         begin
           match decl_list with
           | None -> ()
@@ -123,4 +124,105 @@ let of_file filename =
     end
   | Error msg -> raise  ( ParseException msg)
   
+let print_const_value fmt v =
+  match v with 
+  | Const_bool b -> Format.fprintf fmt "%b " b
+  | Const_int i -> Format.fprintf fmt "%i " i
+  | Const_real r -> Format.fprintf fmt "%f " r
+  
+let print_type fmt t =
+  match t with 
+  | Bool  -> Format.fprintf fmt "bool"
+  | Int  -> Format.fprintf fmt  "integer" 
+  | Real  -> Format.fprintf fmt "real" 
 
+
+let print_declaration fmt d = 
+  match d with 
+  |Constant (name, t) -> Format.fprintf fmt "Constant\t%s of value " name; print_const_value fmt t;  Format.fprintf fmt "@."
+  |Input (name, t) -> Format.fprintf fmt "Input\t\t%s of type " name ; print_type fmt t;  Format.fprintf fmt "@."
+  |Output (name, t) -> Format.fprintf fmt "Output\t\t%s of type " name ; print_type fmt t;  Format.fprintf fmt "@."
+  |Internal (name, t) -> Format.fprintf fmt "Internal\t%s of type " name ; print_type fmt t;  Format.fprintf fmt "@."
+
+let rec print_exp fmt e=
+  match e with
+  | Var (s) -> Format.fprintf fmt "%s" s
+  | Bool_const (b) -> Format.fprintf fmt "%b" b
+  | Int_const (i) -> Format.fprintf fmt "%d" i
+  | Real_const (r) -> Format.fprintf fmt "%f" r
+  | Not (e) -> Format.fprintf fmt "!"; print_exp fmt e
+  | And  (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " && "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Or (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " || "; print_exp  fmt e2;  Format.fprintf fmt ")"    
+  | Eq (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " == "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | NotEq (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " != "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Geq (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " >= "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Leq (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " <= "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Gt (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " > "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Lt (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " < "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Implies (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " ==> "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Plus  (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " + "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Minus (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " - "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Divide (e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " / "; print_exp  fmt e2;  Format.fprintf fmt ")"
+  | Multiply(e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " * "; print_exp  fmt e2;  Format.fprintf fmt ")"
+
+
+let print_hold fmt h= 
+ 
+ ( match h with
+  | Empty -> ()
+  | Holds -> Format.fprintf fmt " holds ";
+  | Holds_afterward -> Format.fprintf fmt " holds afterward "
+  | Previously_held -> Format.fprintf fmt " previously held "
+  | Holds_for_at_least (e) -> Format.fprintf fmt " holds for at least "; print_exp  fmt e; Format.fprintf fmt " time units"
+  | Holds_after_at_most (e) -> Format.fprintf fmt " holds after at most, "; print_exp  fmt e; Format.fprintf fmt " time units"
+  | Holds_afterward_for_at_least (e) -> Format.fprintf fmt " holds afterwards for at least "; print_exp  fmt e; Format.fprintf fmt " time units"
+  | Holds_for_less_than (e) -> Format.fprintf fmt " holds for less than "; print_exp  fmt e; Format.fprintf fmt " time units"
+  | Holds_at_list_every (e) -> Format.fprintf fmt " holds at least every "; print_exp  fmt e; Format.fprintf fmt " time units"
+  | Holds_end_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by "; print_exp  fmt e; Format.fprintf fmt " time units"
+  | Toggles_at_most (e1,e2) -> Format.fprintf fmt " toggles "; print_exp  fmt e1; Format.fprintf fmt "at most"; print_exp  fmt e2; Format.fprintf fmt " time units" )
+
+let pretty = ref true
+
+let open_box fmt = 
+  if !pretty then Format.fprintf fmt "@["
+
+let close_box fmt = 
+  if !pretty then Format.fprintf fmt "@]"
+
+let carriage_return fmt = 
+  if !pretty then Format.fprintf fmt "@\n  " else Format.fprintf fmt " "
+
+let rec print_req fmt r =
+  open_box fmt;
+  (match r with 
+  | Prop (e, h) -> print_exp  fmt e; print_hold  fmt h;
+  | Globally (r) ->  Format.fprintf fmt "Globally,"; carriage_return fmt ; print_req fmt  r
+  | After (e, r) ->   Format.fprintf fmt "After "; print_exp  fmt e; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r;
+  | After_until (e1, e2 ,r ) ->   Format.fprintf fmt "After "; print_exp  fmt e1; Format.fprintf fmt " until "; print_exp  fmt e2; Format.fprintf fmt "," ; carriage_return fmt ; print_req fmt  r;
+  | Before (e,r) ->   Format.fprintf fmt "Before "; print_exp  fmt e; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r;
+  | Always (r) ->   Format.fprintf fmt "it is always the case that";  carriage_return fmt ; print_req fmt  r;
+  | Never (r) ->   Format.fprintf fmt "it is never the case that";  carriage_return fmt ; print_req fmt  r;
+  | If (r1, r2) ->   Format.fprintf fmt "if "; print_req fmt  r1;  carriage_return fmt ; Format.fprintf fmt ", then "; print_req fmt  r2;
+  | After_at_most (r, e) -> print_req fmt  r; Format.fprintf fmt " after at most "; print_exp  fmt e; Format.fprintf fmt " time units"
+  | Between (e1, e2, r) ->   Format.fprintf fmt "Between"; print_exp  fmt e1; Format.fprintf fmt " and "; print_exp  fmt e2; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r);
+  close_box fmt
+
+let print_requirements fmt r =
+  match r with 
+  |(name, r_no_id) ->Format.fprintf fmt "%s :" name; print_req fmt  r_no_id; Format.fprintf fmt "@."
+
+let print_ fmt r =
+  let h = r.vars in
+  let l = List.of_seq (Hashtbl.to_seq_values h) in
+  List.iter (print_declaration fmt) l; Format.fprintf fmt "@.";
+  let lreq = List.of_seq (Hashtbl.to_seq r.reqs ) in
+  List.iter (print_requirements fmt) lreq;  Format.fprintf fmt "@."
+
+
+let print fmt r = 
+  pretty := false;
+  print_ fmt r
+
+let pretty_print fmt r =
+  pretty := true;
+  print_ fmt r

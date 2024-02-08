@@ -14,5 +14,6 @@ val of_file: string -> t   (*parse a file of name [string] and return
 
 val ast_from_string : string -> (Ast_types.prog, string) result
 
+val print : Format.formatter -> t -> unit  (* print each requirements of [t] on a single line *)
 
-(*val print: t -> string  print [t] to returned [string] *)
+val pretty_print : Format.formatter -> t -> unit  (* pretty print each requirements of [t] to returned [string] *)
