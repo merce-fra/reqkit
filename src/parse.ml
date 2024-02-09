@@ -73,7 +73,7 @@ let parse lexbuf =
       | None -> Error (Printf.sprintf "Syntax error: %s" err)
     end
     (* here not so much info but this means that there are some unknown tokens*)
-  | e -> Error (Printf.sprintf "Grammar error: " )
+  | _ -> Error (Printf.sprintf "Grammar error: " )
 
 (** get the ast from a file*)
 let ast_from_file filename =
@@ -89,11 +89,7 @@ let ast_from_string s =
   let lexbuf = Lexing.from_string s in
   parse lexbuf
 
-
-
-(** get the content of the file as two hashmaps : one for declaration, other one for requirements *)
-let of_file filename =
-  let ast = ast_from_file filename in 
+let ast_to_parse_t ast =
   match ast with
   | Ok ast_ ->
     begin
@@ -123,6 +119,12 @@ let of_file filename =
       { vars = vars; reqs = reqs}
     end
   | Error msg -> raise  ( ParseException msg)
+  
+
+
+(** get the content of the file as two hashmaps : one for declaration, other one for requirements *)
+let of_file filename =
+  ast_to_parse_t ( ast_from_file filename )
   
 let print_const_value fmt v =
   match v with 
@@ -179,7 +181,7 @@ let print_hold fmt h=
   | Holds_for_less_than (e) -> Format.fprintf fmt " holds for less than "; print_exp  fmt e; Format.fprintf fmt " time units"
   | Holds_at_list_every (e) -> Format.fprintf fmt " holds at least every "; print_exp  fmt e; Format.fprintf fmt " time units"
   | Holds_end_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Toggles_at_most (e1,e2) -> Format.fprintf fmt " toggles "; print_exp  fmt e1; Format.fprintf fmt "at most"; print_exp  fmt e2; Format.fprintf fmt " time units" )
+  | Toggles_at_most (e1,e2) -> Format.fprintf fmt " toggles "; print_exp  fmt e1; Format.fprintf fmt " at most "; print_exp  fmt e2; Format.fprintf fmt " time units" )
 
 let pretty = ref true
 
@@ -204,12 +206,12 @@ let rec print_req fmt r =
   | Never (r) ->   Format.fprintf fmt "it is never the case that";  carriage_return fmt ; print_req fmt  r;
   | If (r1, r2) ->   Format.fprintf fmt "if "; print_req fmt  r1;  carriage_return fmt ; Format.fprintf fmt ", then "; print_req fmt  r2;
   | After_at_most (r, e) -> print_req fmt  r; Format.fprintf fmt " after at most "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Between (e1, e2, r) ->   Format.fprintf fmt "Between"; print_exp  fmt e1; Format.fprintf fmt " and "; print_exp  fmt e2; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r);
+  | Between (e1, e2, r) ->   Format.fprintf fmt "Between "; print_exp  fmt e1; Format.fprintf fmt " and "; print_exp  fmt e2; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r);
   close_box fmt
 
 let print_requirements fmt r =
   match r with 
-  |(name, r_no_id) ->Format.fprintf fmt "%s :" name; print_req fmt  r_no_id; Format.fprintf fmt "@."
+  |(name, r_no_id) ->Format.fprintf fmt "%s : " name; print_req fmt  r_no_id; Format.fprintf fmt "@."
 
 let print_ fmt r =
   let h = r.vars in

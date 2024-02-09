@@ -12,6 +12,8 @@ exception ParseException of string
 val of_file: string -> t   (*parse a file of name [string] and return
                             its content as [t] *)
 
+val ast_to_parse_t: (Ast_types.prog, string) result -> t
+
 val ast_from_string : string -> (Ast_types.prog, string) result
 
 val print : Format.formatter -> t -> unit  (* print each requirements of [t] on a single line *)

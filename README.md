@@ -32,6 +32,10 @@ Run the command "dune runtest" in the project directory
 
 Run the script ./scripts/test_all.sh
 
+## How to get coverage info when processing all requirements files
+
+Run the script ./scripts/coverage.sh
+
 ## How to use the tool
 
 Run the command "./exec" in the project directory

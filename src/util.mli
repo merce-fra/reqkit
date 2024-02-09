@@ -1,4 +1,7 @@
 
+
+exception Unknown_variable of string
+
 (* From a list of [Parse.t] requirement sets, return a list of minimal
    [Parse.t] requirements. Each element of the list contains only 1
    requirement (in Parse.req sense) such that it has a different
