@@ -1,6 +1,8 @@
 (library
   (name req2something_test)
   (libraries src)
-  (preprocess (pps ppx_expect ppx_inline_test ppx_assert))
+  (preprocess (pps ppx_expect ppx_inline_test ppx_assert bisect_ppx ))
   (inline_tests)
+  (instrumentation (backend bisect_ppx))
 )
+

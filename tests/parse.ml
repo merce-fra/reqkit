@@ -79,3 +79,18 @@ let%expect_test "parse_req_1" =
     let (expected_result : bool list )= List.init (List.length valid_requirements) (fun _ ->  true) in
     List.iter2 check result expected_result;
     [%expect {| ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok-ok- |}]
+
+
+let%expect_test "print_req_1" =
+  let s = "Input x0000 is bool
+          Input x0001 is real 
+          ID000: Globally, it is always the case that if \"x0000\" holds, then \"x0001\" holds for at least 25 time units" in
+  let ast = Src.Parse.ast_from_string s in
+  let parse_t = Src.Parse.ast_to_parse_t ast in
+  let fmt = Format.get_std_formatter () in
+  Src.Parse.print fmt parse_t;
+  [%expect {|
+    Input		x0000 of type bool
+    Input		x0001 of type real
+
+    ID000 : Globally, it is always the case that if x0000 holds  , then x0001 holds for at least 25 time units |}]

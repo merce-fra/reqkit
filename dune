@@ -1,13 +1,4 @@
-(env
-  (dev
-    (flags (:standard -g -warn-error -A)
-    	    (-cclib -lstdc++))))
-
-
 (executables
   (names req2something )
   (libraries src)
-  (modes byte exe)
-
 )
-
