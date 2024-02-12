@@ -1,2 +1,9 @@
 # generic
 *~
+
+# Dune
+_build/
+
+# bisect_ppx (coverage)
+_coverage/
+*.coverage
