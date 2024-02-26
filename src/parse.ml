@@ -169,7 +169,6 @@ let rec print_exp fmt e=
 
 
 let print_hold fmt h= 
- 
  ( match h with
   | Empty -> ()
   | Holds -> Format.fprintf fmt " holds ";
@@ -180,8 +179,8 @@ let print_hold fmt h=
   | Holds_afterward_for_at_least (e) -> Format.fprintf fmt " holds afterwards for at least "; print_exp  fmt e; Format.fprintf fmt " time units"
   | Holds_for_less_than (e) -> Format.fprintf fmt " holds for less than "; print_exp  fmt e; Format.fprintf fmt " time units"
   | Holds_at_list_every (e) -> Format.fprintf fmt " holds at least every "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Holds_end_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Toggles_at_most (e1,e2) -> Format.fprintf fmt " toggles "; print_exp  fmt e1; Format.fprintf fmt " at most "; print_exp  fmt e2; Format.fprintf fmt " time units" )
+  | Holds_end_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by "; print_exp  fmt e
+  | Toggles_at_most (e1,e2) -> Format.fprintf fmt " toggles "; print_exp  fmt e1; Format.fprintf fmt " at most "; print_exp  fmt e2; Format.fprintf fmt " time units later" )
 
 let pretty = ref true
 
