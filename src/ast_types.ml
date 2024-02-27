@@ -45,8 +45,8 @@ type hold=
   | Holds_afterward_for_at_least of exp (*holds afterwards for at least [exp] time units*) 
   | Holds_for_less_than of exp  (*holds for less [exp] time units*) 
   | Holds_at_list_every of exp  (*holds at least every [exp] time units*) 
-  | Holds_end_succeded_by of exp  (*holds and is succeeded by [exp]*) 
-  | Toggles_at_most of exp * exp (*toggles [exp] at most [exp] time units*) 
+  | Holds_and_succeded_by of exp  (*holds and is succeeded by [exp]*) 
+  | At_most of exp  (*at most [exp] time units*) 
          
 type req =
   | Prop of exp * hold (* [exp] "holds" or [exp] "holds as well" *)
@@ -59,6 +59,8 @@ type req =
   | If of req * req (* "if" [req], "then" [req] *)
   | After_at_most of req * exp (* [req] "after at most" [exp] "time units" *)
   | Between of exp *exp*req (* Between [exp] and [exp], [req]*)
+  | Toggles of exp * exp * hold (* [exp] toggles [exp]  [hold] *)
+
 
 type req_with_id = | Req of string * req
 

@@ -26,6 +26,7 @@ let req_to_int r =
   | Between (_ ,_, _)-> 8
   | After_until (_, _, _) -> 9
   | If (_, _) -> 10
+  | Toggles(_,_,_) -> 11
 
 (** converts a hold to integer *)
 let hold_to_int h =
@@ -39,8 +40,8 @@ let hold_to_int h =
   | Holds_afterward_for_at_least (_) -> 26
   | Holds_for_less_than (_) -> 27
   | Holds_at_list_every (_) -> 28
-  | Holds_end_succeded_by (_) -> 29
-  | Toggles_at_most (_, _) -> 30
+  | Holds_and_succeded_by (_) -> 29
+  | At_most (_) -> 30
 
 
 (** for a requirement this function 
@@ -86,8 +87,9 @@ let extract_vars_from_req req list_vars=
     | Holds_afterward_for_at_least (e)
     | Holds_for_less_than (e)
     | Holds_at_list_every (e)
-    | Holds_end_succeded_by (e) -> aux_e (vars, nb_expr +1, (hold_to_int h)::list_op) e
-    | Toggles_at_most (e1, e2) -> aux_e (aux_e (vars, nb_expr + 2, (hold_to_int h)::list_op) e2 ) e1
+    | Holds_and_succeded_by (e) -> aux_e (vars, nb_expr +1, (hold_to_int h)::list_op) e
+    (*| Toggles_at_most (e1, e2) -> aux_e (aux_e (vars, nb_expr + 2, (hold_to_int h)::list_op) e2 ) e1*)
+    | At_most (e) -> aux_e  (vars, nb_expr +1, (hold_to_int h)::list_op) e
   in
   let rec aux_r (vars, nb_expr, list_op) req = 
     match req with
@@ -101,8 +103,10 @@ let extract_vars_from_req req list_vars=
     | Between (e1, e2, r)
     | After_until (e1, e2, r) -> aux_r (aux_e ( aux_e (vars, nb_expr + 3, (req_to_int req)::list_op) e2) e1 ) r
     | If (r1, r2) -> aux_r (aux_r (vars, nb_expr + 2, (req_to_int req)::list_op) r2 ) r1
+    | Toggles(e1, e2, h) -> aux_e( aux_e (aux_h (vars, nb_expr+3, (req_to_int req)::list_op) h ) e2) e1 
   in 
   aux_r ( SMap.empty, 0, []) req 
+
 
 (** for a Parse.t, split all requirements in a tuple (name of the requirements, requirement, variables involved in the requirement, 
     nb of nodes, list of integer representing the requirements/holds) *)
@@ -120,12 +124,12 @@ let split_reqs_from_parse_t (input_parse : Parse.t) =
 
 (** for a list of Parse.t, call split_reqs_from_parse_t on each and then filter them according the list of integer representing the requirements/holds
     If two requirements have the same list, the one with the highest number of nodes is kept *)
-let typical_reqs_ input_parse_list  = 
+let typical_reqs_ input_parse_list keep_simple = 
   let all_reqs = List.fold_left (fun acc input_parse -> List.append (split_reqs_from_parse_t input_parse) acc) [] input_parse_list in
   let filted_reqs_ = List.fold_left (fun acc (name, req, vars, nb_expr, list_op) -> begin
                                                                   try 
                                                                     let (_,_,_,nb,_) = ILMap.find list_op acc  in
-                                                                    if nb_expr > nb then (ILMap.add list_op (name, req, vars, nb_expr, list_op) acc) else acc
+                                                                    if ( (not keep_simple && (nb_expr > nb)) || (keep_simple && (nb_expr < nb))) then (ILMap.add list_op (name, req, vars, nb_expr, list_op) acc) else acc
                                                                   with Not_found -> ILMap.add list_op (name, req, vars, nb_expr, list_op) acc
                                                                   end) ILMap.empty all_reqs in
   (*Format.printf "Typical requirements @\n";                                                                
@@ -145,8 +149,8 @@ let convert_to_parse_t name vars req  =
   {vars=h1; reqs=h2}
 
 (** extract all unique requirements. The requirements are distinguished from their ast considering only req/hold nodes *)
-let typical_reqs (input_parse_list: Parse.t list) : Parse.t list =
-  let reqs_ = typical_reqs_ input_parse_list in 
+let typical_reqs (input_parse_list: Parse.t list) simple_exp : Parse.t list =
+  let reqs_ = typical_reqs_ input_parse_list simple_exp in 
   (* convert the map into a list of Parse.t *)
   let filted_reqs_list_ = List.of_seq (ILMap.to_seq reqs_) in
   List.fold_left (fun acc (_ ,(name, req, vars, _, _)) -> (convert_to_parse_t name vars req) :: acc ) [] filted_reqs_list_

@@ -13,6 +13,13 @@
 %token CONSTANT INPUT OUTPUT INTERNAL TOGGLES LATER IS ALWAYS FOR NEVER PREVIOUSLY_HELD GLOBALLY IS_SUCCEEDED_BY AFTER BETWEEN AND2 EVERY BEFORE UNTIL ONCE BECOME_SATISFIED IF THEN AT_LEAST AT_MOST LESS_THAN TIME_UNITS AFTERWARDS HOLDS DOUBLE_QUOTE
 %token BOOLEAN_TYPE INTEGER_TYPE REAL_TYPE TRUE FALSE 
 
+%left OR
+%left AND 
+%left EQUAL NOT_EQUAL
+%left LT LE GT GE
+%left PLUS MINUS
+%left MULTIPLY DIVIDE
+
 %{ open Ast_types %} 
 
 %type <Ast_types.prog> prog
@@ -83,14 +90,13 @@ hold:
 | HOLDS; AFTER; AT_MOST; e1_ = exp; TIME_UNITS;  {Holds_after_at_most (e1_ )}
 | HOLDS; FOR; LESS_THAN; e1_ = exp; TIME_UNITS; { Holds_for_less_than (e1_ ) }
 | HOLDS; AT_LEAST; EVERY; e1_ = exp;  TIME_UNITS; {Holds_at_list_every(e1_)}
-| HOLDS; AND2; IS_SUCCEEDED_BY; e1_ = exp; {Holds_end_succeded_by(e1_)}
+| HOLDS; AND2; IS_SUCCEEDED_BY; e1_ = exp; {Holds_and_succeded_by(e1_)}
 | PREVIOUSLY_HELD; { Previously_held }
-| TOGGLES; e1_ =exp; AT_MOST; e2_=exp; TIME_UNITS; LATER; { Toggles_at_most (e1_ , e2_)}
+| AT_MOST; e1_=exp; TIME_UNITS; LATER; {At_most(e1_) }
 ;
 
 exp_hold :
 | DOUBLE_QUOTE; e1_ = exp; DOUBLE_QUOTE; h_ = hold; { Prop (e1_, h_) }
-| ONCE; e1_=exp; BECOME_SATISFIED; COMMA?; h_=hold; { Prop (e1_, h_) }
 ;
 
 req :
@@ -103,6 +109,8 @@ req :
 | BEFORE ; e1_ = exp; COMMA; r2_ = req; { Before ( e1_, r2_) }
 | IF; r1_ = req; COMMA?; THEN; r2_ = req; { If (r1_, r2_ ) } 
 | BETWEEN; e1_ =exp; AND2; e2_ =exp; COMMA; r_ =req; { Between (e1_, e2_, r_)}
+| ONCE; e1_=exp; BECOME_SATISFIED; COMMA?; h_=hold; { If( Prop (e1_, Holds), Prop(e1_, h_)) }
+| e1_ =exp; TOGGLES; e2_=exp; h_=hold; { Toggles (e1_ , e2_, h_)}
 ;
 
 req_with_id :

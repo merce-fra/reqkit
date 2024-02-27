@@ -89,6 +89,7 @@ let ast_from_string s =
   let lexbuf = Lexing.from_string s in
   parse lexbuf
 
+(** convert an ast Ast_types.Prog to Parse_t.t *)
 let ast_to_parse_t ast =
   match ast with
   | Ok ast_ ->
@@ -121,31 +122,33 @@ let ast_to_parse_t ast =
   | Error msg -> raise  ( ParseException msg)
   
 
-
 (** get the content of the file as two hashmaps : one for declaration, other one for requirements *)
 let of_file filename =
   ast_to_parse_t ( ast_from_file filename )
   
+(** print a constant value *)
 let print_const_value fmt v =
   match v with 
   | Const_bool b -> Format.fprintf fmt "%b " b
   | Const_int i -> Format.fprintf fmt "%i " i
   | Const_real r -> Format.fprintf fmt "%f " r
   
+(** print a type *)
 let print_type fmt t =
   match t with 
   | Bool  -> Format.fprintf fmt "bool"
   | Int  -> Format.fprintf fmt  "integer" 
   | Real  -> Format.fprintf fmt "real" 
 
-
+(** print a declaration *)
 let print_declaration fmt d = 
   match d with 
   |Constant (name, t) -> Format.fprintf fmt "Constant\t%s of value " name; print_const_value fmt t;  Format.fprintf fmt "@."
-  |Input (name, t) -> Format.fprintf fmt "Input\t\t%s of type " name ; print_type fmt t;  Format.fprintf fmt "@."
-  |Output (name, t) -> Format.fprintf fmt "Output\t\t%s of type " name ; print_type fmt t;  Format.fprintf fmt "@."
-  |Internal (name, t) -> Format.fprintf fmt "Internal\t%s of type " name ; print_type fmt t;  Format.fprintf fmt "@."
+  |Input (name, t) -> Format.fprintf fmt "Input\t\t%s IS " name ; print_type fmt t;  Format.fprintf fmt "@."
+  |Output (name, t) -> Format.fprintf fmt "Output\t\t%s IS " name ; print_type fmt t;  Format.fprintf fmt "@."
+  |Internal (name, t) -> Format.fprintf fmt "Internal\t%s IS " name ; print_type fmt t;  Format.fprintf fmt "@."
 
+(** print an expression *)
 let rec print_exp fmt e=
   match e with
   | Var (s) -> Format.fprintf fmt "%s" s
@@ -168,6 +171,11 @@ let rec print_exp fmt e=
   | Multiply(e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " * "; print_exp  fmt e2;  Format.fprintf fmt ")"
 
 
+(** if true , the requirements are pretty printed, otherwise they are one a single line *)
+let pretty = ref true
+
+
+(** print a hold value *)
 let print_hold fmt h= 
  ( match h with
   | Empty -> ()
@@ -179,10 +187,29 @@ let print_hold fmt h=
   | Holds_afterward_for_at_least (e) -> Format.fprintf fmt " holds afterwards for at least "; print_exp  fmt e; Format.fprintf fmt " time units"
   | Holds_for_less_than (e) -> Format.fprintf fmt " holds for less than "; print_exp  fmt e; Format.fprintf fmt " time units"
   | Holds_at_list_every (e) -> Format.fprintf fmt " holds at least every "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Holds_end_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by "; print_exp  fmt e
-  | Toggles_at_most (e1,e2) -> Format.fprintf fmt " toggles "; print_exp  fmt e1; Format.fprintf fmt " at most "; print_exp  fmt e2; Format.fprintf fmt " time units later" )
+  | Holds_and_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by "; print_exp  fmt e
+  | At_most (e) -> Format.fprintf fmt " at most "; print_exp  fmt e;  Format.fprintf fmt " time units later" )
 
-let pretty = ref true
+(** print an expression as a string *)
+let print_exp_as_string e =
+  pretty := false;
+  let fmt = Format.get_str_formatter() in
+  print_exp fmt e;
+  Format.flush_str_formatter()
+
+(** print a hold as a string *)
+let print_hold_as_string h =
+  pretty := false;
+  let fmt = Format.get_str_formatter() in
+  print_hold fmt h;
+  Format.flush_str_formatter()
+
+(** print a declaration as a string *)
+let print_declaration_as_string d =
+  pretty := false;
+  let fmt = Format.get_str_formatter() in
+  print_declaration fmt d;
+  Format.flush_str_formatter()
 
 let open_box fmt = 
   if !pretty then Format.fprintf fmt "@["
@@ -193,6 +220,7 @@ let close_box fmt =
 let carriage_return fmt = 
   if !pretty then Format.fprintf fmt "@\n  " else Format.fprintf fmt " "
 
+(** print a requirement  *)
 let rec print_req fmt r =
   open_box fmt;
   (match r with 
@@ -205,9 +233,18 @@ let rec print_req fmt r =
   | Never (r) ->   Format.fprintf fmt "it is never the case that";  carriage_return fmt ; print_req fmt  r;
   | If (r1, r2) ->   Format.fprintf fmt "if "; print_req fmt  r1;  carriage_return fmt ; Format.fprintf fmt ", then "; print_req fmt  r2;
   | After_at_most (r, e) -> print_req fmt  r; Format.fprintf fmt " after at most "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Between (e1, e2, r) ->   Format.fprintf fmt "Between "; print_exp  fmt e1; Format.fprintf fmt " and "; print_exp  fmt e2; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r);
+  | Between (e1, e2, r) ->   Format.fprintf fmt "Between "; print_exp  fmt e1; Format.fprintf fmt " and "; print_exp  fmt e2; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r
+  | Toggles( e1, e2, h) ->  print_exp  fmt e1; Format.fprintf fmt " toggles "; print_exp  fmt e2; Format.fprintf fmt " "; print_hold fmt h; carriage_return fmt );
   close_box fmt
 
+(** print a requirement as a string *)
+let print_req_as_string h =
+  pretty := false;
+  let fmt = Format.get_str_formatter() in
+  print_req fmt h;
+  Format.flush_str_formatter()
+
+(** print requirements *)
 let print_requirements fmt r =
   match r with 
   |(name, r_no_id) ->Format.fprintf fmt "%s : " name; print_req fmt  r_no_id; Format.fprintf fmt "@."
