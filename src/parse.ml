@@ -179,7 +179,8 @@ let pretty = ref true
 let print_hold fmt h= 
  ( match h with
   | Empty -> ()
-  | Holds -> Format.fprintf fmt " holds ";
+  | Holds -> Format.fprintf fmt " holds "
+  | Holds_for_ever -> Format.fprintf fmt " holds for ever (trick for SUP conversion)"
   | Holds_afterward -> Format.fprintf fmt " holds afterward "
   | Previously_held -> Format.fprintf fmt " previously held "
   | Holds_for_at_least (e) -> Format.fprintf fmt " holds for at least "; print_exp  fmt e; Format.fprintf fmt " time units"
@@ -264,3 +265,13 @@ let print fmt r =
 let pretty_print fmt r =
   pretty := true;
   print_ fmt r
+
+let extract_bool_variables vars =
+  Hashtbl.fold( fun  _ d acc-> 
+    begin
+      match d with
+      | Ast_types.Constant(n,Const_bool(_)) -> n::acc
+      | Ast_types.Input(n,Ast_types.Bool) -> n::acc
+      | _ -> acc
+    end)  vars  []
+  

@@ -8,36 +8,37 @@ let time_to_int t =
 let rec print_event fmt e =
   match e with 
   | Var (s) -> Format.fprintf fmt "%s " s
-  | Not (e) -> Format.fprintf fmt "!(" ; print_event fmt e ; Format.fprintf fmt ")"
-  | Or (e1,e2) -> Format.fprintf fmt "(" ; print_event fmt e1 ; Format.fprintf fmt " || " ; print_event fmt e2 ; Format.fprintf fmt ")"
-  | And (e1,e2) -> Format.fprintf fmt "(" ; print_event fmt e1 ; Format.fprintf fmt " && " ; print_event fmt e2 ; Format.fprintf fmt ")"
-  | Eq(e1,e2) -> Format.fprintf fmt "(" ; print_event fmt e1 ; Format.fprintf fmt " == "; print_event fmt e2 ; Format.fprintf fmt ")"
-  | NotEq(e1,e2) -> Format.fprintf fmt "(" ; print_event fmt e1 ; Format.fprintf fmt " != "; print_event fmt e2 ; Format.fprintf fmt ")"
-  | Constant(b) -> if b then  Format.fprintf fmt "true" else  Format.fprintf fmt "false" 
+  | Not (e) -> Format.fprintf fmt "Not(" ; print_event fmt e ; Format.fprintf fmt ")"
+  | Or (e1,e2) -> Format.fprintf fmt "Or(" ; print_event fmt e1 ; Format.fprintf fmt " , " ; print_event fmt e2 ; Format.fprintf fmt ")"
+  | And (e1,e2) -> Format.fprintf fmt "And(" ; print_event fmt e1 ; Format.fprintf fmt " , " ; print_event fmt e2 ; Format.fprintf fmt ")"
+  | Constant(b) -> if b then  Format.fprintf fmt "True" else  Format.fprintf fmt "False" 
   
 (** prints a trigger *)
 let print_trigger fmt t =
-  print_event fmt t.tse; Format.fprintf fmt " ";
-  print_event fmt t.tc; Format.fprintf fmt " ";
-  print_event fmt t.tee; Format.fprintf fmt " ";
-  Format.fprintf fmt  "%d %d " (time_to_int t.tmin) (time_to_int t.tmax) 
+  print_event fmt t.tse; Format.fprintf fmt ", ";
+  print_event fmt t.tc; Format.fprintf fmt ", ";
+  print_event fmt t.tee; Format.fprintf fmt ", ";
+  Format.fprintf fmt  "%d, %d, " (time_to_int t.tmin) (time_to_int t.tmax) 
   
 (** prints a delay *)
 let print_delay fmt d =
-  Format.fprintf fmt  "%d %d " (time_to_int d.lmin) (time_to_int d.lmax) 
+  Format.fprintf fmt  "%d, %d, " (time_to_int d.lmin) (time_to_int d.lmax) 
 
 (** prints an action *)
 let print_action fmt a = 
-  print_event fmt a.ase; Format.fprintf fmt " ";
-  print_event fmt a.ac; Format.fprintf fmt " ";
-  print_event fmt a.aee; Format.fprintf fmt " ";
-  Format.fprintf fmt  "%d %d " (time_to_int a.amin) (time_to_int a.amax) 
+  print_event fmt a.ase; Format.fprintf fmt ", ";
+  print_event fmt a.ac; Format.fprintf fmt ", ";
+  print_event fmt a.aee; Format.fprintf fmt ", ";
+  Format.fprintf fmt  "%d, %d " (time_to_int a.amin) (time_to_int a.amax) 
 
 (** print a SUP requirement *)
-let print fmt (sup : sup_req) =
+let print fmt (sup : sup_req) first =
+  if not first then Format.fprintf fmt ",@\n";
+  Format.fprintf fmt "[ ";
   print_trigger fmt sup.t;
   print_delay  fmt sup.d;
-  print_action fmt sup.a
+  print_action fmt sup.a;
+  Format.fprintf fmt "]"
 
 (** converts a requirements to SUP*)
 let rec event_of_exp ast = 
@@ -45,8 +46,6 @@ let rec event_of_exp ast =
   | Ast_types.Not( e ) -> Not (event_of_exp e)
   | Ast_types.And (e1, e2) -> And (event_of_exp e1, event_of_exp e2)
   | Ast_types.Or (e1, e2) -> Or (event_of_exp e1, event_of_exp e2)
-  | Ast_types.Eq (e1, e2) -> Eq (event_of_exp e1, event_of_exp e2)
-  | Ast_types.NotEq (e1, e2) -> NotEq (event_of_exp e1, event_of_exp e2)
   | Ast_types.Bool_const(b)-> Constant(b)
   | Ast_types.Var(s) -> Var(s)
   | _ -> raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_exp_as_string ast)))
@@ -82,62 +81,214 @@ let const_of_h vars ast : int =
     end
   | _ -> raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_hold_as_string ast)))
 
+let get_intermediate_var intermediate_hashtbl =
+  let i = Hashtbl.length intermediate_hashtbl in 
+  let var_name = "intermediate"^(string_of_int i) in
+  Hashtbl.add intermediate_hashtbl var_name "";
+  Var(var_name)
+
+
+let get_intermediate_var2 intermediate_hashtbl =
+  let i = Hashtbl.length intermediate_hashtbl in 
+  let var_name = "intermediate"^(string_of_int i) in
+  Hashtbl.add intermediate_hashtbl var_name "";
+  Ast_types.Var(var_name)
+  
+
 (** converts Ast_types requirements into SUP requirements. Due to the
     semantic differences, an Ast_types requirements may be expressed with 
     several SUPs *)
-let convert_sup1 vars req =
-  ( req, 
+let rec convert_sup1 vars intermediate_hashtbl req =
+  
+  let convert_globally_always vars intermediate_hashtbl req =
     match req with
-    | Ast_types.Globally( Ast_types.Always( Ast_types.If( Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Prop(e2, Holds_for_at_least (e3))))) ->
-        [{t={tse=(event_of_exp e1) ; tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(0); tmax= Time(0)}; 
-          d={lmin=Time(0); lmax= Time(0)};
-          a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(0); amax= Time(const_of_h vars (Holds_for_at_least (e3)))} 
-        }] 
-    | Ast_types.Globally( Ast_types.Always( Ast_types.If( Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Prop(e2, Holds_after_at_most(e3)) ))) ->
-      [{t={tse=(event_of_exp e1) ; tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(0); tmax= Time(0)}; 
-        d={lmin=Time(0); lmax= Time(0)};
-        a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(0); amax= Time(const_of_h vars (Holds_after_at_most (e3)))}
-      };
-      {t={tse=(event_of_exp e1) ; tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(0); tmax= Time(0)}; 
-        d={lmin=Time(0); lmax= Time(0)};
-        a={ase=Constant(true); ac=Constant(true); aee=(Not(event_of_exp e2)); amin =Time(1+const_of_h vars (Holds_after_at_most (e3))); amax = Time(-1)}
-      }]
-    | Ast_types.Globally( Ast_types.Never( Ast_types.Prop(e1, Holds) )) ->
+    | Ast_types.If( Ast_types.Prop(e1,Ast_types.Holds), r) ->
+      begin
+        let e1_ = event_of_exp e1 in
+        let t = {tse=e1_; tc=e1_; tee=e1_; tmin = Time(0); tmax= Time(0)} in
+        let d = { lmin=Time(0); lmax=Time(0)} in
+        match r with 
+        | Ast_types.Prop(e2, Holds_for_at_least (e3)) -> 
+              [{t=t;d=d;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(const_of_h vars (Holds_for_at_least (e3))); amax= Time(const_of_h vars (Holds_for_at_least (e3)))}}]
+        | Ast_types.Prop(e2, Holds_after_at_most(e3)) -> 
+              [{t=t;d=d;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(0); amax= Time(const_of_h vars (Holds_after_at_most (e3)))}}]
+        | Ast_types.Prop(e2, Holds_for_less_than(e3)) ->
+              [{t=t;d=d;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(0); amax= Time(const_of_h vars (Holds_for_less_than (e3)))}}]
+        | Ast_types.Prop(e2, Holds) ->
+              [{t=t;d=d;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(0); amax= Time(0)}}]
+        | Ast_types.Prop(e2, Holds_for_ever) ->
+              [{t=t;d=d;a={ase=(event_of_exp e2); ac=Constant(true); aee=Constant(true); amin = Time(0); amax= Time(-1)}}]
+        | Ast_types.Prop(e2, Holds_afterward) ->
+          [{t=t;d=d;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(-1); amax= Time(0)}}]
+        | Ast_types.Toggles(e2, e3, Ast_types.At_most(h))->
+            begin
+              let t1 = And(event_of_exp e1, And(event_of_exp e2, event_of_exp e3)) in
+              let a1 = Not(event_of_exp e3) in
+              let t2 = And(event_of_exp e1, And(event_of_exp e2, Not(event_of_exp e3))) in
+              let a2 = event_of_exp e3 in
+              let amax = const_of_h vars (Ast_types.At_most(h)) in 
+              [{t={tse=t1; tc=t1; tee=t1; tmin = Time(0); tmax= Time(0)}; 
+                d={lmin=Time(0); lmax= Time(0)};
+                a={ase=a1; ac=a1;aee=a1; amin = Time(0); amax= Time(amax)}
+              };
+              {t={tse=t2; tc=t2; tee=t2; tmin = Time(0); tmax= Time(0)}; 
+                d={lmin=Time(0); lmax= Time(0)};
+                a={ase=a2; ac=a2;aee=a2; amin = Time(0); amax= Time(amax)}
+              }] 
+            end
+        | Ast_types.Toggles(e2, e3, Ast_types.Holds)->
+          begin
+            let t1 = And(event_of_exp e1, And(event_of_exp e2, event_of_exp e3)) in
+            let a1 = Not(event_of_exp e3) in
+            let t2 = And(event_of_exp e1, And(event_of_exp e2, Not(event_of_exp e3))) in
+            let a2 = event_of_exp e3 in
+            [{t={tse=t1; tc=t1; tee=t1; tmin = Time(0); tmax= Time(0)}; 
+              d={lmin=Time(0); lmax= Time(0)};
+              a={ase=a1; ac=a1;aee=a1; amin = Time(0); amax= Time(0)}
+            };
+            {t={tse=t2; tc=t2; tee=t2; tmin = Time(0); tmax= Time(0)}; 
+              d={lmin=Time(0); lmax= Time(0)};
+              a={ase=a2; ac=a2;aee=a2; amin = Time(0); amax= Time(0)}
+            }] 
+          end
+        | Ast_types.Prop(e2,Ast_types.Previously_held) ->
+          ( let intermediate_var = get_intermediate_var intermediate_hashtbl in
+          [ { t={tse=(event_of_exp e2); tc=(event_of_exp e2); tee=(event_of_exp e2); tmin = Time(0); tmax= Time(0)}; 
+              d={lmin=Time(0); lmax= Time(0)};
+              a={ase=intermediate_var; ac=intermediate_var;aee=intermediate_var; amin = Time(0); amax= Time(-1)}
+            };
+            { t={tse=(event_of_exp e1); tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(0); tmax= Time(0)}; 
+              d={lmin=Time(0); lmax= Time(0)};
+              a={ase=intermediate_var; ac=intermediate_var;aee=intermediate_var; amin = Time(0); amax= Time(0)}
+          }] )
+        | _ -> raise (Invalid_argument "")
+
+      end
+    | Ast_types.Prop(e1, Holds) ->
+      begin
+        let e1_ = event_of_exp e1 in
+      [{t={tse=e1_; tc=e1_; tee=e1_; tmin = Time(0); tmax= Time(0)};
+        d={ lmin=Time(0); lmax=Time(0)};
+        a={ase=Constant(true); ac=Constant(true); aee=Constant(true); amin = Time(0); amax= Time(-1)}}]
+      end
+    | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_for_at_least(e2)), Ast_types.Prop(e3,Ast_types.Holds_afterward) ) ->
+        ( let tt = const_of_h vars (Ast_types.Holds_for_at_least(e2)) in 
+          [{t={tse=(event_of_exp e1); tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(tt); tmax= Time(tt)}; 
+              d={lmin=Time(1); lmax= Time(1)};
+              a={ase=(event_of_exp e3); ac=(event_of_exp e3);aee=(event_of_exp e3); amin = Time(0); amax= Time(-1)}
+          }] )
+    | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_for_at_least(e2)), Ast_types.Prop(e3,Ast_types.Holds_afterward_for_at_least(e4)) ) ->
+      ( let tt = const_of_h vars (Ast_types.Holds_for_at_least(e2)) in 
+        let at = const_of_h vars (Ast_types.Holds_for_at_least(e4)) in 
+        [{t={tse=(event_of_exp e1); tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(tt); tmax= Time(tt)}; 
+            d={lmin=Time(1); lmax= Time(1)};
+            a={ase=(event_of_exp e3); ac=(event_of_exp e3);aee=(event_of_exp e3); amin = Time(at); amax= Time(at)}
+        }] )
+    | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_and_succeded_by(e2)), Ast_types.Prop(e3,Ast_types.Previously_held) ) ->
+      (
+        let intermediate_var = get_intermediate_var2 intermediate_hashtbl in
+        let intermediate_var2 = get_intermediate_var2 intermediate_hashtbl in
+        let new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(e3,Ast_types.Holds), Ast_types.Prop(intermediate_var, Ast_types.Holds_for_ever)))) in
+        let new_req2 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Prop(intermediate_var2, Ast_types.Holds_for_ever)))) in
+        let new_req3 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop( And(e2, intermediate_var2), Ast_types.Holds), Ast_types.Prop(intermediate_var, Holds)))) in
+        let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 in
+        let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 in
+        let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 in
+        res1 @ res2 @ res3
+      )
+  | _ -> raise (Invalid_argument "") in
+
+  let convert_globally_never req = 
+    match req with
+    | Ast_types.Prop(e1, Holds) -> 
       [{t={tse=(Not(event_of_exp e1)) ; tc=(Not(event_of_exp e1)); tee=(Not(event_of_exp e1)); tmin = Time(0); tmax= Time(0)}; 
         d={lmin=Time(0); lmax= Time(0)};
         a={ase=Constant(true); ac=Constant(true); aee=Constant(true); amin = Time(0); amax= Time(-1)}
       }]
-    | Ast_types.Globally( Ast_types.Always(Ast_types.If( Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Prop(e2, Holds_for_less_than(e3))))) ->
-      [{t={tse=(event_of_exp e1); tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(0); tmax= Time(0)}; 
-        d={lmin=Time(0); lmax= Time(0)};
-        a={ase=Constant(true); ac=Constant(true);aee=(event_of_exp e2); amin = Time(0); amax= Time( (const_of_h vars (Holds_for_less_than (e3)) -1))}
-      }]
-    | Ast_types.Globally( Ast_types.Always(Ast_types.If( Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Prop(e2, Holds)))) ->
-      [{t={tse=(event_of_exp e1); tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(0); tmax= Time(0)}; 
-        d={lmin=Time(0); lmax= Time(0)};
-        a={ase=Constant(true); ac=Constant(true);aee=(event_of_exp e2); amin = Time(0); amax= Time(1)}
-      }] 
-    | Ast_types.Globally( Ast_types.Always( Ast_types.Prop(e1,Ast_types.Holds))) ->
-      [{t={tse=(event_of_exp e1); tc=Constant(true); tee=Constant(true); tmin = Time(0); tmax= Time(0)}; 
-        d={lmin=Time(0); lmax= Time(0)};
-        a={ase=Constant(true); ac=Constant(true);aee=Constant(true); amin = Time(0); amax= Time(-1)}
-      }] 
-    | Ast_types.Globally( Ast_types.Always( Ast_types.If( Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Toggles(e2, e3, Ast_types.At_most(h))) )) ->
-        let t1 = And(event_of_exp e1, And(event_of_exp e2, event_of_exp e3)) in
-        let a1 = Not(event_of_exp e3) in
-        let t2 = And(event_of_exp e1, And(event_of_exp e2, Not(event_of_exp e3))) in
-        let a2 = event_of_exp e3 in
-        let amax = const_of_h vars (Ast_types.At_most(h)) in 
-        [{t={tse=t1; tc=t1; tee=t1; tmin = Time(0); tmax= Time(0)}; 
-          d={lmin=Time(0); lmax= Time(0)};
-          a={ase=a1; ac=a1;aee=a1; amin = Time(0); amax= Time(amax)}
-        };
-        {t={tse=t2; tc=t2; tee=t2; tmin = Time(0); tmax= Time(0)}; 
-          d={lmin=Time(0); lmax= Time(0)};
-          a={ase=a2; ac=a2;aee=a2; amin = Time(0); amax= Time(amax)}
-        }] 
-    | _-> raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
-  )
+    | _-> raise (Invalid_argument "") in
+
+
+  let  convert_after_always e1 vars intermediate_hashtbl req =
+    let intermediate_var = get_intermediate_var2 intermediate_hashtbl in
+    let new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Prop(intermediate_var, Ast_types.Holds_for_ever)))) in
+    let new_req2 = (
+      match req with
+      | Ast_types.If(Ast_types.Prop(e2,Ast_types.Holds), r) ->
+          Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e2 , intermediate_var), Ast_types.Holds), r)))  
+      | Ast_types.If(Ast_types.Prop(e2,Ast_types.Holds_for_at_least(e3)), r) ->
+          Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e2 , intermediate_var), Ast_types.Holds_for_at_least(e3)),r)))  
+      | _-> raise (Invalid_argument "")
+    ) in 
+    let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 in
+    let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 in
+    res1 @ res2 in
+
+  let convert_after_until_always e1 e2 vars intermediate_hashtbl req = 
+    let intermediate_var = get_intermediate_var2 intermediate_hashtbl in
+    let new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Prop(intermediate_var, Ast_types.Holds_for_ever)))) in
+    let new_req2 = (
+      match req with 
+      | Ast_types.If(Ast_types.Prop(e3,Ast_types.Holds), r) ->
+          Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e3 , Ast_types.And(intermediate_var, Ast_types.Not(e2))), Ast_types.Holds),  r)))  
+      | Ast_types.Prop(e3,Ast_types.Holds) ->
+          Ast_types.Globally(Ast_types.Always( Ast_types.Prop( Ast_types.And(e3 , Ast_types.And(intermediate_var, Ast_types.Not(e2))), Ast_types.Holds)))  
+      | _ -> raise (Invalid_argument "") ) in 
+    let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 in
+    let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 in
+    res1 @ res2 in
+
+
+  let convert_before_always e1 vars intermediate_hashtbl req =
+    let intermediate_var = get_intermediate_var2 intermediate_hashtbl in
+    let new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Prop(intermediate_var, Ast_types.Holds_for_ever)))) in
+    let new_req2 = (match req with 
+    | Ast_types.Prop(e2,Ast_types.Holds) ->
+        Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop( Ast_types.And(e1 , Ast_types.Not(intermediate_var)), Ast_types.Holds),  Ast_types.Prop(e2,Ast_types.Holds))))
+    | Ast_types.If( Ast_types.Prop(e2,Ast_types.Holds),r) ->
+        Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(And(e2,Not(intermediate_var)),Ast_types.Holds),r)))
+    |_ -> raise (Invalid_argument "") )in
+    let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 in
+    let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 in
+    res1 @ res2 in
+
+  let convert_between_always e1 e2 vars intermediate_hashtbl req =
+    let intermediate_var = get_intermediate_var2 intermediate_hashtbl in
+    let intermediate_var2 = get_intermediate_var2 intermediate_hashtbl in
+    let new_req1 = Ast_types.Before(e1, Ast_types.Always(Ast_types.Prop(Ast_types.And( Ast_types.Not(intermediate_var2),Ast_types.Not(intermediate_var)), Ast_types.Holds))) in
+    let new_req2 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(e1,Ast_types.Holds), Ast_types.Toggles( e1, intermediate_var, Ast_types.Holds)))) in
+    let new_req4 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(e2,intermediate_var),Ast_types.Holds), Ast_types.Prop( intermediate_var2, Ast_types.Holds)))) in
+    let new_req5 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(e2, intermediate_var),Ast_types.Holds), Ast_types.Toggles(e2, intermediate_var, Ast_types.Holds)))) in
+    let new_req6 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(e2, intermediate_var2),Ast_types.Holds), Ast_types.Toggles(e2, intermediate_var2, Ast_types.Holds)))) in
+    let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 in
+    let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 in
+    let (_, res4) = convert_sup1 vars intermediate_hashtbl new_req4 in
+    let (_, res5) = convert_sup1 vars intermediate_hashtbl new_req5 in
+    let (_, res6) = convert_sup1 vars intermediate_hashtbl new_req6 in
+    match req with
+    |  Ast_types.Prop(e3,Ast_types.Holds) -> (
+      let new_req3 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(e3,intermediate_var),Ast_types.Holds), Ast_types.Toggles( e3, intermediate_var2, Ast_types.Holds)))) in
+      let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 in
+      res1 @ res2 @ res3 @ res4 @ res5 @ res6 )
+    |  Ast_types.If(Ast_types.Prop(e3,Ast_types.Holds), r) -> (
+      let new_req3 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(e3,intermediate_var),Ast_types.Holds), Ast_types.Toggles( e3, intermediate_var2, Ast_types.Holds)))) in
+      let new_req7 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(e3,intermediate_var),Ast_types.Holds), r))) in
+      let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 in
+      let (_, res7) = convert_sup1 vars intermediate_hashtbl new_req7 in
+      res1 @ res2 @ res3 @ res4 @ res5 @ res6 @ res7)
+    | _-> raise (Invalid_argument "") in
+   
+  try 
+    ( req, 
+      match req with
+      | Ast_types.Globally( Ast_types.Always( r) ) -> convert_globally_always vars intermediate_hashtbl r
+      | Ast_types.Globally( Ast_types.Never(r)) -> convert_globally_never r
+      | Ast_types.After(e1, Ast_types.Always( r)) -> convert_after_always  e1 vars intermediate_hashtbl r
+      | Ast_types.After_until( e1, e2, Ast_types.Always(r)) -> convert_after_until_always e1 e2 vars intermediate_hashtbl r
+      | Ast_types.Before(e1, Ast_types.Always(r)) -> convert_before_always e1 vars intermediate_hashtbl r
+      | Ast_types.Between(e1, e2, Ast_types.Always(r)) -> convert_between_always e1 e2 vars intermediate_hashtbl r
+      | _-> raise (Invalid_argument ("This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
+    )
+  with Invalid_argument _ -> raise (Invalid_argument ("This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
 
 (** replace in the hash table the non boolean expressions *)
 let replace_hashtbl vars hashtbl new_exp =
@@ -188,6 +339,7 @@ let extract_non_bool_exp vars hashtbl req_content =
     | Empty
     | Holds 
     | Holds_afterward
+    | Holds_for_ever
     | Previously_held -> ast
     | Holds_for_at_least (e) -> Holds_for_at_least (aux_exp e)
     | Holds_after_at_most(e) -> Holds_after_at_most(aux_exp e)
@@ -208,12 +360,28 @@ let remove_non_bool_exp (parse_t : Parse.t) hashtbl =
   res
   
 (** prints a list of SUP requirements *)
-let print fmt sup_list = 
-  List.iter (fun sup -> ( print fmt sup; Format.fprintf fmt "@\n")) sup_list
+let print fmt sup_list first = 
+  if not first then Format.fprintf fmt ",";
+  List.iteri (fun i sup -> ( print fmt sup (i = 0))) sup_list;
+  Format.fprintf fmt "@\n"
+  
+
+
+module SMap = Map.Make(String)
 
 (** converts an AST_types requirements list into a SUP requirement list*)
 let of_req parse_t  =
-  let hashtbl = Hashtbl.create 200 in
-  let parse_t_with_only_bool = remove_non_bool_exp parse_t hashtbl in
-  Hashtbl.fold (fun _ req_content acc ->  (convert_sup1 parse_t.vars req_content) :: acc ) parse_t_with_only_bool.reqs [] 
+  (* hash table used to handle generated variables that replaces non boolean expressions *)
+  let generated_hashtbl = Hashtbl.create 200 in
+  (* hash table used to handle some requirements that needs additionnal inputs to be converted into SUP*)
+  let intermediated_hashtbl = Hashtbl.create 200 in
+  
+  let parse_t_with_only_bool = remove_non_bool_exp parse_t generated_hashtbl in
+  let tmp = Hashtbl.fold (fun req_id req_content acc ->  begin
+    try
+     (req_id, convert_sup1 parse_t.vars intermediated_hashtbl req_content) :: acc 
+    with Invalid_argument _ -> (Format.printf "WARNING : requirement with ID %s was not converted to SUP format@\n" req_id; acc)
+  end) parse_t_with_only_bool.reqs [] in 
+  let bool_variables = (List.of_seq (Hashtbl.to_seq_keys generated_hashtbl))@(List.of_seq (Hashtbl.to_seq_keys intermediated_hashtbl)) in
+  (bool_variables,SMap.of_list tmp)
  

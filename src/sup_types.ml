@@ -3,8 +3,6 @@ type event=  | Var of string (* xNNNNN *)
                 | Not of event (* "!" exp *)
                 | And of event * event (* exp "&&" exp *)
                 | Or of event * event (* exp "||" exp *)         
-                | Eq of event * event (* exp "==" exp *)
-                | NotEq of event * event (* exp "!=" exp *)
                 | Constant of bool
 
 type time = | Time of int (*used for tmin, tmax, lmin, lmax, amin and amax*)
