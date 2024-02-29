@@ -5,5 +5,5 @@ module SMap : Map.S with type key = string
 val of_req :  Parse.t ->  (string list * (Ast_types.req * Sup_types.sup_req_list) SMap.t)
 
 
-(* Takes a list of SUP and convert it into the selected format [fmt] *)
-val print : Format.formatter ->  Sup_types.sup_req_list -> bool  -> unit
+(* Takes a list of requirements and convert it into the SUP format in [fmt] *)
+val generate_sup_file : Format.formatter -> Parse.t -> unit

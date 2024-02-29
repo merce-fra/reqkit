@@ -180,7 +180,6 @@ let print_hold fmt h=
  ( match h with
   | Empty -> ()
   | Holds -> Format.fprintf fmt " holds "
-  | Holds_for_ever -> Format.fprintf fmt " holds for ever (trick for SUP conversion)"
   | Holds_afterward -> Format.fprintf fmt " holds afterward "
   | Previously_held -> Format.fprintf fmt " previously held "
   | Holds_for_at_least (e) -> Format.fprintf fmt " holds for at least "; print_exp  fmt e; Format.fprintf fmt " time units"

@@ -42,7 +42,6 @@ let hold_to_int h =
   | Holds_at_list_every (_) -> 28
   | Holds_and_succeded_by (_) -> 29
   | At_most (_) -> 30
-  | Holds_for_ever -> 31
 
 
 (** for a requirement this function 
@@ -82,7 +81,6 @@ let extract_vars_from_req req list_vars=
     | Empty
     | Holds
     | Holds_afterward
-    | Holds_for_ever
     | Previously_held -> (vars, nb_expr, (hold_to_int h)::list_op)
     | Holds_for_at_least (e)   
     | Holds_after_at_most (e)

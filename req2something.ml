@@ -35,13 +35,26 @@ let () =
           let fmt = Format.get_std_formatter () in 
           List.iteri (fun i p ->  ( Format.printf "##################################################################@.Construction #%d@." (i+1); 
                                     Src.Parse.pretty_print fmt p;
+                                    Src.Sup.generate_sup_file fmt p
+                                    (*let list_initial_bool_variables = Src.Parse.extract_bool_variables p.vars in
                                       let (variables,m) =  Src.Sup.of_req p  in
-                                      List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) variables;
                                       let l = (Src.Sup.SMap.to_list m) in 
                                       if (List.length l) > 0 then(
+                                        Format.fprintf fmt "MAX_PTRACE=20@\n";
+                                        List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) list_initial_bool_variables;
+                                        List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) variables;
                                         let (_,(_,sup_list)) = List.hd l in
-                                        Src.Sup.print fmt sup_list true)
-                                  )) typical_reqs;
+                                        Format.fprintf fmt "REQ_SET=[";
+                                        Src.Sup.print fmt sup_list true true;
+                                        Format.fprintf fmt "]@\n";
+                                        if (List.length variables ) > 0 then
+                                          begin
+                                            Format.fprintf fmt "COND_INIT = ["; 
+                                            List.iteri (fun i v -> ( (if i>0 then Format.fprintf fmt ","); Format.fprintf fmt "%s == False" v )) variables;
+                                            Format.fprintf fmt "]@\n"
+                                          end
+                                        )*)
+                                  ) ) typical_reqs;
 
           Format.printf "Success@."
         with Src.Parse.ParseException msg -> Format.printf "%s@." msg 
@@ -51,7 +64,8 @@ let () =
     try 
       let t =  (Src.Parse.of_file f) in 
       let fmt = Format.get_std_formatter() in
-      (* gather initial bool variables*)
+      Src.Sup.generate_sup_file fmt t
+      (*(* gather initial bool variables*)
       let list_initial_bool_variables = Src.Parse.extract_bool_variables t.vars in
       (* and generateed ones + SUP requirements*)
       let (generated_variables, sup_reqs) = Src.Sup.of_req t in
@@ -61,8 +75,16 @@ let () =
       List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) all_variables;
       (* print requirements *)
       Format.fprintf fmt "REQ_SET=[";
-      List.iteri (fun i  (_ ,(_,sup_list ) ) -> Src.Sup.print fmt sup_list (i=0)) ( Src.Sup.SMap.to_list sup_reqs);
-      Format.fprintf fmt "]@\n"
+      let l = ( Src.Sup.SMap.to_list sup_reqs) in
+      List.iteri (fun i  (_ ,(_,sup_list ) ) -> Src.Sup.print fmt sup_list (i=0) (i=((List.length l)-1))) l ;
+      Format.fprintf fmt "]@\n";
+      if (List.length generated_variables ) > 0 then
+        begin
+          Format.fprintf fmt "COND_INIT = ["; 
+          List.iteri (fun i v -> ( (if i>0 then Format.fprintf fmt ","); Format.fprintf fmt "%s == False" v )) generated_variables;
+          Format.fprintf fmt "]@\n"
+        end*)
+
     with Src.Parse.ParseException msg -> Format.printf "%s@." msg 
   end
   |_,_ -> Format.printf "%s@." usage

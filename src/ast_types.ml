@@ -47,7 +47,6 @@ type hold=
   | Holds_at_list_every of exp  (*holds at least every [exp] time units*) 
   | Holds_and_succeded_by of exp  (*holds and is succeeded by [exp]*) 
   | At_most of exp  (*at most [exp] time units*) 
-  | Holds_for_ever (*introduced by us*)
          
 type req =
   | Prop of exp * hold (* [exp] "holds" or [exp] "holds as well" *)
