@@ -234,7 +234,9 @@ let rec print_req fmt r =
   | If (r1, r2) ->   Format.fprintf fmt "if "; print_req fmt  r1;  carriage_return fmt ; Format.fprintf fmt ", then "; print_req fmt  r2;
   | After_at_most (r, e) -> print_req fmt  r; Format.fprintf fmt " after at most "; print_exp  fmt e; Format.fprintf fmt " time units"
   | Between (e1, e2, r) ->   Format.fprintf fmt "Between "; print_exp  fmt e1; Format.fprintf fmt " and "; print_exp  fmt e2; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r
-  | Toggles( e1, e2, h) ->  print_exp  fmt e1; Format.fprintf fmt " toggles "; print_exp  fmt e2; Format.fprintf fmt " "; print_hold fmt h; carriage_return fmt );
+  | Toggles( e1, e2, h) ->  print_exp  fmt e1; Format.fprintf fmt " toggles "; print_exp  fmt e2; Format.fprintf fmt " "; print_hold fmt h; carriage_return fmt 
+  | Next_step(r) -> print_req fmt  r );
+  
   close_box fmt
 
 (** print a requirement as a string *)

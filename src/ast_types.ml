@@ -60,6 +60,7 @@ type req =
   | After_at_most of req * exp (* [req] "after at most" [exp] "time units" *)
   | Between of exp *exp*req (* Between [exp] and [exp], [req]*)
   | Toggles of exp * exp * hold (* [exp] toggles [exp]  [hold] *)
+  | Next_step of req (* introduce in order to handle generated variables*)
 
 
 type req_with_id = | Req of string * req

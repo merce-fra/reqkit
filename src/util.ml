@@ -27,6 +27,7 @@ let req_to_int r =
   | After_until (_, _, _) -> 9
   | If (_, _) -> 10
   | Toggles(_,_,_) -> 11
+  | Next_step (_) -> 12
 
 (** converts a hold to integer *)
 let hold_to_int h =
@@ -89,7 +90,7 @@ let extract_vars_from_req req list_vars=
     | Holds_at_list_every (e)
     | Holds_and_succeded_by (e) -> aux_e (vars, nb_expr +1, (hold_to_int h)::list_op) e
     (*| Toggles_at_most (e1, e2) -> aux_e (aux_e (vars, nb_expr + 2, (hold_to_int h)::list_op) e2 ) e1*)
-    | At_most (e) -> aux_e  (vars, nb_expr +1, (hold_to_int h)::list_op) e
+    | At_most (e) -> aux_e  (vars, nb_expr +1, (hold_to_int h)::list_op) e    
 
   in
   let rec aux_r (vars, nb_expr, list_op) req = 
@@ -97,6 +98,7 @@ let extract_vars_from_req req list_vars=
     | Prop (e, h) -> aux_e (aux_h (vars, nb_expr+2, (req_to_int req)::list_op) h ) e
     | Globally( r) 
     | Always (r)
+    | Next_step (r)
     | Never (r) -> aux_r (vars, nb_expr +1, (req_to_int req)::list_op) r
     | Before (e, r)
     | After_at_most (r, e)
