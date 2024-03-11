@@ -87,10 +87,10 @@ let const_of_h vars ast : int =
 (** converts Ast_types requirements into SUP requirements. Due to the
     semantic differences, an Ast_types requirements may be expressed with 
     several SUPs *)
-let rec convert_sup1 vars intermediate_hashtbl req =
+let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req =
   let hold_after_one_tick = Ast_types.Holds_after_at_most(Ast_types.Real_const(0.1)) in
 
-  let convert_sup_intermediate_variable req_var generated_var =
+  let convert_sup_intermediate_variable intermediate_hashtbl req_var generated_var =
     (*if !req_var && !generated_var at t then at t+1 !generated_var *)
     let e1_ = event_of_exp (Ast_types.And(Ast_types.Not(req_var),Ast_types.Not(generated_var))) in
     let t = {tse=e1_; tc=e1_; tee=e1_; tmin = Time(0); tmax= Time(0)} in
@@ -101,7 +101,7 @@ let rec convert_sup1 vars intermediate_hashtbl req =
     res @ [{t=t;d=d;a=a}] 
   in
 
-  let convert_sup_toggle_intermediate_variable req_var_start_toggle req_var_end_toggle generated_var =
+  let convert_sup_toggle_intermediate_variable intermediate_hashtbl req_var_start_toggle req_var_end_toggle generated_var =
     (*if !req_var_start_toggle && !req_var_end_toggle && !generated_var at t then at t+1 !generated_var *)
     let e1_ = event_of_exp (Ast_types.And(Ast_types.And(Ast_types.Not(req_var_start_toggle),Ast_types.Not(req_var_end_toggle)),Ast_types.Not(generated_var))) in
     let t1 = {tse=e1_; tc=e1_; tee=e1_; tmin = Time(0); tmax= Time(0)} in
@@ -126,8 +126,8 @@ let rec convert_sup1 vars intermediate_hashtbl req =
     let var_name = "intermediate"^(string_of_int i) in
     Hashtbl.add intermediate_hashtbl var_name "";
     match req_var with
-    | first::[] -> (Ast_types.Var(var_name), convert_sup_intermediate_variable first (Ast_types.Var(var_name))) 
-    | first::second::[] -> (Ast_types.Var(var_name), convert_sup_toggle_intermediate_variable first second (Ast_types.Var(var_name))) 
+    | first::[] -> (Ast_types.Var(var_name), convert_sup_intermediate_variable intermediate_hashtbl first (Ast_types.Var(var_name))) 
+    | first::second::[] -> (Ast_types.Var(var_name), convert_sup_toggle_intermediate_variable  intermediate_hashtbl first second (Ast_types.Var(var_name))) 
     | _ -> assert false
   in 
 
@@ -256,11 +256,11 @@ let rec convert_sup1 vars intermediate_hashtbl req =
               Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e3 , intermediate_e1_e2), Ast_types.Holds),  r)))  
           | Ast_types.Prop(e3,Ast_types.Holds) ->
               Ast_types.Globally(Ast_types.Always( Ast_types.Prop( Ast_types.And(e3 , intermediate_e1_e2), Ast_types.Holds)))  
-          | _ -> raise (Invalid_argument "") ) in 
+          | _ -> (raise (Invalid_argument "") ) )in 
         let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 in
         req_intermediate_e1_e2 @ res3 
           end
-    |  _ -> raise (Invalid_argument "")   
+    |  _ -> (raise (Invalid_argument "")  )
   in
 
   let convert_before_always e1 vars intermediate_hashtbl req =
@@ -295,16 +295,24 @@ let rec convert_sup1 vars intermediate_hashtbl req =
     | _-> raise (Invalid_argument "") in
    
   try 
-    ( req, 
+    (* need to use a local hashtable because when an intermediate variable is generated, it is
+       automatically added to the hashtable. However if the SUP is eventually not handled by
+       the tool, it generates an intermediate variable is SMV file that is never used and
+       the python tool bug. So if the SUP is handled, the new entries of the local hashtable are 
+       copied into the global one *)
+    let current_intermediate_hashtable = Hashtbl.copy intermediate_hashtbl in 
+    let res = (
       match req with
-      | Ast_types.Globally( Ast_types.Always( r) ) -> convert_globally_always vars intermediate_hashtbl r
+      | Ast_types.Globally( Ast_types.Always( r) ) -> convert_globally_always vars current_intermediate_hashtable r
       | Ast_types.Globally( Ast_types.Never(r)) -> convert_globally_never r
-      | Ast_types.After(e1, Ast_types.Always( r)) -> convert_after_always  e1 vars intermediate_hashtbl r
-      | Ast_types.After_until( e1, e2, Ast_types.Always(r)) -> convert_after_until_always e1 e2 vars intermediate_hashtbl r
-      | Ast_types.Before(e1, Ast_types.Always(r)) -> convert_before_always e1 vars intermediate_hashtbl r
-      | Ast_types.Between(e1, e2, Ast_types.Always(r)) -> convert_between_always e1 e2 vars intermediate_hashtbl r
+      | Ast_types.After(e1, Ast_types.Always( r)) -> convert_after_always  e1 vars current_intermediate_hashtable r
+      | Ast_types.After_until( e1, e2, Ast_types.Always(r)) -> convert_after_until_always e1 e2 vars current_intermediate_hashtable r
+      | Ast_types.Before(e1, Ast_types.Always(r)) -> convert_before_always e1 vars current_intermediate_hashtable r
+      | Ast_types.Between(e1, e2, Ast_types.Always(r)) -> convert_between_always e1 e2 vars current_intermediate_hashtable r
       | _-> raise (Invalid_argument ("This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
-    )
+    ) in 
+        Hashtbl.iter (fun key value -> if (not (Hashtbl.mem intermediate_hashtbl key)) then Hashtbl.add intermediate_hashtbl key value) current_intermediate_hashtable;
+       (req,res)
   with Invalid_argument _ -> raise (Invalid_argument ("This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
 
 (** replace in the hash table the non boolean expressions *)
@@ -399,16 +407,17 @@ let of_req parse_t  =
      (req_id, convert_sup1 parse_t.vars intermediated_hashtbl req_content) :: acc 
     with Invalid_argument _ -> (Format.fprintf fmt "WARNING : requirement with ID %s was not converted to SUP format@\n" req_id; acc)
   end) parse_t_with_only_bool.reqs [] in 
-  let bool_variables = (List.fold_left (fun acc e -> (Parse.print_exp_as_string e)::acc) [] (List.of_seq (Hashtbl.to_seq_values generated_hashtbl)))@(List.of_seq (Hashtbl.to_seq_keys intermediated_hashtbl)) in
-  (bool_variables,SMap.of_list tmp)
+  let bool_generated_variables = (List.fold_left (fun acc e -> (Parse.print_exp_as_string e)::acc) [] (List.of_seq (Hashtbl.to_seq_values generated_hashtbl))) in
+  let bool_intermediate_variables = (List.of_seq (Hashtbl.to_seq_keys intermediated_hashtbl)) in
+  (bool_generated_variables,bool_intermediate_variables,SMap.of_list tmp)
  
 
 let generate_sup_file fmt (t:Parse.t) =
   let list_initial_bool_variables = Parse.extract_bool_variables t.vars in
   (* and generateed ones + SUP requirements*)
-  let (generated_variables, sup_reqs) = of_req t in
+  let (generated_variables, intermediate_variables, sup_reqs) = of_req t in
   (* print variables*)
-  let all_variables = generated_variables@list_initial_bool_variables in
+  let all_variables = generated_variables@intermediate_variables@list_initial_bool_variables in
   Format.fprintf fmt "from z3 import *@\n";
   Format.fprintf fmt "ALPHA = 30@\n";
   Format.fprintf fmt "BETA = 10@\n";
@@ -420,5 +429,5 @@ let generate_sup_file fmt (t:Parse.t) =
   List.iteri (fun i  (_ ,(_,sup_list ) ) -> print fmt sup_list (i=0) (i=((List.length l)-1))) l ;
   Format.fprintf fmt "]@\n"; 
   Format.fprintf fmt "COND_INIT = ["; 
-  List.iteri (fun i v -> ( (if i>0 then Format.fprintf fmt ","); Format.fprintf fmt "%s == False" v )) generated_variables;
+  List.iteri (fun i v -> ( (if i>0 then Format.fprintf fmt ","); Format.fprintf fmt "%s == False" v )) intermediate_variables;
   Format.fprintf fmt "]@\n"

@@ -273,6 +273,8 @@ let extract_bool_variables vars =
       match d with
       | Ast_types.Constant(n,Const_bool(_)) -> n::acc
       | Ast_types.Input(n,Ast_types.Bool) -> n::acc
+      | Ast_types.Output(n,Ast_types.Bool) -> n::acc
+      | Ast_types.Internal(n,Ast_types.Bool) -> n::acc
       | _ -> acc
     end)  vars  []
   
