@@ -46,7 +46,7 @@ if [ ! -d $OUTPUT_FILES_DIR ]; then
     mkdir -p $OUTPUT_FILES_DIR
 fi
 
-REQ_VERIFICATION_INSTALL_DIR=${REQ_VERIFICATION_INSTALL_DIR:-"${HOME}/req_verification"}
+REQ_VERIFICATION_INSTALL_DIR=${REQ_VERIFICATION_INSTALL_DIR:-"${REQ_2_SOMETHING_PROJECT_DIR}/3rd_party/req_verification"}
 
 if [[ $# -eq 0 ]]; then
     for f in ${INPUT_FILES}

@@ -3,6 +3,7 @@ let () =
   
   let file = ref None in
   let dir = ref None in 
+  let output_fmt = ref "nusmv" in
   let simple_exp = ref false in
   let fill s =
     let l = (15-(String.length s)) in
@@ -22,11 +23,19 @@ let () =
     ("--simple-exp",
       Arg.Bool (fun b -> simple_exp := b),
       (fill "simple_exp")^"When used with --input-dir keep the most simple or complex expressions for the requirements");  
+    ("--output-fmt",
+      Arg.String (fun s -> output_fmt := s),
+      (fill "output-fmt")^"Specify the generated file format : nusmv or vmtlib");  
   ] in 
   Arg.parse speclist print_endline usage;
 
-  match (!file, !dir) with 
-  |None, Some d ->    
+  (match !output_fmt with 
+  | "nusmv" 
+  | "vmtlib"  -> ()
+  | _         -> Format.printf "Output format not supported : %s@." !output_fmt);
+
+  match (!file, !dir, !output_fmt) with 
+  |None, Some d, _ ->    
     begin
         try
           let list_req_files =  Array.to_list (Sys.readdir d) in          
@@ -59,12 +68,16 @@ let () =
           Format.printf "Success@."
         with Src.Parse.ParseException msg -> Format.printf "%s@." msg 
     end
-  |Some f, None -> 
+  |Some f, None, out_fmt -> 
     begin
     try 
       let t =  (Src.Parse.of_file f) in 
       let fmt = Format.get_std_formatter() in
-      Src.Sup.generate_sup_file fmt t
+      (match out_fmt with
+      | "nusmv"   -> Src.Sup.generate_sup_file fmt t
+      | "vmtlib"  -> Src.Vmt.generate_vmt_file fmt t
+      | _         -> ());
+
       (*(* gather initial bool variables*)
       let list_initial_bool_variables = Src.Parse.extract_bool_variables t.vars in
       (* and generateed ones + SUP requirements*)
@@ -87,4 +100,4 @@ let () =
 
     with Src.Parse.ParseException msg -> Format.printf "%s@." msg 
   end
-  |_,_ -> Format.printf "%s@." usage
+  | _,_,_ -> Format.printf "%s@." usage

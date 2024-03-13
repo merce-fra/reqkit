@@ -278,3 +278,6 @@ let extract_bool_variables vars =
       | _ -> acc
     end)  vars  []
   
+
+let print_vars parse_t=
+    Hashtbl.iter (fun key value -> Format.printf "key : %s => declaration : %s" key (print_declaration_as_string value)) parse_t.vars

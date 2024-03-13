@@ -4,6 +4,7 @@ let time_to_int t =
   match  t with
   | Time(v) -> v
 
+
 (** prints en event *)
 let rec print_event fmt e =
   match e with 
@@ -12,6 +13,7 @@ let rec print_event fmt e =
   | Or (e1,e2) -> Format.fprintf fmt "Or(" ; print_event fmt e1 ; Format.fprintf fmt " , " ; print_event fmt e2 ; Format.fprintf fmt ")"
   | And (e1,e2) -> Format.fprintf fmt "And(" ; print_event fmt e1 ; Format.fprintf fmt " , " ; print_event fmt e2 ; Format.fprintf fmt ")"
   | Constant(b) -> if b then  Format.fprintf fmt "True" else  Format.fprintf fmt "False" 
+  | _ -> assert false (*this shall not happen as an exception is raised when matching un handled variants when creating the event*)
   
 (** prints a trigger *)
 let print_trigger fmt t =
@@ -40,15 +42,6 @@ let print fmt (sup : sup_req) first =
   print_action fmt sup.a;
   Format.fprintf fmt "]"
 
-(** converts a requirements to SUP*)
-let rec event_of_exp ast = 
-  match ast with
-  | Ast_types.Not( e ) -> Not (event_of_exp e)
-  | Ast_types.And (e1, e2) -> And (event_of_exp e1, event_of_exp e2)
-  | Ast_types.Or (e1, e2) -> Or (event_of_exp e1, event_of_exp e2)
-  | Ast_types.Bool_const(b)-> Constant(b)
-  | Ast_types.Var(s) -> Var(s)
-  | _ -> raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_exp_as_string ast)))
 
 (** check if a variable of name [s] is in the variable declaration hashtable.
     If so and if constant, the value is returned with a 10 multiplicator for SUP Time infos *)
@@ -83,11 +76,10 @@ let const_of_h vars ast : int =
 
 
 
-  
 (** converts Ast_types requirements into SUP requirements. Due to the
     semantic differences, an Ast_types requirements may be expressed with 
     several SUPs *)
-let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req =
+let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req  event_of_exp =
   let hold_after_one_tick = Ast_types.Holds_after_at_most(Ast_types.Real_const(0.1)) in
 
   let convert_sup_intermediate_variable intermediate_hashtbl req_var generated_var =
@@ -97,7 +89,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     let d = {lmin=Time(1); lmax=Time(1)} in
     let a = {ase=Constant(true); ac=Constant(true); aee=event_of_exp(Ast_types.Not(generated_var)); amin=Time(0); amax=Time(0)} in
     let new_req = Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop(req_var, Ast_types.Holds), Ast_types.Prop(generated_var, Ast_types.Holds_afterward)))) in      
-    let (_ , res)   = convert_sup1 vars intermediate_hashtbl new_req in
+    let (_ , res)   = convert_sup1 vars intermediate_hashtbl new_req event_of_exp in
     res @ [{t=t;d=d;a=a}] 
   in
 
@@ -116,8 +108,8 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     (*creates the requirements related to the toggle itself*)
     let  new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(req_var_start_toggle,Ast_types.Not(generated_var)), Ast_types.Holds),Ast_types.Toggles(req_var_start_toggle, generated_var, Ast_types.Holds)))) in
     let  new_req2 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(req_var_end_toggle,generated_var), Ast_types.Holds),Ast_types.Toggles(req_var_end_toggle, generated_var, Ast_types.Holds)))) in
-    let (_ , res1)   = convert_sup1 vars intermediate_hashtbl new_req1 in
-    let (_ , res2)   = convert_sup1 vars intermediate_hashtbl new_req2 in
+    let (_ , res1)   = convert_sup1 vars intermediate_hashtbl new_req1 event_of_exp in
+    let (_ , res2)   = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
     res1 @ res2 @ [{t=t1;d=d;a=a1};{t=t2;d=d;a=a2}]
   in
 
@@ -186,7 +178,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
           ( 
           let (intermediate_e2, reqs_intermediate_e2) = get_intermediate_var intermediate_hashtbl [e2] in
           let new_req2 = Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop(e1, Ast_types.Holds), Ast_types.Prop(intermediate_e2, hold_after_one_tick)))) in
-          let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 in
+          let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
           reqs_intermediate_e2 @ res2 
            )
         | _ -> raise (Invalid_argument "")
@@ -217,7 +209,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         let (intermediate_e3, reqs_intermediate_e3) = get_intermediate_var intermediate_hashtbl [e3] in
         let (intermediate_e2, reqs_intermediate_e2) = get_intermediate_var intermediate_hashtbl [e2] in       
         let new_req3 = Ast_types.Globally(Ast_types.Always(Ast_types.Prop( Ast_types.And(Ast_types.Not(intermediate_e2),And(e1, intermediate_e3)), Ast_types.Holds))) in
-        let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 in
+        let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
         reqs_intermediate_e2 @ reqs_intermediate_e3 @ res3
       )
   | _ -> raise (Invalid_argument "") in
@@ -226,7 +218,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     match req with
     | Ast_types.Prop(e1, Holds) -> 
       let new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.Prop(Ast_types.Not(e1),Ast_types.Holds))) in
-      let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 in
+      let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 event_of_exp in
       res1
     | _-> raise (Invalid_argument "") in
 
@@ -240,10 +232,23 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
           Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e2 , intermediate_e1), Ast_types.Holds_for_at_least(e3)),r)))  
       | _-> raise (Invalid_argument "")
     ) in 
-    let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 in
+    let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
     reqs_intermediate_e1 @ res2 in
 
-
+    let convert_after_until_never e1 e2 vars intermediate_hashtbl req = 
+      match req with 
+      | Ast_types.Prop(_,Ast_types.Holds) -> begin
+          let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
+          let  new_req3 = (
+            match req with 
+            | Ast_types.Prop(e3,Ast_types.Holds) ->
+                Ast_types.Globally(Ast_types.Never( Ast_types.Prop( Ast_types.And(e3 , intermediate_e1_e2), Ast_types.Holds)))  
+            | _ -> (raise (Invalid_argument "") ) )in 
+          let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
+          req_intermediate_e1_e2 @ res3 
+            end
+      |  _ -> (raise (Invalid_argument "")  )
+    in
     
   let convert_after_until_always e1 e2 vars intermediate_hashtbl req = 
     match req with 
@@ -256,11 +261,11 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
               Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e3 , intermediate_e1_e2), Ast_types.Holds),  r)))  
           | Ast_types.Prop(e3,Ast_types.Holds) ->
               Ast_types.Globally(Ast_types.Always( Ast_types.Prop( Ast_types.And(e3 , intermediate_e1_e2), Ast_types.Holds)))  
-          | _ -> (raise (Invalid_argument "") ) )in 
-        let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 in
+          | _ -> (raise (Invalid_argument "2") ) )in 
+        let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
         req_intermediate_e1_e2 @ res3 
           end
-    |  _ -> (raise (Invalid_argument "")  )
+    |  _ -> (raise (Invalid_argument "1")  )
   in
 
   let convert_before_always e1 vars intermediate_hashtbl req =
@@ -271,7 +276,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     | Ast_types.If( Ast_types.Prop(e2,Ast_types.Holds),r) ->
         Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(And(e2,Not(intermediate_e1)),Ast_types.Holds),r)))
     |_ -> raise (Invalid_argument "") )in
-    let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 in
+    let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
     reqs_intermediate_e1 @ res2 in
 
   let convert_between_always e1 e2 vars intermediate_hashtbl req =
@@ -280,7 +285,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
       let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
       let (intermediate_e3_e2, req_intermediate_e3_e2) = get_intermediate_var intermediate_hashtbl [e3 ;e2] in
       let new_req3 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(e2, Ast_types.Holds), Ast_types.Prop(Ast_types.And(intermediate_e1_e2, intermediate_e3_e2), Ast_types.Holds)))) in
-      let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 in
+      let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
       req_intermediate_e1_e2 @ res3 @ req_intermediate_e3_e2 )
     (*|  Ast_types.If(Ast_types.Prop(e3,Ast_types.Holds), r) -> (
       let (intermediate_e3_e2, req_intermediate_e3_e2) = get_intermediate_var intermediate_hashtbl [e3 ;e2] in
@@ -301,12 +306,14 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
        the python tool bug. So if the SUP is handled, the new entries of the local hashtable are 
        copied into the global one *)
     let current_intermediate_hashtable = Hashtbl.copy intermediate_hashtbl in 
+    Format.printf "Treating %s @." (Parse.print_req_as_string req);
     let res = (
       match req with
       | Ast_types.Globally( Ast_types.Always( r) ) -> convert_globally_always vars current_intermediate_hashtable r
       | Ast_types.Globally( Ast_types.Never(r)) -> convert_globally_never r
       | Ast_types.After(e1, Ast_types.Always( r)) -> convert_after_always  e1 vars current_intermediate_hashtable r
       | Ast_types.After_until( e1, e2, Ast_types.Always(r)) -> convert_after_until_always e1 e2 vars current_intermediate_hashtable r
+      | Ast_types.After_until( e1, e2, Ast_types.Never(r)) -> convert_after_until_never e1 e2 vars current_intermediate_hashtable r
       | Ast_types.Before(e1, Ast_types.Always(r)) -> convert_before_always e1 vars current_intermediate_hashtable r
       | Ast_types.Between(e1, e2, Ast_types.Always(r)) -> convert_between_always e1 e2 vars current_intermediate_hashtable r
       | _-> raise (Invalid_argument ("This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
@@ -390,9 +397,23 @@ let print fmt sup_list first last =
   List.iteri (fun i sup -> ( print fmt sup (i = 0))) sup_list;
   if not last then Format.fprintf fmt "@\n"
   
-
-
 module SMap = Map.Make(String)
+
+(** converts an AST_types requirements list into a SUP requirement list*)
+let of_req_with_non_bool parse_t = 
+  let open Parse in
+  Parse.print_vars parse_t;
+  (* hash table used to handle some requirements that needs additionnal inputs to be converted into SUP*)
+  let intermediated_hashtbl = Hashtbl.create 200 in
+  let fmt = Format.get_err_formatter() in 
+  let tmp = Hashtbl.fold (fun req_id req_content acc ->  begin
+    try
+     (req_id, convert_sup1 parse_t.vars intermediated_hashtbl req_content Ast_convert.vmt_event_of_exp) :: acc 
+    with Invalid_argument msg -> (Format.fprintf fmt "WARNING : requirement with ID %s was not converted : %s @\n" req_id msg; acc)
+  end) parse_t.reqs [] in 
+  let bool_intermediate_variables = (List.of_seq (Hashtbl.to_seq_keys intermediated_hashtbl)) in
+  (bool_intermediate_variables,SMap.of_list tmp)
+
 
 (** converts an AST_types requirements list into a SUP requirement list*)
 let of_req parse_t  =
@@ -404,15 +425,15 @@ let of_req parse_t  =
   let parse_t_with_only_bool = remove_non_bool_exp parse_t generated_hashtbl in
   let tmp = Hashtbl.fold (fun req_id req_content acc ->  begin
     try
-     (req_id, convert_sup1 parse_t.vars intermediated_hashtbl req_content) :: acc 
-    with Invalid_argument _ -> (Format.fprintf fmt "WARNING : requirement with ID %s was not converted to SUP format@\n" req_id; acc)
+     (req_id, convert_sup1 parse_t.vars intermediated_hashtbl req_content Ast_convert.sup_event_of_exp) :: acc 
+    with Invalid_argument msg -> (Format.fprintf fmt "WARNING : requirement with ID %s was not converted : %s @\n" req_id msg; acc)
   end) parse_t_with_only_bool.reqs [] in 
   let bool_generated_variables = (List.fold_left (fun acc e -> (Parse.print_exp_as_string e)::acc) [] (List.of_seq (Hashtbl.to_seq_values generated_hashtbl))) in
   let bool_intermediate_variables = (List.of_seq (Hashtbl.to_seq_keys intermediated_hashtbl)) in
   (bool_generated_variables,bool_intermediate_variables,SMap.of_list tmp)
  
 
-let generate_sup_file fmt (t:Parse.t) =
+let generate_sup_file fmt (t:Parse.t)  =
   let list_initial_bool_variables = Parse.extract_bool_variables t.vars in
   (* and generateed ones + SUP requirements*)
   let (generated_variables, intermediate_variables, sup_reqs) = of_req t in
