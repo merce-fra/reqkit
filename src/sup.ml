@@ -306,7 +306,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
        the python tool bug. So if the SUP is handled, the new entries of the local hashtable are 
        copied into the global one *)
     let current_intermediate_hashtable = Hashtbl.copy intermediate_hashtbl in 
-    Format.printf "Treating %s @." (Parse.print_req_as_string req);
+    (*Format.printf "Treating %s @." (Parse.print_req_as_string req);*)
     let res = (
       match req with
       | Ast_types.Globally( Ast_types.Always( r) ) -> convert_globally_always vars current_intermediate_hashtable r
@@ -402,7 +402,7 @@ module SMap = Map.Make(String)
 (** converts an AST_types requirements list into a SUP requirement list*)
 let of_req_with_non_bool parse_t = 
   let open Parse in
-  Parse.print_vars parse_t;
+  (*Parse.print_vars parse_t;*)
   (* hash table used to handle some requirements that needs additionnal inputs to be converted into SUP*)
   let intermediated_hashtbl = Hashtbl.create 200 in
   let fmt = Format.get_err_formatter() in 

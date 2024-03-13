@@ -1,11 +1,11 @@
-(*let generate_counter fmt =
+let generate_counter fmt =
   Format.fprintf fmt ";this is the global time counter@\n";
   Format.fprintf fmt "(declare-fun t () Int)@\n";
   Format.fprintf fmt "(declare-fun tn () Int)@\n";
   Format.fprintf fmt "(define-fun .sv0 () Int (! t :next tn))@\n";
   Format.fprintf fmt "(define-fun .init () Bool (! (= t 1) :init true))@\n";
   Format.fprintf fmt "(define-fun .trans () Bool (! (= tn (+ t 1)) :trans true))@\n";
-  Format.fprintf fmt "(define-fun .p0 () Bool (! (> t 0) :invar-property 0))@\n"*)
+  Format.fprintf fmt "(define-fun .p0 () Bool (! (> t 0) :invar-property 0))@\n"
 
   (** defines the states list *)
 let generate_state fmt =
@@ -180,7 +180,7 @@ let generate_var_decl fmt decl =
   |Ast_types.Internal (name, Int) -> Format.fprintf fmt "(declare-fun %s () Int)@\n" name
   |Ast_types.Input (name, Real) 
   |Ast_types.Output (name, Real) 
-  |Ast_types.Internal (name, Real) -> Format.fprintf fmt "(declare-fun %s () Real)" name
+  |Ast_types.Internal (name, Real) -> Format.fprintf fmt "(declare-fun %s () Real)@\n" name
   
 (** generates the declaration of an intermediate variable and initialized it to false *)
 let generate_intermediate_var_decl fmt (var_name :string)=
@@ -255,7 +255,7 @@ let generate_requirements fmt (t:Parse.t) =
 
 let generate_vmt_file fmt t=
   generate_state fmt;
-  (*generate_counter fmt;*)
+  generate_counter fmt;
   generate_requirements fmt t;
   Format.fprintf fmt "@\n";
   Format.fprintf fmt "(check-sat)@\n"

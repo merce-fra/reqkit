@@ -30,4 +30,4 @@ val print_req_as_string : Ast_types.req -> string (* prints an ast requirement a
  
 val print_declaration_as_string : Ast_types.declaration -> string (* prints an ast declaration as a string *)
 
-val print_vars : t -> unit
+(*val print_vars : t -> unit*)

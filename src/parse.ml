@@ -137,13 +137,13 @@ let print_const_value fmt v =
 let print_type fmt t =
   match t with 
   | Bool  -> Format.fprintf fmt "bool"
-  | Int  -> Format.fprintf fmt  "integer" 
+  | Int  -> Format.fprintf fmt  "int" 
   | Real  -> Format.fprintf fmt "real" 
 
 (** print a declaration *)
 let print_declaration fmt d = 
   match d with 
-  |Constant (name, t) -> Format.fprintf fmt "Constant\t%s of value " name; print_const_value fmt t;  Format.fprintf fmt "@."
+  |Constant (name, t) -> Format.fprintf fmt "CONST\t%s IS " name; print_const_value fmt t;  Format.fprintf fmt "@."
   |Input (name, t) -> Format.fprintf fmt "Input\t\t%s IS " name ; print_type fmt t;  Format.fprintf fmt "@."
   |Output (name, t) -> Format.fprintf fmt "Output\t\t%s IS " name ; print_type fmt t;  Format.fprintf fmt "@."
   |Internal (name, t) -> Format.fprintf fmt "Internal\t%s IS " name ; print_type fmt t;  Format.fprintf fmt "@."
@@ -279,5 +279,5 @@ let extract_bool_variables vars =
     end)  vars  []
   
 
-let print_vars parse_t=
-    Hashtbl.iter (fun key value -> Format.printf "key : %s => declaration : %s" key (print_declaration_as_string value)) parse_t.vars
+(*let print_vars parse_t=
+    Hashtbl.iter (fun key value -> Format.printf "key : %s => declaration : %s" key (print_declaration_as_string value)) parse_t.vars*)

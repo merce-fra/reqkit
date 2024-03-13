@@ -11,6 +11,8 @@ function process_file {
     #generation of the vmtlib file 
     SUP_FILE_VMT=${OUTPUT_FILES_DIR}/${BASENAME_NO_EXT}".vmt"
     ./exec --input ${f} --output-fmt vmtlib > ${SUP_FILE_VMT}
+   
+    z3 ${SUP_FILE_VMT}
     echo "Done"	
 }
 

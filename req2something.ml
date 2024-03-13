@@ -35,7 +35,7 @@ let () =
   | _         -> Format.printf "Output format not supported : %s@." !output_fmt);
 
   match (!file, !dir, !output_fmt) with 
-  |None, Some d, _ ->    
+  |None, Some d, out_fmt ->    
     begin
         try
           let list_req_files =  Array.to_list (Sys.readdir d) in          
@@ -44,8 +44,10 @@ let () =
           let fmt = Format.get_std_formatter () in 
           List.iteri (fun i p ->  ( Format.printf "##################################################################@.Construction #%d@." (i+1); 
                                     Src.Parse.pretty_print fmt p;
-                                    Src.Sup.generate_sup_file fmt p
-                                    (*let list_initial_bool_variables = Src.Parse.extract_bool_variables p.vars in
+                                    (match out_fmt with
+                                    | "nusmv"   -> Src.Sup.generate_sup_file fmt p
+                                    | "vmtlib"  -> Src.Vmt.generate_vmt_file fmt p
+                                    | _         -> ());                                    (*let list_initial_bool_variables = Src.Parse.extract_bool_variables p.vars in
                                       let (variables,m) =  Src.Sup.of_req p  in
                                       let l = (Src.Sup.SMap.to_list m) in 
                                       if (List.length l) > 0 then(
