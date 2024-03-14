@@ -1,3 +1,4 @@
+(** time counter that is used for initialization*)
 let generate_counter fmt =
   Format.fprintf fmt ";this is the global time counter@\n";
   Format.fprintf fmt "(declare-fun t () Int)@\n";
@@ -7,7 +8,7 @@ let generate_counter fmt =
   Format.fprintf fmt "(define-fun .trans () Bool (! (= tn (+ t 1)) :trans true))@\n";
   Format.fprintf fmt "(define-fun .p0 () Bool (! (> t 0) :invar-property 0))@\n"
 
-  (** defines the states list *)
+(** defines the states list *)
 let generate_state fmt =
   Format.fprintf fmt ";this is the states for SUP@\n";
   Format.fprintf fmt "(define-fun IDLE () Int 0)@\n";
@@ -16,12 +17,12 @@ let generate_state fmt =
   Format.fprintf fmt "(define-fun ACTION () Int 3)@\n";
   Format.fprintf fmt "(define-fun ERR () Int 4)@\n"
 
-(* convert times to string, for now only integer time units *)
+(** convert times to string, for now only integer time units *)
 let time_to_string t =
   match  t with
   | Sup_types.Time(v) -> string_of_int v
   
-(* current unique id *)
+(** current invariant unique id *)
 let invariant_index = ref 0
 
 (** generates an invariant with a unique id *)
