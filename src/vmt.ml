@@ -41,9 +41,9 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
   let tmax_name = "tmax_"^req_name^"_"^(string_of_int sup_index) in
   let lmin_name = "lmin_"^req_name^"_"^(string_of_int sup_index) in
   let lmax_name = "lmax_"^req_name^"_"^(string_of_int sup_index) in
-  let ase_name = "tse_"^req_name^"_"^(string_of_int sup_index) in
-  let aee_name = "tee_"^req_name^"_"^(string_of_int sup_index) in
-  let ac_name = "tc_"^req_name^"_"^(string_of_int sup_index) in
+  let ase_name = "ase_"^req_name^"_"^(string_of_int sup_index) in
+  let aee_name = "aee_"^req_name^"_"^(string_of_int sup_index) in
+  let ac_name = "ac_"^req_name^"_"^(string_of_int sup_index) in
   let amin_name = "amin_"^req_name^"_"^(string_of_int sup_index) in
   let amax_name = "amax_"^req_name^"_"^(string_of_int sup_index) in
   
@@ -68,6 +68,9 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
   Format.fprintf fmt "@\n";
 
   Format.fprintf fmt ";these are the function to explicit SUP time counter initial value and transition@\n";
+  Format.fprintf fmt ";for counter and state, transition resulting in -1 shall not happen (this is an error in the state machine transcription in vmtlib)@\n";
+  Format.fprintf fmt ";for counter, transition resulting in -ERR means there is a requirement that is not satisfied @\n";
+  Format.fprintf fmt ";for state, transition resulting in ERR means there is a requirement that is not satisfied @\n";
   Format.fprintf fmt "(define-fun .%s_sv0 () Int (!  %s :next %s_n))@\n" counter_name counter_name counter_name;
   Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s 0) :init true))@\n" counter_name counter_name;
   let counter_trans = "(define-fun ."^counter_name^"_trans () Bool (! (= "^counter_name^"_n 
@@ -87,7 +90,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
                             )
                             (ite (= "^state_name^"  DELAY)
                               (ite (and (not "^ase_name^") (>= "^counter_name^" "^lmax_name^" )) 
-                                ERR
+                                (- ERR)
                                 (ite (and (< "^counter_name^" "^lmax_name^" ) (or (not "^ase_name^" )(< "^counter_name^" "^lmin_name^")))
                                     (+ "^counter_name^" 1)
                                     (ite (and "^ase_name^" (<= "^lmin_name^" "^counter_name^") (<= "^counter_name^" "^lmax_name^" ))
@@ -100,7 +103,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
                                 (ite (and "^aee_name^" (<= "^amin_name^"  "^counter_name^") (<= "^counter_name^" "^amax_name^" ))
                                     0
                                     (ite (or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") (< "^counter_name^" "^amin_name^")) (and (not "^aee_name^") (>= "^counter_name^" "^amax_name^")) (> "^counter_name^" "^amax_name^"))
-                                      ERR
+                                      (- ERR)
                                       (ite (and "^ac_name^" (< "^counter_name^" "^amax_name^") (or (not "^aee_name^") (< "^counter_name^" "^amin_name^")))
                                             (+ "^counter_name^" 1)
                                             (- 1)
@@ -164,7 +167,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
                         )
                       ) :trans true))" in
   Format.fprintf fmt "%s@\n" state_trans;
-  generate_invariant fmt ("(define-fun ."^state_name^"_p0 () Bool (! (and (>= "^state_name^" 0)  (< "^state_name^" ERR)) ")  "))" ;
+  generate_invariant fmt ("(define-fun ."^state_name^"_p0 () Bool (! (and (>= "^state_name^" IDLE)  (< "^state_name^" ERR)) ")  "))" ;
   Format.fprintf fmt "\n"
 
 (** generates the declaration of variables used in the requirements *)
@@ -186,7 +189,7 @@ let generate_var_decl fmt decl =
 (** generates the declaration of an intermediate variable and initialized it to false *)
 let generate_intermediate_var_decl fmt (var_name :string)=
   Format.fprintf fmt "(declare-fun %s () Bool)@\n" var_name;
-  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= t 1) :init false))@\n" var_name
+  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s false) :init true))@\n" var_name var_name
 
 (** generates the content of the event *)
 let rec generate_event_content fmt event =

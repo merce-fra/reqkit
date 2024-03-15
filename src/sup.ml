@@ -154,7 +154,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         | Ast_types.Prop(e2, Holds) ->
               [{t=t;d=d0;a={ase=(event_of_exp e2); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(0); amax= Time(0)}}]
         | Ast_types.Prop(e2, Holds_afterward) ->
-              [{t=t;d=d1;a={ase=(event_of_exp e2); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(-1); amax= Time(-1)}}]
+              [{t=t;d=d1;a={ase=(event_of_exp e2); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(0); amax= Time(0)}}]
         | Ast_types.Toggles(e2, e3, Ast_types.At_most(h))->
             begin
               let t1 = And(event_of_exp e1, And(event_of_exp e2, event_of_exp e3)) in
@@ -208,7 +208,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         ( let tt = const_of_h vars (Ast_types.Holds_for_at_least(e2)) in 
           [{t={tse=(event_of_exp e1); tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(tt); tmax= Time(tt)}; 
               d={lmin=Time(1); lmax= Time(1)};
-              a={ase=(event_of_exp e3); ac=(event_of_exp e3);aee=(event_of_exp e3); amin = Time(-1); amax= Time(-1)}
+              a={ase=(event_of_exp e3); ac=(event_of_exp e3);aee=(event_of_exp e3); amin = Time(0); amax= Time(0)}
           }] )
     | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_for_at_least(e2)), Ast_types.Prop(e3,Ast_types.Holds_afterward_for_at_least(e4)) ) ->
       ( let tt = const_of_h vars (Ast_types.Holds_for_at_least(e2)) in 
