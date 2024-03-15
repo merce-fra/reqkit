@@ -251,7 +251,8 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     let convert_after_until_never e1 e2 vars intermediate_hashtbl req = 
       match req with 
       | Ast_types.Prop(_,Ast_types.Holds) -> begin
-          let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
+        if Ast_convert.equal e1 e2 then (raise (Invalid_argument ""));
+        let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
           let  new_req3 = (
             match req with  
             | Ast_types.Prop(e3,Ast_types.Holds) ->  
@@ -267,7 +268,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     match req with 
     | Ast_types.If(Ast_types.Prop(_,Ast_types.Holds), _) 
     | Ast_types.Prop(_,Ast_types.Holds) -> begin
-        
+        if Ast_convert.equal e1 e2 then (raise (Invalid_argument ""));
         let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
         let  new_req3 = (
           match req with 
