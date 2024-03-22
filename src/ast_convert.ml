@@ -6,7 +6,7 @@ let rec sup_event_of_exp ast =
   | Ast_types.Or (e1, e2) -> Sup_types.Or (sup_event_of_exp e1, sup_event_of_exp e2)
   | Ast_types.Bool_const(b)-> Sup_types.Constant(b)
   | Ast_types.Var(s) -> Sup_types.Var(s)
-  | _ -> raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_exp_as_string ast)))
+  | _ -> raise (Invalid_argument ("(17) This node is not supported in SUP conversion " ^ (Parse.print_exp_as_string ast)))
 
 
 (** [vmt_event_of_exp ast] converts an requirement expression [ast] into a vmt lib event*)
@@ -52,4 +52,4 @@ let rec equal ast1 ast2 =
   | (Ast_types.Int_const(i),Ast_types.Int_const(i2))-> i = i2
   | (Ast_types.Real_const(f),Ast_types.Real_const(f2))-> f = f2
   | (Ast_types.Var(s), Ast_types.Var(s2)) -> String.equal s s2
-  | _ -> raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_exp_as_string ast1)))
+  | _ -> false

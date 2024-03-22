@@ -54,10 +54,10 @@ let get_value_from_tbl (vars : (string,Ast_types.declaration) Hashtbl.t) (s: str
         match v with
         | Constant ( _, Const_int (i)) -> 10*i
         | Constant ( _,Const_real (f)) -> int_of_float(10.0 *. f)
-        | _->  raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_declaration_as_string v)))   
+        | _->  raise (Invalid_argument ("(1) This node is not supported in SUP conversion " ^ (Parse.print_declaration_as_string v)))   
     end
   else
-   raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (s)))   
+   raise (Invalid_argument ("(2) This node is not supported in SUP conversion " ^ (s)))   
 
 (** [const_of_h vars ast] converts a hold expression [ast] into an integer usable for Time *)
 let const_of_h vars ast : int =
@@ -72,9 +72,9 @@ let const_of_h vars ast : int =
       | Ast_types.Int_const (i)-> 10*i
       | Ast_types.Real_const (f) -> int_of_float(10.0 *. f)
       | Ast_types.Var (s) -> get_value_from_tbl vars s  
-      | _ ->  raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_exp_as_string v)))        
+      | _ ->  raise (Invalid_argument ("(3) This node is not supported in SUP conversion " ^ (Parse.print_exp_as_string v)))        
     end
-  | _ -> raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_hold_as_string ast)))
+  | _ -> raise (Invalid_argument ("(4) This node is not supported in SUP conversion " ^ (Parse.print_hold_as_string ast)))
 
 
 
@@ -200,7 +200,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
           let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
           reqs_intermediate_e2 @ res2 
            )
-        | _ -> raise (Invalid_argument "")
+        | _ -> raise (Invalid_argument ("(5) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string r)))
 
       end
     | Ast_types.Prop(e1, Holds) ->
@@ -231,7 +231,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
         reqs_intermediate_e1 @ reqs_intermediate_e3 @ res3
       )
-  | _ -> raise (Invalid_argument "") in
+  | _ -> raise (Invalid_argument ("(6) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) in
 
   (* converts the end of requirements that starts with Globally, it is never the case that*)
   let convert_globally_never req = 
@@ -240,7 +240,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
       let new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.Prop(Ast_types.Not(e1),Ast_types.Holds))) in
       let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 event_of_exp in
       res1
-    | _-> raise (Invalid_argument "") in
+    | _-> raise (Invalid_argument ("(7) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) in
 
   (* converts the end of requirements that starts with After [e1], it is always the case that*)  
   let  convert_after_always e1 vars intermediate_hashtbl req =
@@ -251,7 +251,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
           Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e2 , intermediate_e1), Ast_types.Holds), r)))  
       | Ast_types.If(Ast_types.Prop(e2,Ast_types.Holds_for_at_least(e3)), r) ->
           Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e2 , intermediate_e1), Ast_types.Holds_for_at_least(e3)),r)))  
-      | _-> raise (Invalid_argument "")
+      | _-> raise (Invalid_argument ("(8) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req)))
     ) in 
     let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
     reqs_intermediate_e1 @ res2 in
@@ -260,17 +260,17 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     let convert_after_until_never e1 e2 vars intermediate_hashtbl req = 
       match req with 
       | Ast_types.Prop(_,Ast_types.Holds) -> begin
-        if Ast_convert.equal e1 e2 then (raise (Invalid_argument ""));
+        if Ast_convert.equal e1 e2 then (raise (Invalid_argument ("(9) This node is not supported in SUP conversion e1 = e2 with req =" ^ (Parse.print_req_as_string req))));
         let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
           let  new_req3 = (
             match req with  
             | Ast_types.Prop(e3,Ast_types.Holds) ->  
                 Ast_types.Globally(Ast_types.Always( Ast_types.If(Ast_types.Prop(intermediate_e1_e2, Ast_types.Holds), Ast_types.Prop( Ast_types.Not(e3), Ast_types.Holds))))
-            | _ -> (raise (Invalid_argument "") ) )in 
+            | _ -> (raise (Invalid_argument ("(10) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) ) )in 
           let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
           req_intermediate_e1_e2 @ res3 
             end
-      |  _ -> (raise (Invalid_argument "")  )
+      |  _ -> (raise (Invalid_argument ("(11) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req)))  )
     in
       
   (* converts the end of requirements that starts with After [e1], Until [e2] it is always the case that*)  
@@ -278,7 +278,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     match req with 
     | Ast_types.If(Ast_types.Prop(_,Ast_types.Holds), _) 
     | Ast_types.Prop(_,Ast_types.Holds) -> begin
-        if Ast_convert.equal e1 e2 then (raise (Invalid_argument ""));
+        if Ast_convert.equal e1 e2 then (raise (Invalid_argument ("(12) This node is not supported in SUP conversion e1 = e2 with req =" ^ (Parse.print_req_as_string req))));
         let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
         let  new_req3 = (
           match req with 
@@ -286,11 +286,11 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
               Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e3 , intermediate_e1_e2), Ast_types.Holds),  r)))  
           | Ast_types.Prop(e3,Ast_types.Holds) ->
               Ast_types.Globally(Ast_types.Always( Ast_types.If( Ast_types.Prop(intermediate_e1_e2,Ast_types.Holds), Ast_types.Prop(e3, Ast_types.Holds))))  
-          | _ -> (raise (Invalid_argument "") ) )in 
+          | _ -> (raise (Invalid_argument ("(13) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) ) )in 
         let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
         req_intermediate_e1_e2 @ res3 
           end
-    |  _ -> (raise (Invalid_argument "")  )
+    |  _ -> (raise (Invalid_argument ("(14) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req)))  )
   in
 
   (* converts the end of requirements that starts with Before [e1], it is always the case that*)  
@@ -301,7 +301,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop( Ast_types.And(e1 , Ast_types.Not(intermediate_e1)), Ast_types.Holds),  Ast_types.Prop(e2,Ast_types.Holds))))
     | Ast_types.If( Ast_types.Prop(e2,Ast_types.Holds),r) ->
         Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(And(e2,Not(intermediate_e1)),Ast_types.Holds),r)))
-    |_ -> raise (Invalid_argument "") )in
+    |_ -> raise (Invalid_argument ("(15) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) )in
     let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
     reqs_intermediate_e1 @ res2 in
 
@@ -324,7 +324,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
       let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 in
       let (_, res7) = convert_sup1 vars intermediate_hashtbl new_req7 in
       (*res1 @*) res2 @ res3 @ res4 @ res5 @ res6 @ res7)*)
-    | _-> raise (Invalid_argument "") in
+    | _-> raise (Invalid_argument ("(16) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) in
    
   try 
     (* need to use a local hashtable because when an intermediate variable is generated, it is
@@ -343,11 +343,11 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
       | Ast_types.After_until( e1, e2, Ast_types.Never(r)) -> convert_after_until_never e1 e2 vars current_intermediate_hashtable r
       | Ast_types.Before(e1, Ast_types.Always(r)) -> convert_before_always e1 vars current_intermediate_hashtable r
       | Ast_types.Between(e1, e2, Ast_types.Always(r)) -> convert_between_always e1 e2 vars current_intermediate_hashtable r
-      | _-> raise (Invalid_argument ("This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
+      | _-> raise (Invalid_argument ("(17) This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
     ) in 
         Hashtbl.iter (fun key value -> if (not (Hashtbl.mem intermediate_hashtbl key)) then Hashtbl.add intermediate_hashtbl key value) current_intermediate_hashtable;
        (req,res)
-  with Invalid_argument _ -> raise (Invalid_argument ("This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
+  with Invalid_argument msg -> raise (Invalid_argument ( msg ^ " (full requirement : " ^ (Parse.print_req_as_string req)^")")) 
 
 (** [replace_hashtbl vars hashtbl new_exp] replaces in the hash table [hashtbl] the non boolean expressions with [new_exp] 
     [hashtbl] contains the list of all generated variable (value of the hash table) and the expression they replaced (key of the 
