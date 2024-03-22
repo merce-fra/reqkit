@@ -2,9 +2,9 @@
 
 Utility to convert RE2019 "Scalable Analysis of Real-Time
 Requirements" paper benchmark real-time requirements to some other
-format.
-
-TODO: tell which formats
+format :
+  - nusmv 
+  - vmtlib
 
 ## Installation
 

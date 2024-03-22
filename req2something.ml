@@ -16,13 +16,13 @@ let () =
   let speclist = [
     ("--input",
       Arg.String (fun s -> file := Some s),
-      (fill "input")^"Gives the requirement file to process");  
+      (fill "input")^"Gives the requirement file to process. This option cannot be used with --input-dir.");  
     ("--input-dir",
       Arg.String (fun s -> dir := Some s),
-      (fill "input_valuenput-dir")^"Gives a directory where all requirements file are processed");  
+      (fill "input_valuenput-dir")^"Gives a directory where all requirements file are processed in order to extract a single requirement for each construction kind. This option cannot be used with --input.");  
     ("--simple-exp",
       Arg.Bool (fun b -> simple_exp := b),
-      (fill "simple_exp")^"When used with --input-dir keep the most simple or complex expressions for the requirements");  
+      (fill "simple_exp")^"When used with --input-dir keep the most simple (true) or complex (false) expressions for the requirements");  
     ("--output-fmt",
       Arg.String (fun s -> output_fmt := s),
       (fill "output-fmt")^"Specify the generated file format : nusmv or vmtlib");  
