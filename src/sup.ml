@@ -261,14 +261,16 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
       match req with 
       | Ast_types.Prop(_,Ast_types.Holds) -> begin
         if Ast_convert.equal e1 e2 then (raise (Invalid_argument ("(9) This node is not supported in SUP conversion e1 = e2 with req =" ^ (Parse.print_req_as_string req))));
-        let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
+        (*let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in*)
+        let (intermediate_e1, req_intermediate_e1) = get_intermediate_var intermediate_hashtbl [e1] in
+        let (intermediate_e2, req_intermediate_e2) = get_intermediate_var intermediate_hashtbl [e2] in 
           let  new_req3 = (
             match req with  
             | Ast_types.Prop(e3,Ast_types.Holds) ->  
-                Ast_types.Globally(Ast_types.Always( Ast_types.If(Ast_types.Prop(intermediate_e1_e2, Ast_types.Holds), Ast_types.Prop( Ast_types.Not(e3), Ast_types.Holds))))
+                Ast_types.Globally(Ast_types.Always( Ast_types.If(Ast_types.Prop(Ast_types.And(intermediate_e1, Ast_types.Not(intermediate_e2)), Ast_types.Holds), Ast_types.Prop( Ast_types.Not(e3), Ast_types.Holds))))
             | _ -> (raise (Invalid_argument ("(10) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) ) )in 
           let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
-          req_intermediate_e1_e2 @ res3 
+          req_intermediate_e1 @ req_intermediate_e2 @ res3 
             end
       |  _ -> (raise (Invalid_argument ("(11) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req)))  )
     in
@@ -279,16 +281,18 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     | Ast_types.If(Ast_types.Prop(_,Ast_types.Holds), _) 
     | Ast_types.Prop(_,Ast_types.Holds) -> begin
         if Ast_convert.equal e1 e2 then (raise (Invalid_argument ("(12) This node is not supported in SUP conversion e1 = e2 with req =" ^ (Parse.print_req_as_string req))));
-        let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in
+        (*let (intermediate_e1_e2, req_intermediate_e1_e2) = get_intermediate_var intermediate_hashtbl [e1;e2] in*)
+        let (intermediate_e1, req_intermediate_e1) = get_intermediate_var intermediate_hashtbl [e1] in
+        let (intermediate_e2, req_intermediate_e2) = get_intermediate_var intermediate_hashtbl [e2] in        
         let  new_req3 = (
           match req with 
           | Ast_types.If(Ast_types.Prop(e3,Ast_types.Holds), r) ->
-              Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e3 , intermediate_e1_e2), Ast_types.Holds),  r)))  
+              Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop( Ast_types.And(e3 , Ast_types.And(intermediate_e1, Ast_types.Not(intermediate_e2))), Ast_types.Holds),  r)))  
           | Ast_types.Prop(e3,Ast_types.Holds) ->
-              Ast_types.Globally(Ast_types.Always( Ast_types.If( Ast_types.Prop(intermediate_e1_e2,Ast_types.Holds), Ast_types.Prop(e3, Ast_types.Holds))))  
+              Ast_types.Globally(Ast_types.Always( Ast_types.If( Ast_types.Prop( Ast_types.And(intermediate_e1, Ast_types.Not(intermediate_e2)),Ast_types.Holds), Ast_types.Prop(e3, Ast_types.Holds))))  
           | _ -> (raise (Invalid_argument ("(13) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) ) )in 
         let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp in
-        req_intermediate_e1_e2 @ res3 
+        req_intermediate_e1 @ req_intermediate_e2 @ res3 
           end
     |  _ -> (raise (Invalid_argument ("(14) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req)))  )
   in
