@@ -1,4 +1,4 @@
-(** time counter that is used for initialization*)
+(** [generate_counter fmt] generates the time counter that is used for initialization in the formatter [fmt]*)
 let generate_counter fmt =
   Format.fprintf fmt ";this is the global time counter@\n";
   Format.fprintf fmt "(declare-fun t () Int)@\n";
@@ -8,7 +8,7 @@ let generate_counter fmt =
   Format.fprintf fmt "(define-fun .trans () Bool (! (= tn (+ t 1)) :trans true))@\n";
   Format.fprintf fmt "(define-fun .p0 () Bool (! (> t 0) :invar-property 0))@\n"
 
-(** defines the states list *)
+(** [generate_state fmt] defines the states list in the formatter [fmt]*)
 let generate_state fmt =
   Format.fprintf fmt ";this is the states for SUP@\n";
   Format.fprintf fmt "(define-fun IDLE () Int 0)@\n";
@@ -17,7 +17,7 @@ let generate_state fmt =
   Format.fprintf fmt "(define-fun ACTION () Int 3)@\n";
   Format.fprintf fmt "(define-fun ERR () Int 4)@\n"
 
-(** convert times to string, for now only integer time units *)
+(** [time_to_string t] convert the time [t] to string, for now only integer time units *)
 let time_to_string t =
   match  t with
   | Sup_types.Time(v) -> string_of_int v
@@ -25,12 +25,21 @@ let time_to_string t =
 (** current invariant unique id *)
 let invariant_index = ref 0
 
-(** generates an invariant with a unique id *)
+(** [generate_invariant fmt content_start content_end] generates an invariant with a unique id in the formatter [fmt]
+    [content_start] is what is before the invar property definition and [content_end] is what is after*)
 let generate_invariant fmt content_start content_end =
   invariant_index := !invariant_index + 1;
   Format.fprintf fmt "%s@\n" (content_start ^ " :invar-property " ^ (string_of_int !invariant_index) ^content_end)
 
-(** generates the states machine for the state and counter of the SUP *)
+(** [generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax] generates the states machine for the state and counter of the SUP 
+    with index [sup_index] and name [req_name] in the formatter [fmt]
+    The SUP trigger start event is [tmin]
+    The SUP trigger end event is [tmax]
+    The SUP delay min is [lmin]
+    The SUP delay max is [lmax]
+    The SUP action start event is [amin]
+    The SUP action end event is [amax]
+     *)
 let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
   let state_name = "state_"^req_name^"_"^(string_of_int sup_index) in
   let counter_name = "c_"^req_name^"_"^(string_of_int sup_index) in
@@ -170,12 +179,14 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
   generate_invariant fmt ("(define-fun ."^state_name^"_p0 () Bool (! (and (>= "^state_name^" IDLE)  (< "^state_name^" ERR)) ")  "))" ;
   Format.fprintf fmt "\n"
 
-(** generates the declaration of variables used in the requirements *)
+(** [generate_var_decl fmt decl] generates the declaration of variable [decl] used in the requirements in the formatter [fmt] *)
 let generate_var_decl fmt decl =  
   match decl with 
+  (* for constant force the value using assert*)
   |Ast_types.Constant (name, Const_bool(value)) -> Format.fprintf fmt "(declare-fun %s () Bool)@\n(assert(= %s %b))@\n"  name name value
   |Ast_types.Constant (name, Const_int(value)) -> Format.fprintf fmt "(declare-fun %s () Int)@\n(assert(= %s %d))@\n"  name name value
   |Ast_types.Constant (name, Const_real(value)) -> Format.fprintf fmt "(declare-fun %s () Real)@\n(assert(= %s %f))@\n"  name name value
+  (* for variable let the value free to change *)
   |Ast_types.Input (name, Bool) 
   |Ast_types.Output (name, Bool) 
   |Ast_types.Internal (name, Bool) -> Format.fprintf fmt "(declare-fun %s () Bool)@\n" name
@@ -186,12 +197,13 @@ let generate_var_decl fmt decl =
   |Ast_types.Output (name, Real) 
   |Ast_types.Internal (name, Real) -> Format.fprintf fmt "(declare-fun %s () Real)@\n" name
   
-(** generates the declaration of an intermediate variable and initialized it to false *)
+(** [generate_intermediate_var_decl fmt var_name ] generates the declaration of an intermediate variable [var_name]
+    and initialized it to false in the formatter [fmt] *)
 let generate_intermediate_var_decl fmt (var_name :string)=
   Format.fprintf fmt "(declare-fun %s () Bool)@\n" var_name;
   Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s false) :init true))@\n" var_name var_name
 
-(** generates the content of the event *)
+(** [generate_event_content fmt event] generates the content of an [event] into the formatter [fmt] *)
 let rec generate_event_content fmt event =
   match event with
   | Sup_types.Var (s) -> Format.fprintf fmt "%s " s
@@ -212,14 +224,17 @@ let rec generate_event_content fmt event =
   | Sup_types.Lt(e1,e2) -> Format.fprintf fmt "(< " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
   | Sup_types.NotEq(e1,e2) -> Format.fprintf fmt "(not (= " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt "))"
 
-(** generates a function related to an event *)
+(** [generate_event_declaration fmt sup_index prefix event] generates for a SUP with index [sup_index] a function 
+    which return the evaluation of an [event] in the formatter [fmt]. This generation is identical for triggers, actions... 
+    The [prefix] allows to indicate in the name of the function which event is handled *)
 let generate_event_declaration fmt sup_index prefix (event: Sup_types.event) = 
   let var_name = prefix^"_"^(string_of_int sup_index) in
   Format.fprintf fmt "(define-fun %s () Bool " var_name;
   generate_event_content fmt event;
   Format.fprintf fmt ")@\n" 
 
-(** generates the conversion of a SUP into VMT lib format *)
+(** [generate_sup fmt req_name sup_index sup] generates the conversion in the formatter [fmt] of a SUP with name [req_name] and index 
+    [sup_index] into VMT lib format *)
 let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req)=
   let t = sup.t in 
   generate_event_declaration fmt sup_index ("tse_"^req_name) t.tse;
@@ -232,12 +247,14 @@ let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req)=
   generate_SUP_content fmt sup_index req_name t.tmin t.tmax sup.d.lmin sup.d.lmax a.amin a.amax
   
   
-(** generates the conversion of a parsed requirement in SUP format into VMT lib format *)
+(** [generate_sup_list fmt req_name (_, req_sups_list)] generates the conversion in the formatter [fmt] of the SUP 
+    list [req_sups_list] corresponding to a parsed requirement with name [req_name] in SUP format into VMT lib format *)
 let generate_sup_list fmt req_name (_, req_sups_list) =
   Format.fprintf fmt ";generation of the SUP state machine for requirement %s @\n" req_name;
   List.iteri (fun i sup -> generate_sup fmt req_name i sup) req_sups_list
 
-(** generates the conversion of the parsed requirements in SUP format into VMT lib format *)
+(** [generate_requirements fmt t] generates the conversion of the parsed requirements [t] in SUP format into VMT lib format
+    in the formatter [fmt] *)
 let generate_requirements fmt (t:Parse.t) = 
   (*print original variables*)
   Format.fprintf fmt "@\n;these are the variables used in triggers and actions@\n";
@@ -256,7 +273,7 @@ let generate_requirements fmt (t:Parse.t) =
   Format.fprintf fmt "@\n;these are generated SUPs @\n";
   Sup.SMap.iter (fun key value -> generate_sup_list fmt key value) sup_map
  
-
+(** [generate_vmt_file fmt t] generates a file in the vmt-lib format containing the parsed requirements [t] in the formatter [fmt]*)
 let generate_vmt_file fmt t=
   generate_state fmt;
   generate_counter fmt;

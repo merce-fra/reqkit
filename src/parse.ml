@@ -14,14 +14,14 @@ type t = {
 (** syntax error description *)
 exception Syntax_error of ((int * int) option * string)
 
-(** get the position of the lexbuf *)
+(** [get_lexing_position lexbuf] gets the position of the [lexbuf] *)
 let get_lexing_position lexbuf =
   let p = Lexing.lexeme_start_p lexbuf in
   let line_number = p.Lexing.pos_lnum in
   let column = p.Lexing.pos_cnum - p.Lexing.pos_bol + 1 in
   (line_number, column)
 
-(** get the code error related to the parser.messages file *)
+(** [message] gets the code error related to the parser.messages file *)
 let message =
   fun s ->
     match s with
@@ -30,7 +30,7 @@ let message =
     | _ ->
         raise Not_found
 
-(** get the parse error code error from the state machine*)
+(** [get_parse_error env] gets the parse error code error from the [env] state machine*)
 let get_parse_error env =
     match I.stack env with
     | lazy Nil -> "Invalid syntax"
@@ -38,7 +38,7 @@ let get_parse_error env =
         try (message (I.number state)) with
         | Not_found -> "invalid syntax (no specific message for this eror)"
 
-(** recursive method that parse the lexbuf *)
+(** [parse_ lexbuf checkpoint ] is the recursive method that parse the [lexbuf] *)
 let rec parse_ lexbuf (checkpoint : prog I.checkpoint) =
   match checkpoint with
   | I.InputNeeded _env ->
@@ -59,7 +59,7 @@ let rec parse_ lexbuf (checkpoint : prog I.checkpoint) =
   | I.Rejected ->
        raise (Syntax_error (None, "invalid syntax (parser rejected the input)"))
 
-(** entry point method to parse a lexbuf*)
+(** [parse lexbuf] is the entry point method to parse a [lexbuf]*)
 let parse lexbuf =
   try
     let ast = parse_ lexbuf (Parser.Incremental.prog lexbuf.lex_curr_p) in
@@ -75,7 +75,7 @@ let parse lexbuf =
     (* here not so much info but this means that there are some unknown tokens*)
   | _ -> Error (Printf.sprintf "Grammar error: " )
 
-(** get the ast from a file*)
+(** [ast_from_file filename] gets the ast from a the file [filename]*)
 let ast_from_file filename =
   let ic = open_in filename in
   let lexbuf = Lexing.from_channel ic in
@@ -84,12 +84,12 @@ let ast_from_file filename =
   let () = close_in ic in
   ast
 
-(** get the ast from a string*)
+(** [ast_from_string s] get the ast from a string [s]*)
 let ast_from_string s =
   let lexbuf = Lexing.from_string s in
   parse lexbuf
 
-(** convert an ast Ast_types.Prog to Parse_t.t *)
+(** [ast_to_parse_t ast] converts an [ast] of type Ast_types.Prog to a Parse_t.t *)
 let ast_to_parse_t ast =
   match ast with
   | Ok ast_ ->
@@ -122,25 +122,25 @@ let ast_to_parse_t ast =
   | Error msg -> raise  ( ParseException msg)
   
 
-(** get the content of the file as two hashmaps : one for declaration, other one for requirements *)
+(** [of_file filename] gets the content of [filename] as two hashmaps : one for declaration, other one for requirements *)
 let of_file filename =
   ast_to_parse_t ( ast_from_file filename )
   
-(** print a constant value *)
+(** [print_const_value fmt v] prints a constant value [v] into the formatter [fmt] *)
 let print_const_value fmt v =
   match v with 
   | Const_bool b -> Format.fprintf fmt "%b " b
   | Const_int i -> Format.fprintf fmt "%i " i
   | Const_real r -> Format.fprintf fmt "%f " r
   
-(** print a type *)
+(** [print_type fmt t] prints a type [t] into the formatter [fmt] *)
 let print_type fmt t =
   match t with 
   | Bool  -> Format.fprintf fmt "bool"
   | Int  -> Format.fprintf fmt  "int" 
   | Real  -> Format.fprintf fmt "real" 
 
-(** print a declaration *)
+(** [print_declaration fmt d] prints a declaration [d] into the formatter [fmt] *)
 let print_declaration fmt d = 
   match d with 
   |Constant (name, t) -> Format.fprintf fmt "CONST\t%s IS " name; print_const_value fmt t;  Format.fprintf fmt "@."
@@ -148,7 +148,7 @@ let print_declaration fmt d =
   |Output (name, t) -> Format.fprintf fmt "Output\t\t%s IS " name ; print_type fmt t;  Format.fprintf fmt "@."
   |Internal (name, t) -> Format.fprintf fmt "Internal\t%s IS " name ; print_type fmt t;  Format.fprintf fmt "@."
 
-(** print an expression *)
+(** [print_exp fmt e] prints an expression [e] into the formatter [fmt] *)
 let rec print_exp fmt e=
   match e with
   | Var (s) -> Format.fprintf fmt "%s" s
@@ -171,11 +171,11 @@ let rec print_exp fmt e=
   | Multiply(e1,e2) -> Format.fprintf fmt "(" ; print_exp  fmt e1 ; Format.fprintf fmt " * "; print_exp  fmt e2;  Format.fprintf fmt ")"
 
 
-(** if true , the requirements are pretty printed, otherwise they are one a single line *)
+(** [pretty] if true , the requirements are pretty printed, otherwise they are one a single line *)
 let pretty = ref true
 
 
-(** print a hold value *)
+(** [print_hold fmt h] prints a hold value [h] into the formatter [fmt] *)
 let print_hold fmt h= 
  ( match h with
   | Empty -> ()
@@ -190,37 +190,40 @@ let print_hold fmt h=
   | Holds_and_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by "; print_exp  fmt e
   | At_most (e) -> Format.fprintf fmt " at most "; print_exp  fmt e;  Format.fprintf fmt " time units later" )
 
-(** print an expression as a string *)
+(** [print_exp_as_string e] prints an expression [e] as a string *)
 let print_exp_as_string e =
   pretty := false;
   let fmt = Format.get_str_formatter() in
   print_exp fmt e;
   Format.flush_str_formatter()
 
-(** print a hold as a string *)
+(** [print_hold_as_string h] prints a hold [h] as a string *)
 let print_hold_as_string h =
   pretty := false;
   let fmt = Format.get_str_formatter() in
   print_hold fmt h;
   Format.flush_str_formatter()
 
-(** print a declaration as a string *)
+(** [print_declaration_as_string d] prints a declaration [d] as a string *)
 let print_declaration_as_string d =
   pretty := false;
   let fmt = Format.get_str_formatter() in
   print_declaration fmt d;
   Format.flush_str_formatter()
 
+(** [open_box fmt] opens a box in the formatter [fmt]*)
 let open_box fmt = 
   if !pretty then Format.fprintf fmt "@["
 
+(** [close_box fmt] closes a box in the formatter [fmt]*)
 let close_box fmt = 
   if !pretty then Format.fprintf fmt "@]"
 
+(** [carriage_return fmt] returns to a new line in a box in the formatter [fmt]*)
 let carriage_return fmt = 
   if !pretty then Format.fprintf fmt "@\n  " else Format.fprintf fmt " "
 
-(** print a requirement  *)
+(** [print_req fmt r] prints a requirement [r] in the formatter [fmt]  *)
 let rec print_req fmt r =
   open_box fmt;
   (match r with 
@@ -235,22 +238,22 @@ let rec print_req fmt r =
   | After_at_most (r, e) -> print_req fmt  r; Format.fprintf fmt " after at most "; print_exp  fmt e; Format.fprintf fmt " time units"
   | Between (e1, e2, r) ->   Format.fprintf fmt "Between "; print_exp  fmt e1; Format.fprintf fmt " and "; print_exp  fmt e2; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r
   | Toggles( e1, e2, h) ->  print_exp  fmt e1; Format.fprintf fmt " toggles "; print_exp  fmt e2; Format.fprintf fmt " "; print_hold fmt h; carriage_return fmt 
-  | Next_step(r) -> print_req fmt  r );
-  
+   );
   close_box fmt
 
-(** print a requirement as a string *)
-let print_req_as_string h =
+(** [print_req_as_string h] prints a requirement [r] as a string *)
+let print_req_as_string r =
   pretty := false;
   let fmt = Format.get_str_formatter() in
-  print_req fmt h;
+  print_req fmt r;
   Format.flush_str_formatter()
 
-(** print requirements *)
+(** [print_requirements fmt r] prints several requirements [r] in the formatter [fmt] *)
 let print_requirements fmt r =
   match r with 
   |(name, r_no_id) ->Format.fprintf fmt "%s : " name; print_req fmt  r_no_id; Format.fprintf fmt "@."
 
+(** [print_ fmt r] prints the variables and the requirements in [r] in the formatter [fmt]*)  
 let print_ fmt r =
   let h = r.vars in
   let l = List.of_seq (Hashtbl.to_seq_values h) in
@@ -258,15 +261,17 @@ let print_ fmt r =
   let lreq = List.of_seq (Hashtbl.to_seq r.reqs ) in
   List.iter (print_requirements fmt) lreq;  Format.fprintf fmt "@."
 
-
+(** [print fmt r] prints the variables and the requirements in [r] in the formatter [fmt]*)  
 let print fmt r = 
   pretty := false;
   print_ fmt r
 
+(** [pretty_print fmt r] pretty prints the variables and the requirements in [r] in the formatter [fmt]*)  
 let pretty_print fmt r =
   pretty := true;
   print_ fmt r
 
+(** [extract_bool_variables vars] extracts the boolean variables of the hashtable of declared variables [vars]*)
 let extract_bool_variables vars =
   Hashtbl.fold( fun  _ d acc-> 
     begin

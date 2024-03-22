@@ -1,11 +1,12 @@
 open Sup_types
-(** converts a Time to int*)
+
+(** [time_to_int t] converts a Time [t] to int, for now time from variables are not considered *)
 let time_to_int t =
   match  t with
   | Time(v) -> v
 
 
-(** prints en event *)
+(** [print_event fmt e] prints an event [e] in the formatter [fmt] *)
 let rec print_event fmt e =
   match e with 
   | Var (s) -> Format.fprintf fmt "%s " s
@@ -15,25 +16,26 @@ let rec print_event fmt e =
   | Constant(b) -> if b then  Format.fprintf fmt "True" else  Format.fprintf fmt "False" 
   | _ -> assert false (*this shall not happen as an exception is raised when matching un handled variants when creating the event*)
   
-(** prints a trigger *)
+(** [print_trigger fmt t] prints a trigger [t] in the formatter [fmt] *)
 let print_trigger fmt t =
   print_event fmt t.tse; Format.fprintf fmt ", ";
   print_event fmt t.tc; Format.fprintf fmt ", ";
   print_event fmt t.tee; Format.fprintf fmt ", ";
   Format.fprintf fmt  "%d, %d, " (time_to_int t.tmin) (time_to_int t.tmax) 
   
-(** prints a delay *)
+(** [print_delay fmt d] prints a delay [d] in the formatter [fmt] *)
 let print_delay fmt d =
   Format.fprintf fmt  "%d, %d, " (time_to_int d.lmin) (time_to_int d.lmax) 
 
-(** prints an action *)
+(** [print_action fmt a] prints an action [a] in the formatter [fmt] *)
 let print_action fmt a = 
   print_event fmt a.ase; Format.fprintf fmt ", ";
   print_event fmt a.ac; Format.fprintf fmt ", ";
   print_event fmt a.aee; Format.fprintf fmt ", ";
   Format.fprintf fmt  "%d, %d " (time_to_int a.amin) (time_to_int a.amax) 
 
-(** print a SUP requirement *)
+(** [print fmt sup first] prints a [sup] requirement in the formatter [fmt]
+    The [first] sup does no need the "," separator *)
 let print fmt (sup : sup_req) first =
   if not first then Format.fprintf fmt ",@\n";
   Format.fprintf fmt "[ ";
@@ -43,7 +45,7 @@ let print fmt (sup : sup_req) first =
   Format.fprintf fmt "]"
 
 
-(** check if a variable of name [s] is in the variable declaration hashtable.
+(** [get_value_from_tbl vars s] checks if a variable of name [s] is in the variable declaration hashtable [vars].
     If so and if constant, the value is returned with a 10 multiplicator for SUP Time infos *)
 let get_value_from_tbl (vars : (string,Ast_types.declaration) Hashtbl.t) (s: string) =
   if (Hashtbl.mem vars s) then
@@ -57,7 +59,7 @@ let get_value_from_tbl (vars : (string,Ast_types.declaration) Hashtbl.t) (s: str
   else
    raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (s)))   
 
-(** converts a hold expression into an integer usable for Time *)
+(** [const_of_h vars ast] converts a hold expression [ast] into an integer usable for Time *)
 let const_of_h vars ast : int =
   match ast with
   | Ast_types.Holds_for_at_least (v)
@@ -76,12 +78,15 @@ let const_of_h vars ast : int =
 
 
 
-(** converts Ast_types requirements into SUP requirements. Due to the
-    semantic differences, an Ast_types requirements may be expressed with 
-    several SUPs *)
+(** [convert_sup1 vars intermediate_hashtbl req  event_of_exp] converts an Ast_types requirements [req] into SUP requirements. Due to the
+    semantic differences, an Ast_types requirements may be expressed with several SUPs 
+    All the declared variables used in the requirements are in [vars].
+    An [intermediate_hashtbl] is filled with new intermediate variables created to models the SUP. There are kept
+    only if the conversion can be done *)
 let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req  event_of_exp =
   let hold_after_one_tick = Ast_types.Holds_after_at_most(Ast_types.Real_const(0.1)) in
 
+  (* allow to model intermediate variables behavior in SUP format*)
   let convert_sup_intermediate_variable intermediate_hashtbl req_var generated_var =
     (*if !req_var && !generated_var at t then at t+1 !generated_var *)
     let e1_ = event_of_exp (Ast_types.And(Ast_types.Not(req_var),Ast_types.Not(generated_var))) in
@@ -93,6 +98,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     res @ [{t=t;d=d;a=a}] 
   in
 
+  (* allow to model intermediate variables behavior in SUP format*)
   let convert_sup_toggle_intermediate_variable  req_var_start_toggle req_var_end_toggle generated_var =
     (*if !req_var_start_toggle && !req_var_end_toggle && !generated_var at t then at t+1 !generated_var *)
     let e1_ = event_of_exp (Ast_types.And(Ast_types.And(Ast_types.Not(req_var_start_toggle),Ast_types.Not(req_var_end_toggle)),Ast_types.Not(generated_var))) in
@@ -111,21 +117,20 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     let a3 = {ase=Constant(true); ac=Constant(true); aee=event_of_exp(generated_var); amin=Time(0); amax=Time(0)} in
     let e3b_ = event_of_exp (Ast_types.And(req_var_start_toggle,generated_var)) in
     let t3b = {tse=e3b_; tc=e3b_; tee=e3b_; tmin = Time(0); tmax= Time(0)} in
-
+    
+    (*creates the requirements related to the toggle itself*)
     let e4_ = event_of_exp (Ast_types.And(req_var_end_toggle,generated_var)) in
     let t4 = {tse=e4_; tc=e4_; tee=e4_; tmin = Time(0); tmax= Time(0)} in
     let a4 = {ase=Constant(true); ac=Constant(true); aee=event_of_exp(Not(generated_var)); amin=Time(0); amax=Time(0)} in
     let e4b_ = event_of_exp (Ast_types.And(req_var_end_toggle,Not(generated_var))) in
     let t4b = {tse=e4b_; tc=e4b_; tee=e4b_; tmin = Time(0); tmax= Time(0)} in
-
-
-    (*let  new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(req_var_start_toggle,Ast_types.Not(generated_var)), Ast_types.Holds),Ast_types.Toggles(req_var_start_toggle, Not(generated_var), Ast_types.Holds)))) in
-    let  new_req2 = Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(Ast_types.And(req_var_end_toggle,generated_var), Ast_types.Holds),Ast_types.Toggles(req_var_end_toggle, generated_var, Ast_types.Holds)))) in
-    let (_ , res1)   = convert_sup1 vars intermediate_hashtbl new_req1 event_of_exp in
-    let (_ , res2)   = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in*)
+    
+    (* generated SUPs*)
     [{t=t1;d=d;a=a1};{t=t2;d=d;a=a2};{t=t3;d=d;a=a3};{t=t3b;d=d;a=a3};{t=t4;d=d;a=a4};{t=t4b;d=d;a=a4}]
   in
 
+  (* creates a new intermediate variable and model its behavior with SUPs*)
+  (* this new variable is related  to one event  (Before) or two events (Toggle) *)
   let get_intermediate_var intermediate_hashtbl req_var =
     let i = Hashtbl.length intermediate_hashtbl in 
     let var_name = "intermediate"^(string_of_int i) in
@@ -136,6 +141,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     | _ -> assert false
   in 
 
+  (* converts the end of requirements that starts with Globally, it is always the case that*)
   let convert_globally_always vars intermediate_hashtbl req =
     match req with
     | Ast_types.If( Ast_types.Prop(e1,Ast_types.Holds), r) ->
@@ -227,6 +233,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
       )
   | _ -> raise (Invalid_argument "") in
 
+  (* converts the end of requirements that starts with Globally, it is never the case that*)
   let convert_globally_never req = 
     match req with
     | Ast_types.Prop(e1, Holds) -> 
@@ -235,6 +242,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
       res1
     | _-> raise (Invalid_argument "") in
 
+  (* converts the end of requirements that starts with After [e1], it is always the case that*)  
   let  convert_after_always e1 vars intermediate_hashtbl req =
     let (intermediate_e1, reqs_intermediate_e1) = get_intermediate_var intermediate_hashtbl [e1] in
     let new_req2 = (
@@ -247,7 +255,8 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     ) in 
     let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
     reqs_intermediate_e1 @ res2 in
-
+  
+    (* converts the end of requirements that starts with After [e1], Until [e2] it is never the case that*)  
     let convert_after_until_never e1 e2 vars intermediate_hashtbl req = 
       match req with 
       | Ast_types.Prop(_,Ast_types.Holds) -> begin
@@ -263,7 +272,8 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
             end
       |  _ -> (raise (Invalid_argument "")  )
     in
-    
+      
+  (* converts the end of requirements that starts with After [e1], Until [e2] it is always the case that*)  
   let convert_after_until_always e1 e2 vars intermediate_hashtbl req = 
     match req with 
     | Ast_types.If(Ast_types.Prop(_,Ast_types.Holds), _) 
@@ -283,6 +293,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     |  _ -> (raise (Invalid_argument "")  )
   in
 
+  (* converts the end of requirements that starts with Before [e1], it is always the case that*)  
   let convert_before_always e1 vars intermediate_hashtbl req =
     let (intermediate_e1, reqs_intermediate_e1) = get_intermediate_var intermediate_hashtbl [e1] in
     let new_req2 = (match req with 
@@ -294,6 +305,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     let (_, res2) = convert_sup1 vars intermediate_hashtbl new_req2 event_of_exp in
     reqs_intermediate_e1 @ res2 in
 
+  (* converts the end of requirements that starts with Between [e1] and [e2], it is always the case that*)  
   let convert_between_always e1 e2 vars intermediate_hashtbl req =
     match req with
     |  Ast_types.Prop(e3,Ast_types.Holds) -> (
@@ -317,8 +329,8 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
   try 
     (* need to use a local hashtable because when an intermediate variable is generated, it is
        automatically added to the hashtable. However if the SUP is eventually not handled by
-       the tool, it generates an intermediate variable is SMV file that is never used and
-       the python tool bug. So if the SUP is handled, the new entries of the local hashtable are 
+       the tool, it generates an intermediate variable is SMV file that is never used. 
+       So if the SUP is handled, the new entries of the local hashtable are 
        copied into the global one *)
     let current_intermediate_hashtable = Hashtbl.copy intermediate_hashtbl in 
     (*Format.printf "Treating %s @." (Parse.print_req_as_string req);*)
@@ -337,7 +349,9 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
        (req,res)
   with Invalid_argument _ -> raise (Invalid_argument ("This requirement is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) 
 
-(** replace in the hash table the non boolean expressions *)
+(** [replace_hashtbl vars hashtbl new_exp] replaces in the hash table [hashtbl] the non boolean expressions with [new_exp] 
+    [hashtbl] contains the list of all generated variable (value of the hash table) and the expression they replaced (key of the 
+    hashtable). Therefore if the same expression is detected, the previous generated variable is used *)
 let replace_hashtbl vars hashtbl new_exp =
   let s = Hashtbl.length hashtbl in
   let var_name = "generated"^string_of_int(s) in
@@ -349,7 +363,9 @@ let replace_hashtbl vars hashtbl new_exp =
   else
     (Hashtbl.add hashtbl var_content (Ast_types.Var(var_name)); Ast_types.Var(var_name))
 
-(** extracts and replaces the non boolean expression of an Ast_types requirement by boolean expression
+(** [extract_non_bool_exp vars hashtbl req_content] extracts and replaces the non boolean expression of an Ast_types requirement [req_content]
+    by boolean expression. New variables are stored in the [vars] hash table. The non boolean expression that are replaced are keys for the 
+    [hashtabl] and the values are the name of the generated variable.
     Some info can be lost in the conversion *)
 let extract_non_bool_exp vars hashtbl req_content = 
   let rec aux_req ast  = 
@@ -365,7 +381,6 @@ let extract_non_bool_exp vars hashtbl req_content =
     | Ast_types.After_until (e1, e2, r) -> Ast_types.After_until(aux_exp e1, aux_exp e2, aux_req r)
     | Ast_types.If(r1,r2) -> Ast_types.If(aux_req r1, aux_req r2)
     | Ast_types.Toggles(e1, e2, h) -> Ast_types.Toggles( aux_exp e1, aux_exp e2, aux_hold h)
-    | Ast_types.Next_step(r) -> Ast_types.Next_step( aux_req r)
   and aux_exp ast  =
     match ast with
     | Plus (_,_) 
@@ -397,16 +412,17 @@ let extract_non_bool_exp vars hashtbl req_content =
     | At_most (e) -> At_most( aux_exp e )
   in aux_req req_content
 
-(** converts all non boolean expression to boolean ones. If several
-    identical expressions appears in the same or different Ast_types
-    requirements, the same boolean expression is used *)
+(** [remove_non_bool_exp parse_t hashtbl] converts all non boolean expression in the requirement set [parse_t] to boolean ones.
+    If several identical expressions appears in the same or different Ast_types requirements, the same boolean expression is 
+    used through the use of [hashtbl]*)
 let remove_non_bool_exp (parse_t : Parse.t) hashtbl = 
   let req_hashtable = Hashtbl.create 200 in
   Hashtbl.iter (fun req_id req_content  ->  Hashtbl.add req_hashtable req_id (extract_non_bool_exp parse_t.vars hashtbl req_content) ) parse_t.reqs;
   let res : Parse.t = {vars = parse_t.vars; reqs = req_hashtable} in
   res
   
-(** prints a list of SUP requirements *)
+(** [print fmt sup_list first last] prints a list of SUP requirements [sup_list] in the the formatter [fmt].
+    Except the [first], SUP is preceded by, and except the [last] followed by carriage return *)
 let print fmt sup_list first last = 
   if not first then Format.fprintf fmt ",";
   List.iteri (fun i sup -> ( print fmt sup (i = 0))) sup_list;
@@ -414,7 +430,7 @@ let print fmt sup_list first last =
   
 module SMap = Map.Make(String)
 
-(** converts an AST_types requirements list into a SUP requirement list*)
+(** [of_req_with_non_bool parse_t] converts an AST_types requirements list and its variables [parse_t] into a SUP requirement list*)
 let of_req_with_non_bool parse_t = 
   let open Parse in
   (*Parse.print_vars parse_t;*)
@@ -430,7 +446,8 @@ let of_req_with_non_bool parse_t =
   (bool_intermediate_variables,SMap.of_list tmp)
 
 
-(** converts an AST_types requirements list into a SUP requirement list*)
+(** [of_req parse_t] After converting non boolean expressions into expressions, converts an AST_types requirements list
+    and its variables [parse_t] into a SUP requirement list*)
 let of_req parse_t  =
   (* hash table used to handle generated variables that replaces non boolean expressions *)
   let generated_hashtbl = Hashtbl.create 200 in
@@ -447,7 +464,7 @@ let of_req parse_t  =
   let bool_intermediate_variables = (List.of_seq (Hashtbl.to_seq_keys intermediated_hashtbl)) in
   (bool_generated_variables,bool_intermediate_variables,SMap.of_list tmp)
  
-
+(** [generate_sup_file fmt t] generates a sup file from parsed requirements [t] into the formatter fmt*)
 let generate_sup_file fmt (t:Parse.t)  =
   let list_initial_bool_variables = Parse.extract_bool_variables t.vars in
   (* and generateed ones + SUP requirements*)

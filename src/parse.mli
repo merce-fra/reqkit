@@ -9,25 +9,33 @@ type t = {
 
 exception ParseException of string
 
-val of_file: string -> t   (*parse a file of name [string] and return
-                            its content as [t] *)
+(** [of_file filename] gets the content of [filename] as two hashmaps as [t]: one for declaration, other one for requirements *)
+val of_file: string -> t   
 
+(** [extract_bool_variables vars] extracts the boolean variables of the hashtable of declared variables [vars]*)                        
 val extract_bool_variables : (string, declaration) Hashtbl.t -> string list 
 
-val ast_to_parse_t: (Ast_types.prog, string) result -> t (* convert requirements ast to t*)
+(** [ast_to_parse_t ast] converts an [ast] of type Ast_types.Prog to a Parse_t.t *)
+val ast_to_parse_t: (Ast_types.prog, string) result -> t 
 
+(** [ast_from_string s] get the ast from a string [s]*)
 val ast_from_string : string -> (Ast_types.prog, string) result
 
-val print : Format.formatter -> t -> unit  (* print each requirements of [t] on a single line *)
+(** [print fmt r] prints the variables and the requirements in [r] in the formatter [fmt]*)  
+val print : Format.formatter -> t -> unit  
 
-val pretty_print : Format.formatter -> t -> unit  (* pretty print each requirements of [t] to returned [string] *)
+(** [pretty_print fmt r] pretty prints the variables and the requirements in [r] in the formatter [fmt]*)  
+val pretty_print : Format.formatter -> t -> unit  
 
-val print_exp_as_string : Ast_types.exp -> string (* prints an ast expression as a string *)
+(** [print_exp_as_string e] prints an expression [e] as a string *)
+val print_exp_as_string : Ast_types.exp -> string 
 
-val print_hold_as_string : Ast_types.hold -> string (* prints an ast hold as a string *)
+(** [print_hold_as_string h] prints a hold [h] as a string *)
+val print_hold_as_string : Ast_types.hold -> string 
 
-val print_req_as_string : Ast_types.req -> string (* prints an ast requirement as a string *)
+(** [print_req_as_string h] prints a requirement [r] as a string *)
+val print_req_as_string : Ast_types.req -> string 
  
-val print_declaration_as_string : Ast_types.declaration -> string (* prints an ast declaration as a string *)
+(** [print_declaration_as_string d] prints a declaration [d] as a string *)
+val print_declaration_as_string : Ast_types.declaration -> string 
 
-(*val print_vars : t -> unit*)

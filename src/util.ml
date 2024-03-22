@@ -13,7 +13,7 @@ module SMap = Map.Make(String)
 
 exception Unknown_variable of string
 
-(** converts a req to integer *)
+(** [req_to_int r] converts a requirement [r] into an integer in order to distinguish identical requirements construction *)
 let req_to_int r =
   match r with
   | Prop (_, _) -> 1
@@ -27,9 +27,8 @@ let req_to_int r =
   | After_until (_, _, _) -> 9
   | If (_, _) -> 10
   | Toggles(_,_,_) -> 11
-  | Next_step (_) -> 12
-
-(** converts a hold to integer *)
+ 
+(** [hold_to_int h] converts a hold [h] into an integer in order to distinguish identical requirements construction *)
 let hold_to_int h =
   match h with
   | Empty -> 20
@@ -45,7 +44,7 @@ let hold_to_int h =
   | At_most (_) -> 30
 
 
-(** for a requirement this function 
+(** [extract_vars_from_req req list_vars] for a requirement [req] this function 
     - extracts all variable that are used in this requirement
     - construct an integer list that represents the different requirements/holds occuring in the input requirement 
     - count the number of node used (to evaluate complexity of the requirement)*)
@@ -98,7 +97,6 @@ let extract_vars_from_req req list_vars=
     | Prop (e, h) -> aux_e (aux_h (vars, nb_expr+2, (req_to_int req)::list_op) h ) e
     | Globally( r) 
     | Always (r)
-    | Next_step (r)
     | Never (r) -> aux_r (vars, nb_expr +1, (req_to_int req)::list_op) r
     | Before (e, r)
     | After_at_most (r, e)
@@ -111,7 +109,8 @@ let extract_vars_from_req req list_vars=
   aux_r ( SMap.empty, 0, []) req 
 
 
-(** for a Parse.t, split all requirements in a tuple (name of the requirements, requirement, variables involved in the requirement, 
+(** [split_reqs_from_parse_t input_parse] for a Parse.t [input_parse], split all requirements in a tuple 
+    (name of the requirements, requirement, variables involved in the requirement, 
     nb of nodes, list of integer representing the requirements/holds) *)
 let split_reqs_from_parse_t (input_parse : Parse.t) = 
   let req_as_list = List.of_seq (Hashtbl.to_seq (input_parse.reqs)) in
@@ -125,8 +124,10 @@ let split_reqs_from_parse_t (input_parse : Parse.t) =
                  ) [] req_as_list 
 
 
-(** for a list of Parse.t, call split_reqs_from_parse_t on each and then filter them according the list of integer representing the requirements/holds
-    If two requirements have the same list, the one with the highest number of nodes is kept *)
+(** [typical_reqs_ input_parse_list keep_simple] for a list of Parse.t [input_parse_list], it calls split_reqs_from_parse_t 
+     on each and then filter them according the list of integer representing the requirements/holds 
+    If two requirements have the same list, the one with the highest number of nodes is kept if [keep_simple] is false, otherwise
+    the one with lowest number of nodes is kept *)
 let typical_reqs_ input_parse_list keep_simple = 
   let all_reqs = List.fold_left (fun acc input_parse -> List.append (split_reqs_from_parse_t input_parse) acc) [] input_parse_list in
   let filted_reqs_ = List.fold_left (fun acc (name, req, vars, nb_expr, list_op) -> begin
@@ -143,7 +144,7 @@ let typical_reqs_ input_parse_list keep_simple =
                                                           end) filted_reqs_;*)
                                                           filted_reqs_
 
-(** convert a requirement name, a map of used variables and a requirement to a Parse.t*)                                                                   
+(** [convert_to_parse_t name vars req] convert a requirement [name], a map of used variables [vars] and a requirement [req] to a Parse.t*)                                                                   
 let convert_to_parse_t name vars req  =
   let h1 = Hashtbl.create 1 in 
   SMap.iter ( fun k v -> Hashtbl.add h1 k v ) vars;
@@ -151,7 +152,8 @@ let convert_to_parse_t name vars req  =
   Hashtbl.add h2 name req;
   {vars=h1; reqs=h2}
 
-(** extract all unique requirements. The requirements are distinguished from their ast considering only req/hold nodes *)
+(** [typical_reqs input_parse_list simple_exp] extract all unique requirements constructions. 
+    The requirements are distinguished using their ast considering only req/hold nodes (not the expressions) *)
 let typical_reqs (input_parse_list: Parse.t list) simple_exp : Parse.t list =
   let reqs_ = typical_reqs_ input_parse_list simple_exp in 
   (* convert the map into a list of Parse.t *)

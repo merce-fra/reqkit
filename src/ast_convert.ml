@@ -1,4 +1,4 @@
-(** converts a requirements to SUP event*)
+(** [sup_event_of_exp ast] converts a requirements [ast] to SUP event*)
 let rec sup_event_of_exp ast = 
   match ast with
   | Ast_types.Not( e ) -> Sup_types.Not (sup_event_of_exp e)
@@ -9,7 +9,7 @@ let rec sup_event_of_exp ast =
   | _ -> raise (Invalid_argument ("This node is not supported in SUP conversion " ^ (Parse.print_exp_as_string ast)))
 
 
-
+(** [vmt_event_of_exp ast] converts an requirement expression [ast] into a vmt lib event*)
 let rec vmt_event_of_exp ast = 
   match ast with
   | Ast_types.Not( e ) -> Sup_types.Not (vmt_event_of_exp e)
@@ -32,7 +32,7 @@ let rec vmt_event_of_exp ast =
   (*| Ast_types.Implies(e1,e2) -> Sup_types.Implies(vmt_event_of_exp e1, vmt_event_of_exp e2)*)
   | _ -> raise (Invalid_argument ("This node is not supported in VMT conversion " ^ (Parse.print_exp_as_string ast)))
 
-
+(** [equal ast1 ast2] checks if [ast1] and [ast2] are equals*)
 let rec equal ast1 ast2 =
   match (ast1,ast2) with
   | (Ast_types.Not( e1 ), Ast_types.Not( e2 ))  -> equal e1 e2

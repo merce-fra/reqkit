@@ -6,16 +6,16 @@ type event=  | Var of string (* xNNNNN *)
                 | Constant of bool
                 | IntConstant of int
                 | RealConstant of float
-                | Plus of event * event
-                | Minus of event * event
-                | Multiply of event * event
-                | Divide of event * event
-                | Eq of event * event
-                | Geq of event * event
-                | Leq of event * event
-                | Gt of event * event
-                | Lt of event * event
-                | NotEq of event * event
+                | Plus of event * event (* exp + exp*)
+                | Minus of event * event (* exp - exp*)
+                | Multiply of event * event (* exp * exp*)
+                | Divide of event * event (* exp / exp*)
+                | Eq of event * event (* exp == exp*)
+                | Geq of event * event (* exp >= exp*)
+                | Leq of event * event (* exp <= exp*)
+                | Gt of event * event (* exp > exp*)
+                | Lt of event * event (* exp < exp*)
+                | NotEq of event * event (* exp != exp*)
 
 type time = | Time of int (*used for tmin, tmax, lmin, lmax, amin and amax*)            
              

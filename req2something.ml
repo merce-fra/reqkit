@@ -35,6 +35,7 @@ let () =
   | _         -> Format.printf "Output format not supported : %s@." !output_fmt);
 
   match (!file, !dir, !output_fmt) with 
+  (* case the tool is apply on a whole directory in order to extract constructions *)
   |None, Some d, out_fmt ->    
     begin
         try
@@ -47,29 +48,13 @@ let () =
                                     (match out_fmt with
                                     | "nusmv"   -> Src.Sup.generate_sup_file fmt p
                                     | "vmtlib"  -> Src.Vmt.generate_vmt_file fmt p
-                                    | _         -> ());                                    (*let list_initial_bool_variables = Src.Parse.extract_bool_variables p.vars in
-                                      let (variables,m) =  Src.Sup.of_req p  in
-                                      let l = (Src.Sup.SMap.to_list m) in 
-                                      if (List.length l) > 0 then(
-                                        Format.fprintf fmt "MAX_PTRACE=20@\n";
-                                        List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) list_initial_bool_variables;
-                                        List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) variables;
-                                        let (_,(_,sup_list)) = List.hd l in
-                                        Format.fprintf fmt "REQ_SET=[";
-                                        Src.Sup.print fmt sup_list true true;
-                                        Format.fprintf fmt "]@\n";
-                                        if (List.length variables ) > 0 then
-                                          begin
-                                            Format.fprintf fmt "COND_INIT = ["; 
-                                            List.iteri (fun i v -> ( (if i>0 then Format.fprintf fmt ","); Format.fprintf fmt "%s == False" v )) variables;
-                                            Format.fprintf fmt "]@\n"
-                                          end
-                                        )*)
+                                    | _         -> ());                                    
                                   ) ) typical_reqs;
 
           Format.printf "Success@."
         with Src.Parse.ParseException msg -> Format.printf "%s@." msg 
     end
+  (* case the tool is apply on a single file *)
   |Some f, None, out_fmt -> 
     begin
     try 
@@ -79,27 +64,6 @@ let () =
       | "nusmv"   -> Src.Sup.generate_sup_file fmt t
       | "vmtlib"  -> Src.Vmt.generate_vmt_file fmt t
       | _         -> ());
-
-      (*(* gather initial bool variables*)
-      let list_initial_bool_variables = Src.Parse.extract_bool_variables t.vars in
-      (* and generateed ones + SUP requirements*)
-      let (generated_variables, sup_reqs) = Src.Sup.of_req t in
-      (* print variables*)
-      let all_variables = generated_variables@list_initial_bool_variables in
-      Format.fprintf fmt "MAX_PTRACE=20@\n";
-      List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) all_variables;
-      (* print requirements *)
-      Format.fprintf fmt "REQ_SET=[";
-      let l = ( Src.Sup.SMap.to_list sup_reqs) in
-      List.iteri (fun i  (_ ,(_,sup_list ) ) -> Src.Sup.print fmt sup_list (i=0) (i=((List.length l)-1))) l ;
-      Format.fprintf fmt "]@\n";
-      if (List.length generated_variables ) > 0 then
-        begin
-          Format.fprintf fmt "COND_INIT = ["; 
-          List.iteri (fun i v -> ( (if i>0 then Format.fprintf fmt ","); Format.fprintf fmt "%s == False" v )) generated_variables;
-          Format.fprintf fmt "]@\n"
-        end*)
-
     with Src.Parse.ParseException msg -> Format.printf "%s@." msg 
   end
   | _,_,_ -> Format.printf "%s@." usage
