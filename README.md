@@ -6,6 +6,13 @@ format :
   - nusmv 
   - vmtlib
 
+## Prerequisites
+
+In order to validate the generated smv code using the script NuSMV.sh, the environment variable REQ_VERIFICATION_INSTALL_DIR shall point to the installation directory of the tool req_verification.
+
+The tool NuSMV 2.6.0 shall also be installed (https://nusmv.fbk.eu/downloads.html)
+
+
 ## Installation
 
 Opam shall be installed using the command (depending on your linux distribution): 
