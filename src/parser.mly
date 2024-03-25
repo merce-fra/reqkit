@@ -19,6 +19,7 @@
 %left LT LE GT GE
 %left PLUS MINUS
 %left MULTIPLY DIVIDE
+%left NOT
 
 %{ open Ast_types %} 
 
