@@ -13,6 +13,7 @@
 %token CONSTANT INPUT OUTPUT INTERNAL TOGGLES LATER IS ALWAYS FOR NEVER PREVIOUSLY_HELD GLOBALLY IS_SUCCEEDED_BY AFTER BETWEEN AND2 EVERY BEFORE UNTIL ONCE BECOME_SATISFIED IF THEN AT_LEAST AT_MOST LESS_THAN TIME_UNITS AFTERWARDS HOLDS DOUBLE_QUOTE
 %token BOOLEAN_TYPE INTEGER_TYPE REAL_TYPE TRUE FALSE 
 
+%left IMPLIES
 %left OR
 %left AND 
 %left EQUAL NOT_EQUAL
@@ -25,7 +26,7 @@
 
 %type <Ast_types.prog> prog
 %type <Ast_types.req_with_id> req_with_id
-%type <Ast_types.req> req
+%type <Ast_types.req> req 
 %type <Ast_types.var_type> var_type
 %type <Ast_types.const_value> const_value
 %type <Ast_types.declaration> declaration
