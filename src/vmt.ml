@@ -38,6 +38,8 @@ let generate_invariant fmt content_start content_end =
   invariant_index := !invariant_index + 1;
   Format.fprintf fmt "%s@\n" (content_start ^ " :invar-property " ^ (string_of_int !invariant_index) ^content_end)
 
+
+
 (** [generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax] generates the states machine for the state and counter of the SUP 
     with index [sup_index] and name [req_name] in the formatter [fmt]
     The SUP trigger start event is [tmin]
@@ -189,10 +191,10 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
                         )
                       ) :trans true))" in
   Format.fprintf fmt "%s@\n" state_trans;
-  generate_invariant fmt ("(define-fun ."^state_name^"_p0 () Bool (! (not (= "^state_name^" ERR))") "))" ;
+  Format.fprintf fmt "%s@\n" ("(define-fun "^state_name^"_err () Bool (= "^state_name^" ERR))") ;
   generate_invariant fmt ("(define-fun ."^state_name^"_p1 () Bool (! (not (= "^state_name^" VACUITY))") "))" ;
-  
-  Format.fprintf fmt "\n"
+  Format.fprintf fmt "@\n";
+  state_name^"_err"
 
 (** [generate_var_decl fmt decl] generates the declaration of variable [decl] used in the requirements in the formatter [fmt] *)
 let generate_var_decl fmt decl =  
@@ -271,9 +273,10 @@ let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) (args: Input_a
 (** [generate_sup_list fmt req_name (_, req_sups_list)] generates the conversion in the formatter [fmt] of the SUP 
     list [req_sups_list] corresponding to a parsed requirement with name [req_name] in SUP format into VMT lib format *)
 let generate_sup_list fmt req_name (_, req_sups_list) args=
+  (*generate sups*)
   Format.fprintf fmt ";generation of the SUP state machine for requirement %s @\n" req_name;
-  List.iteri (fun i sup -> generate_sup fmt req_name i sup args) req_sups_list
-
+  List.fold_left (fun acc sup -> (generate_sup fmt req_name (List.length acc) sup args)::acc) [] req_sups_list
+  
 (** [generate_requirements fmt t] generates the conversion of the parsed requirements [t] in SUP format into VMT lib format
     in the formatter [fmt] *)
 let generate_requirements fmt (t:Parse.t) (args : Input_args.t) = 
@@ -296,10 +299,16 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
     List.iter (fun var_name -> (generate_intermediate_var_decl fmt var_name)) intermediate_variables
   );
 
-  (*print the SUPs*)
+  (*print the SUPs and get the list of functions that detects error status*)
   Format.fprintf fmt "@\n;these are generated SUPs @\n";
-  Sup.SMap.iter (fun key value -> generate_sup_list fmt key value args) sup_map
+  let list_error_func = Sup.SMap.fold (fun key value acc -> (generate_sup_list fmt key value args)@acc) sup_map [] in
  
+  (*creates an invariant property with all error status funtions*)
+  let all_func_error = List.fold_left (fun acc s -> (" (not "^s ^") ")^acc) "" list_error_func in
+  let invar_prop = "(define-fun .all_sup_status () Bool (! (and "^all_func_error^")" in 
+  generate_invariant fmt invar_prop "))" ;
+  Format.fprintf fmt "@\n"
+
 (** [generate_vmt_file fmt t] generates a file in the vmt-lib format containing the parsed requirements [t] in the formatter [fmt]*)
 let generate_vmt_file fmt t args=
   generate_state fmt args;
