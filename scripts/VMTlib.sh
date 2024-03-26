@@ -10,7 +10,7 @@ function process_file {
 
     #generation of the vmtlib file 
     SUP_FILE_VMT=${OUTPUT_FILES_DIR}/${BASENAME_NO_EXT}".vmt"
-    ./exec --input ${f} --output-fmt vmtlib > ${SUP_FILE_VMT}
+    ./exec --input ${f} --output-fmt vmtlib --bool-only-predicates false --state-encoding boolean --clock-encoding real > ${SUP_FILE_VMT}
    
     z3 ${SUP_FILE_VMT}
     echo "Done"	

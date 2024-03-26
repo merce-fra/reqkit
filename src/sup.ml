@@ -154,7 +154,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         | Ast_types.Prop(e2, Holds_for_at_least (e3)) -> 
               [{t=t;d=d0;a={ase=(event_of_exp e2); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(const_of_h vars (Holds_for_at_least (e3))); amax= Time(const_of_h vars (Holds_for_at_least (e3)))}}]
         | Ast_types.Prop(e2, Holds_after_at_most(e3)) -> 
-              [{t=t;d=d0;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(0); amax= Time(const_of_h vars (Holds_after_at_most (e3)))}}]
+              [{t=t;d=d0;a={ase=Constant(true); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(0); amax= Time(const_of_h vars (Holds_after_at_most (e3)))}}]
         | Ast_types.Prop(e2, Holds_for_less_than(e3)) ->
               [{t=t;d=d0;a={ase=Constant(true); ac=Constant(true); aee=(Not(event_of_exp e2)); amin = Time(0); amax= Time((const_of_h vars (Holds_for_less_than (e3)))-1)}}]
         | Ast_types.Prop(e2, Holds) ->
@@ -433,7 +433,7 @@ let print fmt sup_list first last =
   if not last then Format.fprintf fmt "@\n"
   
 module SMap = Map.Make(String)
-
+(*
 (** [of_req_with_non_bool parse_t] converts an AST_types requirements list and its variables [parse_t] into a SUP requirement list*)
 let of_req_with_non_bool parse_t = 
   let open Parse in
@@ -448,17 +448,19 @@ let of_req_with_non_bool parse_t =
   end) parse_t.reqs [] in 
   let bool_intermediate_variables = (List.of_seq (Hashtbl.to_seq_keys intermediated_hashtbl)) in
   (bool_intermediate_variables,SMap.of_list tmp)
-
+*)
 
 (** [of_req parse_t] After converting non boolean expressions into expressions, converts an AST_types requirements list
     and its variables [parse_t] into a SUP requirement list*)
-let of_req parse_t  =
+let of_req parse_t only_bool_predicates  =
   (* hash table used to handle generated variables that replaces non boolean expressions *)
   let generated_hashtbl = Hashtbl.create 200 in
   (* hash table used to handle some requirements that needs additionnal inputs to be converted into SUP*)
   let intermediated_hashtbl = Hashtbl.create 200 in
   let fmt = Format.get_err_formatter() in 
-  let parse_t_with_only_bool = remove_non_bool_exp parse_t generated_hashtbl in
+  let parse_t_with_only_bool = (if only_bool_predicates then 
+    remove_non_bool_exp parse_t generated_hashtbl
+  else parse_t) in
   let tmp = Hashtbl.fold (fun req_id req_content acc ->  begin
     try
      (req_id, convert_sup1 parse_t.vars intermediated_hashtbl req_content Ast_convert.sup_event_of_exp) :: acc 
@@ -469,10 +471,10 @@ let of_req parse_t  =
   (bool_generated_variables,bool_intermediate_variables,SMap.of_list tmp)
  
 (** [generate_sup_file fmt t] generates a sup file from parsed requirements [t] into the formatter fmt*)
-let generate_sup_file fmt (t:Parse.t)  =
+let generate_sup_file fmt (t:Parse.t)  (args: Input_args.t) =
   let list_initial_bool_variables = Parse.extract_bool_variables t.vars in
   (* and generateed ones + SUP requirements*)
-  let (generated_variables, intermediate_variables, sup_reqs) = of_req t in
+  let (generated_variables, intermediate_variables, sup_reqs) = of_req t args.only_bool_predicates in
   (* print variables*)
   let all_variables = generated_variables@intermediate_variables@list_initial_bool_variables in
   Format.fprintf fmt "from z3 import *@\n";

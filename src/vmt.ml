@@ -1,21 +1,24 @@
-(** [generate_counter fmt] generates the time counter that is used for initialization in the formatter [fmt]*)
-let generate_counter fmt =
-  Format.fprintf fmt ";this is the global time counter@\n";
-  Format.fprintf fmt "(declare-fun t () Int)@\n";
-  Format.fprintf fmt "(declare-fun tn () Int)@\n";
-  Format.fprintf fmt "(define-fun .sv0 () Int (! t :next tn))@\n";
-  Format.fprintf fmt "(define-fun .init () Bool (! (= t 1) :init true))@\n";
-  Format.fprintf fmt "(define-fun .trans () Bool (! (= tn (+ t 1)) :trans true))@\n";
-  Format.fprintf fmt "(define-fun .p0 () Bool (! (> t 0) :invar-property 0))@\n"
 
 (** [generate_state fmt] defines the states list in the formatter [fmt]*)
-let generate_state fmt =
-  Format.fprintf fmt ";this is the states for SUP@\n";
-  Format.fprintf fmt "(define-fun IDLE () Int 0)@\n";
-  Format.fprintf fmt "(define-fun TRIG () Int 1)@\n";
-  Format.fprintf fmt "(define-fun DELAY () Int 2)@\n";
-  Format.fprintf fmt "(define-fun ACTION () Int 3)@\n";
-  Format.fprintf fmt "(define-fun ERR () Int 4)@\n"
+let generate_state fmt (args: Input_args.t) =
+  match args.state_enc with
+  | IntegerEncoding -> (
+        Format.fprintf fmt ";this is the states for SUP@\n";
+        Format.fprintf fmt "(define-fun IDLE () Int 0)@\n";
+        Format.fprintf fmt "(define-fun TRIG () Int 1)@\n";
+        Format.fprintf fmt "(define-fun DELAY () Int 2)@\n";
+        Format.fprintf fmt "(define-fun ACTION () Int 3)@\n";
+        Format.fprintf fmt "(define-fun ERR () Int 4)@\n";
+        Format.fprintf fmt "(define-fun VACUITY () Int -1)@\n")
+  | BooleanEncoding -> (
+        Format.fprintf fmt "(declare-datatypes () ((SUP_state (mk_SUP_state (b1 bool) (b2 bool) (b3 bool)))))@\n";
+        Format.fprintf fmt "(define-fun IDLE () SUP_state (mk_SUP_state false false false))@\n";
+        Format.fprintf fmt "(define-fun TRIG () SUP_state (mk_SUP_state true false false))@\n";
+        Format.fprintf fmt "(define-fun DELAY () SUP_state (mk_SUP_state false true false))@\n";
+        Format.fprintf fmt "(define-fun ACTION () SUP_state (mk_SUP_state false false true))@\n";
+        Format.fprintf fmt "(define-fun ERR () SUP_state (mk_SUP_state true true false))@\n";
+        Format.fprintf fmt "(define-fun VACUITY () SUP_state (mk_SUP_state true true true))@\n";
+  )
 
 (** [time_to_string t] convert the time [t] to string, for now only integer time units *)
 let time_to_string t =
@@ -40,7 +43,7 @@ let generate_invariant fmt content_start content_end =
     The SUP action start event is [amin]
     The SUP action end event is [amax]
      *)
-let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
+let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (args : Input_args.t)=
   let state_name = "state_"^req_name^"_"^(string_of_int sup_index) in
   let counter_name = "c_"^req_name^"_"^(string_of_int sup_index) in
   let tse_name = "tse_"^req_name^"_"^(string_of_int sup_index) in
@@ -64,16 +67,22 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
   let amax_s = time_to_string amax in
 
   Format.fprintf fmt ";these are the function to access SUP attributes (state, time counter, trigger/delay/action time@\n";
-  Format.fprintf fmt "(declare-fun %s () Int)@\n" state_name;
-  Format.fprintf fmt "(declare-fun %s_n () Int)@\n" state_name;
-  Format.fprintf fmt "(declare-fun %s () Int)@\n" counter_name;
-  Format.fprintf fmt "(declare-fun %s_n () Int)@\n" counter_name;
-  Format.fprintf fmt "(define-fun %s () Int %s)@\n" tmin_name tmin_s;
-  Format.fprintf fmt "(define-fun %s () Int %s)@\n" tmax_name tmax_s;
-  Format.fprintf fmt "(define-fun %s () Int %s)@\n" lmin_name lmin_s;
-  Format.fprintf fmt "(define-fun %s () Int %s)@\n" lmax_name lmax_s;
-  Format.fprintf fmt "(define-fun %s () Int %s)@\n" amin_name amin_s;
-  Format.fprintf fmt "(define-fun %s () Int %s)@\n" amax_name amax_s;
+  let state_type = (match args.state_enc with
+  |IntegerEncoding -> "Int"
+  |BooleanEncoding -> "SUP_state") in
+  let clock_type = (match args.clock_t with
+  |IntegerClock-> "Int"
+  |RealClock -> "Real") in
+  Format.fprintf fmt "(declare-fun %s () %s)@\n" state_name state_type;
+  Format.fprintf fmt "(declare-fun %s_n () %s)@\n" state_name state_type;
+  Format.fprintf fmt "(declare-fun %s () %s)@\n" counter_name clock_type;
+  Format.fprintf fmt "(declare-fun %s_n () %s)@\n" counter_name clock_type;
+  Format.fprintf fmt "(define-fun %s () %s %s)@\n" tmin_name clock_type tmin_s;
+  Format.fprintf fmt "(define-fun %s () %s %s)@\n" tmax_name clock_type tmax_s;
+  Format.fprintf fmt "(define-fun %s () %s %s)@\n" lmin_name clock_type lmin_s;
+  Format.fprintf fmt "(define-fun %s () %s %s)@\n" lmax_name clock_type lmax_s;
+  Format.fprintf fmt "(define-fun %s () %s %s)@\n" amin_name clock_type amin_s;
+  Format.fprintf fmt "(define-fun %s () %s %s)@\n" amax_name clock_type amax_s;
   Format.fprintf fmt "@\n";
 
   Format.fprintf fmt ";these are the function to explicit SUP time counter initial value and transition@\n";
@@ -99,7 +108,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
                             )
                             (ite (= "^state_name^"  DELAY)
                               (ite (and (not "^ase_name^") (>= "^counter_name^" "^lmax_name^" )) 
-                                (- ERR)
+                                (- 2)
                                 (ite (and (< "^counter_name^" "^lmax_name^" ) (or (not "^ase_name^" )(< "^counter_name^" "^lmin_name^")))
                                     (+ "^counter_name^" 1)
                                     (ite (and "^ase_name^" (<= "^lmin_name^" "^counter_name^") (<= "^counter_name^" "^lmax_name^" ))
@@ -112,7 +121,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
                                 (ite (and "^aee_name^" (<= "^amin_name^"  "^counter_name^") (<= "^counter_name^" "^amax_name^" ))
                                     0
                                     (ite (or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") (< "^counter_name^" "^amin_name^")) (and (not "^aee_name^") (>= "^counter_name^" "^amax_name^")) (> "^counter_name^" "^amax_name^"))
-                                      (- ERR)
+                                      (- 2)
                                       (ite (and "^ac_name^" (< "^counter_name^" "^amax_name^") (or (not "^aee_name^") (< "^counter_name^" "^amin_name^")))
                                             (+ "^counter_name^" 1)
                                             (- 1)
@@ -131,8 +140,8 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
   Format.fprintf fmt "@\n";
 
   Format.fprintf fmt ";these are the function to explicit SUP state initial value and transition@\n";
-  Format.fprintf fmt "(define-fun .%s_sv0 () Int (!  %s :next %s_n))@\n" state_name state_name state_name;
-  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s 1) :init true))@\n" state_name state_name;
+  Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :next %s_n))@\n" state_name state_type state_name state_name;
+  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s IDLE) :init true))@\n" state_name state_name;
   let state_trans = "(define-fun ."^state_name^"_trans () Bool (! (= "^state_name^"_n 
                         ( ite  	(= "^state_name^"  IDLE)
                           (ite (not "^tse_name^") IDLE TRIG)
@@ -143,7 +152,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
                                 TRIG
                                 (ite (and "^tee_name^" (<= "^tmin_name^" "^counter_name^") (<= "^counter_name^"  "^tmax_name^" )) 
                                   DELAY
-                                  (- 1) 
+                                  VACUITY
                                 )
                               )
                             )
@@ -154,7 +163,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
                                     DELAY
                                     (ite (and "^ase_name^" (<= "^lmin_name^" "^counter_name^") (<= "^counter_name^" "^lmax_name^" ))
                                         ACTION
-                                        (- 1)
+                                        VACUITY
                                     )
                                 )
                               )
@@ -165,18 +174,20 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax=
                                       ERR
                                       (ite (and "^ac_name^" (< "^counter_name^" "^amax_name^") (or (not "^aee_name^") (< "^counter_name^" "^amin_name^")))
                                             ACTION
-                                            (- 1)
+                                            VACUITY
                                       )
                                     )
                                 )
-                                (- 1)
+                                VACUITY
                               )
                             )
                           )
                         )
                       ) :trans true))" in
   Format.fprintf fmt "%s@\n" state_trans;
-  generate_invariant fmt ("(define-fun ."^state_name^"_p0 () Bool (! (and (>= "^state_name^" IDLE)  (< "^state_name^" ERR)) ")  "))" ;
+  generate_invariant fmt ("(define-fun ."^state_name^"_p0 () Bool (! (not (= "^state_name^" ERR))") "))" ;
+  generate_invariant fmt ("(define-fun ."^state_name^"_p1 () Bool (! (not (= "^state_name^" VACUITY))") "))" ;
+  
   Format.fprintf fmt "\n"
 
 (** [generate_var_decl fmt decl] generates the declaration of variable [decl] used in the requirements in the formatter [fmt] *)
@@ -185,7 +196,7 @@ let generate_var_decl fmt decl =
   (* for constant force the value using assert*)
   |Ast_types.Constant (name, Const_bool(value)) -> Format.fprintf fmt "(declare-fun %s () Bool)@\n(assert(= %s %b))@\n"  name name value
   |Ast_types.Constant (name, Const_int(value)) -> Format.fprintf fmt "(declare-fun %s () Int)@\n(assert(= %s %d))@\n"  name name value
-  |Ast_types.Constant (name, Const_real(value)) -> Format.fprintf fmt "(declare-fun %s () Real)@\n(assert(= %s %f))@\n"  name name value
+  |Ast_types.Constant (name, Const_real(value)) -> Format.fprintf fmt "(declare-fun %s () Real)@\n(assert(= %s (to_real %d)))@\n"  name name (int_of_float value)
   (* for variable let the value free to change *)
   |Ast_types.Input (name, Bool) 
   |Ast_types.Output (name, Bool) 
@@ -235,7 +246,7 @@ let generate_event_declaration fmt sup_index prefix (event: Sup_types.event) =
 
 (** [generate_sup fmt req_name sup_index sup] generates the conversion in the formatter [fmt] of a SUP with name [req_name] and index 
     [sup_index] into VMT lib format *)
-let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req)=
+let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) args=
   let t = sup.t in 
   generate_event_declaration fmt sup_index ("tse_"^req_name) t.tse;
   generate_event_declaration fmt sup_index ("tc_"^req_name)  t.tc;
@@ -244,40 +255,39 @@ let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req)=
   generate_event_declaration fmt sup_index ("ase_"^req_name) a.ase;
   generate_event_declaration fmt sup_index ("ac_"^req_name)  a.ac;
   generate_event_declaration fmt sup_index ("aee_"^req_name) a.aee;
-  generate_SUP_content fmt sup_index req_name t.tmin t.tmax sup.d.lmin sup.d.lmax a.amin a.amax
+  generate_SUP_content fmt sup_index req_name t.tmin t.tmax sup.d.lmin sup.d.lmax a.amin a.amax args
   
   
 (** [generate_sup_list fmt req_name (_, req_sups_list)] generates the conversion in the formatter [fmt] of the SUP 
     list [req_sups_list] corresponding to a parsed requirement with name [req_name] in SUP format into VMT lib format *)
-let generate_sup_list fmt req_name (_, req_sups_list) =
+let generate_sup_list fmt req_name (_, req_sups_list) args=
   Format.fprintf fmt ";generation of the SUP state machine for requirement %s @\n" req_name;
-  List.iteri (fun i sup -> generate_sup fmt req_name i sup) req_sups_list
+  List.iteri (fun i sup -> generate_sup fmt req_name i sup args) req_sups_list
 
 (** [generate_requirements fmt t] generates the conversion of the parsed requirements [t] in SUP format into VMT lib format
     in the formatter [fmt] *)
-let generate_requirements fmt (t:Parse.t) = 
+let generate_requirements fmt (t:Parse.t) (args : Input_args.t) = 
   (*print original variables*)
   Format.fprintf fmt "@\n;these are the variables used in triggers and actions@\n";
   let vars = t.vars in
   let vars_decl = List.of_seq ( Hashtbl.to_seq_values vars ) in
   List.iter (fun decl -> generate_var_decl fmt decl) vars_decl;
-  let ((generated_variables:string list), sup_map) =  Sup.of_req_with_non_bool t in 
+  let (_ (*TODO*),(intermediate_variables:string list), sup_map) =  Sup.of_req t args.only_bool_predicates in 
 
   (*print generated variables used to convert requirements to SUP*)
-  if (List.length generated_variables) > 0 then (
+  if (List.length intermediate_variables) > 0 then (
     Format.fprintf fmt "@\n;these are generated variables to model Before, After ... requirements @\n";
-    List.iter (fun var_name -> (generate_intermediate_var_decl fmt var_name)) generated_variables
+    List.iter (fun var_name -> (generate_intermediate_var_decl fmt var_name)) intermediate_variables
   );
 
   (*print the SUPs*)
   Format.fprintf fmt "@\n;these are generated SUPs @\n";
-  Sup.SMap.iter (fun key value -> generate_sup_list fmt key value) sup_map
+  Sup.SMap.iter (fun key value -> generate_sup_list fmt key value args) sup_map
  
 (** [generate_vmt_file fmt t] generates a file in the vmt-lib format containing the parsed requirements [t] in the formatter [fmt]*)
-let generate_vmt_file fmt t=
-  generate_state fmt;
-  generate_counter fmt;
-  generate_requirements fmt t;
+let generate_vmt_file fmt t args=
+  generate_state fmt args;
+  generate_requirements fmt t args;
   Format.fprintf fmt "@\n";
   Format.fprintf fmt "(check-sat)@\n"
 
