@@ -1,5 +1,6 @@
 
-(** [generate_state fmt] defines the states list in the formatter [fmt]*)
+(** [generate_state fmt] defines the states list in the formatter [fmt]. Depending
+    on [args] it can be encoded either with integers or booleans *)
 let generate_state fmt (args: Input_args.t) =
   match args.state_enc with
   | IntegerEncoding -> (
@@ -21,9 +22,12 @@ let generate_state fmt (args: Input_args.t) =
   )
 
 (** [time_to_string t] convert the time [t] to string, for now only integer time units *)
-let time_to_string t =
-  match  t with
-  | Sup_types.Time(v) -> string_of_int v
+let time_to_string t clock_t=
+  let open Input_args in
+  let s = (match  t with
+  | Sup_types.Time(v) -> string_of_int v) in
+  if clock_t = RealClock then ("(to_real "^s^")") else s
+
   
 (** current invariant unique id *)
 let invariant_index = ref 0
@@ -59,12 +63,12 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   let amin_name = "amin_"^req_name^"_"^(string_of_int sup_index) in
   let amax_name = "amax_"^req_name^"_"^(string_of_int sup_index) in
   
-  let tmin_s = time_to_string tmin in
-  let tmax_s = time_to_string tmax in
-  let lmin_s = time_to_string lmin in
-  let lmax_s = time_to_string lmax in
-  let amin_s = time_to_string amin in
-  let amax_s = time_to_string amax in
+  let tmin_s = time_to_string tmin args.clock_t in
+  let tmax_s = time_to_string tmax args.clock_t in
+  let lmin_s = time_to_string lmin args.clock_t in
+  let lmax_s = time_to_string lmax args.clock_t in
+  let amin_s = time_to_string amin args.clock_t in
+  let amax_s = time_to_string amax args.clock_t in
 
   Format.fprintf fmt ";these are the function to access SUP attributes (state, time counter, trigger/delay/action time@\n";
   let state_type = (match args.state_enc with
@@ -89,7 +93,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   Format.fprintf fmt ";for counter and state, transition resulting in -1 shall not happen (this is an error in the state machine transcription in vmtlib)@\n";
   Format.fprintf fmt ";for counter, transition resulting in -ERR means there is a requirement that is not satisfied @\n";
   Format.fprintf fmt ";for state, transition resulting in ERR means there is a requirement that is not satisfied @\n";
-  Format.fprintf fmt "(define-fun .%s_sv0 () Int (!  %s :next %s_n))@\n" counter_name counter_name counter_name;
+  Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :next %s_n))@\n" counter_name clock_type counter_name counter_name;
   Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s 0) :init true))@\n" counter_name counter_name;
   let counter_trans = "(define-fun ."^counter_name^"_trans () Bool (! (= "^counter_name^"_n 
                         ( ite  	(= "^state_name^"  IDLE)
@@ -210,51 +214,57 @@ let generate_var_decl fmt decl =
   
 (** [generate_intermediate_var_decl fmt var_name ] generates the declaration of an intermediate variable [var_name]
     and initialized it to false in the formatter [fmt] *)
-let generate_intermediate_var_decl fmt (var_name :string)=
+let generate_intermediate_var_decl fmt (var_name :string) =
   Format.fprintf fmt "(declare-fun %s () Bool)@\n" var_name;
   Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s false) :init true))@\n" var_name var_name
 
+(** [generate_generated_var_decl fmt var_name ] generates the declaration of a generated variable [var_name] that replaces a
+    non boolean expression in the formatter [fmt] *)
+  let generate_generated_var_decl fmt (var_name :string) =
+    Format.fprintf fmt "(declare-fun %s () Bool)@\n" var_name
+    
 (** [generate_event_content fmt event] generates the content of an [event] into the formatter [fmt] *)
-let rec generate_event_content fmt event =
+let rec generate_event_content fmt event use_to_real =
+  let open Input_args in
   match event with
   | Sup_types.Var (s) -> Format.fprintf fmt "%s " s
-  | Sup_types.Not (e) -> Format.fprintf fmt "(not " ; generate_event_content fmt e ; Format.fprintf fmt ")"
-  | Sup_types.Or (e1,e2) -> Format.fprintf fmt "(or " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.And (e1,e2) -> Format.fprintf fmt "(and " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
+  | Sup_types.Not (e) -> Format.fprintf fmt "(not " ; generate_event_content fmt e use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Or (e1,e2) -> Format.fprintf fmt "(or " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.And (e1,e2) -> Format.fprintf fmt "(and " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
   | Sup_types.Constant(b) -> if b then  Format.fprintf fmt "true" else  Format.fprintf fmt "false" 
-  | Sup_types.IntConstant(i)-> Format.fprintf fmt " %d " i
-  | Sup_types.RealConstant(f)-> Format.fprintf fmt " %d " (int_of_float (f *. 10.0))
-  | Sup_types.Plus(e1,e2) -> Format.fprintf fmt "(+ " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.Minus(e1,e2) -> Format.fprintf fmt "(- " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.Multiply(e1,e2) -> Format.fprintf fmt "(* " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.Divide(e1,e2) -> Format.fprintf fmt "(/ " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.Eq(e1,e2) -> Format.fprintf fmt "(= " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.Geq(e1,e2) -> Format.fprintf fmt "(>= " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.Gt(e1,e2) -> Format.fprintf fmt "(> " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.Leq(e1,e2) -> Format.fprintf fmt "(<= " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.Lt(e1,e2) -> Format.fprintf fmt "(< " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt ")"
-  | Sup_types.NotEq(e1,e2) -> Format.fprintf fmt "(not (= " ; generate_event_content fmt e1 ; Format.fprintf fmt "  " ; generate_event_content fmt e2 ; Format.fprintf fmt "))"
+  | Sup_types.IntConstant(i)-> if use_to_real = RealClock then (Format.fprintf fmt "(to_real %d) " (i*10)) else (Format.fprintf fmt " %d " (i*10))
+  | Sup_types.RealConstant(f)-> if use_to_real = RealClock then (Format.fprintf fmt   "(to_real %d) " (int_of_float (f *. 10.0))) else (Format.fprintf fmt " %d " (int_of_float (f *. 10.0)))
+  | Sup_types.Plus(e1,e2) -> Format.fprintf fmt "(+ " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Minus(e1,e2) -> Format.fprintf fmt "(- " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Multiply(e1,e2) -> Format.fprintf fmt "(* " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Divide(e1,e2) -> Format.fprintf fmt "(/ " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Eq(e1,e2) -> Format.fprintf fmt "(= " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Geq(e1,e2) -> Format.fprintf fmt "(>= " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Gt(e1,e2) -> Format.fprintf fmt "(> " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Leq(e1,e2) -> Format.fprintf fmt "(<= " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.Lt(e1,e2) -> Format.fprintf fmt "(< " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt ")"
+  | Sup_types.NotEq(e1,e2) -> Format.fprintf fmt "(not (= " ; generate_event_content fmt e1 use_to_real; Format.fprintf fmt "  " ; generate_event_content fmt e2 use_to_real; Format.fprintf fmt "))"
 
 (** [generate_event_declaration fmt sup_index prefix event] generates for a SUP with index [sup_index] a function 
     which return the evaluation of an [event] in the formatter [fmt]. This generation is identical for triggers, actions... 
     The [prefix] allows to indicate in the name of the function which event is handled *)
-let generate_event_declaration fmt sup_index prefix (event: Sup_types.event) = 
+let generate_event_declaration fmt sup_index prefix (event: Sup_types.event) use_to_real = 
   let var_name = prefix^"_"^(string_of_int sup_index) in
   Format.fprintf fmt "(define-fun %s () Bool " var_name;
-  generate_event_content fmt event;
+  generate_event_content fmt event use_to_real;
   Format.fprintf fmt ")@\n" 
 
 (** [generate_sup fmt req_name sup_index sup] generates the conversion in the formatter [fmt] of a SUP with name [req_name] and index 
     [sup_index] into VMT lib format *)
-let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) args=
+let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) (args: Input_args.t) =
   let t = sup.t in 
-  generate_event_declaration fmt sup_index ("tse_"^req_name) t.tse;
-  generate_event_declaration fmt sup_index ("tc_"^req_name)  t.tc;
-  generate_event_declaration fmt sup_index ("tee_"^req_name) t.tee;
+  generate_event_declaration fmt sup_index ("tse_"^req_name) t.tse args.clock_t;
+  generate_event_declaration fmt sup_index ("tc_"^req_name)  t.tc args.clock_t;
+  generate_event_declaration fmt sup_index ("tee_"^req_name) t.tee args.clock_t;
   let a = sup.a in
-  generate_event_declaration fmt sup_index ("ase_"^req_name) a.ase;
-  generate_event_declaration fmt sup_index ("ac_"^req_name)  a.ac;
-  generate_event_declaration fmt sup_index ("aee_"^req_name) a.aee;
+  generate_event_declaration fmt sup_index ("ase_"^req_name) a.ase args.clock_t;
+  generate_event_declaration fmt sup_index ("ac_"^req_name)  a.ac args.clock_t;
+  generate_event_declaration fmt sup_index ("aee_"^req_name) a.aee args.clock_t;
   generate_SUP_content fmt sup_index req_name t.tmin t.tmax sup.d.lmin sup.d.lmax a.amin a.amax args
   
   
@@ -272,7 +282,13 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
   let vars = t.vars in
   let vars_decl = List.of_seq ( Hashtbl.to_seq_values vars ) in
   List.iter (fun decl -> generate_var_decl fmt decl) vars_decl;
-  let (_ (*TODO*),(intermediate_variables:string list), sup_map) =  Sup.of_req t args.only_bool_predicates in 
+  let ( generated_variables,(intermediate_variables:string list), sup_map) =  Sup.of_req t args.only_bool_predicates in 
+
+  (*print generated variables used to convert non boolean expressions into boolean*)
+  if (List.length generated_variables) > 0 then(    
+    Format.fprintf fmt "@\n;these are generated variables to replace non boolean expressions @\n";
+    List.iter (fun var_name -> (generate_generated_var_decl fmt var_name)) generated_variables
+  );
 
   (*print generated variables used to convert requirements to SUP*)
   if (List.length intermediate_variables) > 0 then (

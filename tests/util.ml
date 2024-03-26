@@ -23,9 +23,9 @@ let%expect_test "requirements_identical" =
   let fmt = Format.get_std_formatter() in 
   List.iter( fun p -> Src.Parse.print fmt p) filtered_req;
   [%expect {|
-    Input		x03 of type bool
-    Input		x01 of type bool
-    Input		x02 of type bool
+    Input		x03 IS bool
+    Input		x01 IS bool
+    Input		x02 IS bool
 
     ID001 : Globally, it is always the case that if (x01 || x02) holds  , then x03 holds for at least 25 time units |}]
 

@@ -90,7 +90,7 @@ let%expect_test "print_req_1" =
   let fmt = Format.get_std_formatter () in
   Src.Parse.print fmt parse_t;
   [%expect {|
-    Input		x0000 of type bool
-    Input		x0001 of type real
+    Input		x0000 IS bool
+    Input		x0001 IS real
 
     ID000 : Globally, it is always the case that if x0000 holds  , then x0001 holds for at least 25 time units |}]
