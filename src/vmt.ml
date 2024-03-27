@@ -9,16 +9,14 @@ let generate_state fmt (args: Input_args.t) =
         Format.fprintf fmt "(define-fun TRIG () Int 1)@\n";
         Format.fprintf fmt "(define-fun DELAY () Int 2)@\n";
         Format.fprintf fmt "(define-fun ACTION () Int 3)@\n";
-        Format.fprintf fmt "(define-fun ERR () Int 4)@\n";
-        Format.fprintf fmt "(define-fun VACUITY () Int -1)@\n")
+        Format.fprintf fmt "(define-fun ERR () Int 4)@\n")
   | BooleanEncoding -> (
         Format.fprintf fmt "(declare-datatypes () ((SUP_state (mk_SUP_state (b1 bool) (b2 bool) (b3 bool)))))@\n";
-        Format.fprintf fmt "(define-fun IDLE () SUP_state (mk_SUP_state false false false))@\n";
-        Format.fprintf fmt "(define-fun TRIG () SUP_state (mk_SUP_state true false false))@\n";
-        Format.fprintf fmt "(define-fun DELAY () SUP_state (mk_SUP_state false true false))@\n";
-        Format.fprintf fmt "(define-fun ACTION () SUP_state (mk_SUP_state false false true))@\n";
-        Format.fprintf fmt "(define-fun ERR () SUP_state (mk_SUP_state true true false))@\n";
-        Format.fprintf fmt "(define-fun VACUITY () SUP_state (mk_SUP_state true true true))@\n";
+        Format.fprintf fmt "(define-fun IDLE () SUP_state (mk_SUP_state false false false ))@\n";
+        Format.fprintf fmt "(define-fun TRIG () SUP_state (mk_SUP_state false false true ))@\n";
+        Format.fprintf fmt "(define-fun DELAY () SUP_state (mk_SUP_state false true false  ))@\n";
+        Format.fprintf fmt "(define-fun ACTION () SUP_state (mk_SUP_state false true true ))@\n";    
+        Format.fprintf fmt "(define-fun ERR () SUP_state (mk_SUP_state true false false ))@\n"  
   )
 
 (** [time_to_string t] convert the time [t] to string, for now only integer time units *)
@@ -52,6 +50,8 @@ let generate_invariant fmt content_start content_end =
 let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (args : Input_args.t)=
   let state_name = "state_"^req_name^"_"^(string_of_int sup_index) in
   let counter_name = "c_"^req_name^"_"^(string_of_int sup_index) in
+  let error_name = "err_"^req_name^"_"^(string_of_int sup_index) in
+  let vacuity_name = if (List.mem req_name args.check_non_vacuity) then "vacuity_"^req_name^"_"^(string_of_int sup_index) else "" in
   let tse_name = "tse_"^req_name^"_"^(string_of_int sup_index) in
   let tee_name = "tee_"^req_name^"_"^(string_of_int sup_index) in
   let tc_name = "tc_"^req_name^"_"^(string_of_int sup_index) in
@@ -71,6 +71,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   let lmax_s = time_to_string lmax args.clock_t in
   let amin_s = time_to_string amin args.clock_t in
   let amax_s = time_to_string amax args.clock_t in
+  let t0 = time_to_string (Sup_types.Time 0) args.clock_t in
 
   Format.fprintf fmt ";these are the function to access SUP attributes (state, time counter, trigger/delay/action time@\n";
   let state_type = (match args.state_enc with
@@ -79,6 +80,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   let clock_type = (match args.clock_t with
   |IntegerClock-> "Int"
   |RealClock -> "Real") in
+  (* defines the variables needed for the SUP state machine*)
   Format.fprintf fmt "(declare-fun %s () %s)@\n" state_name state_type;
   Format.fprintf fmt "(declare-fun %s_n () %s)@\n" state_name state_type;
   Format.fprintf fmt "(declare-fun %s () %s)@\n" counter_name clock_type;
@@ -90,111 +92,65 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   Format.fprintf fmt "(define-fun %s () %s %s)@\n" amin_name clock_type amin_s;
   Format.fprintf fmt "(define-fun %s () %s %s)@\n" amax_name clock_type amax_s;
   Format.fprintf fmt "@\n";
-
+  (*define all guards*)
+  Format.fprintf fmt ";these are the functions that explicit the guards of the SUP@\n";
+  Format.fprintf fmt "(define-fun stay_idle_%s () Bool (not %s ))@\n"  state_name tse_name  ;
+  Format.fprintf fmt "(define-fun idle_to_trig_%s () Bool ( = %s true ))@\n" state_name tse_name ;
+  Format.fprintf fmt "(define-fun trig_to_idle_%s () Bool ( %s ))@\n" state_name (" or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") (< "^counter_name^" "^tmin_name^")) (and (not "^tee_name^") (>= "^counter_name^" "^tmax_name^" )) (> "^counter_name^"  "^tmax_name^" )") ;
+  Format.fprintf fmt "(define-fun stay_trig_%s () Bool  ( %s )) @\n" state_name (" and "^tc_name^" (< "^counter_name^"  "^tmax_name^" ) ( or ( not "^tee_name^")  (< "^counter_name^"  "^tmin_name^" ))") ;
+  Format.fprintf fmt "(define-fun trig_to_delay_%s () Bool ( %s ))@\n" state_name ("and "^tee_name^" (<= "^tmin_name^" "^counter_name^") (<= "^counter_name^"  "^tmax_name^" )") ;
+  Format.fprintf fmt "(define-fun stay_delay_%s () Bool ( %s ))@\n" state_name ("and "^ase_name^" (<= "^lmin_name^" "^counter_name^") (<= "^counter_name^" "^lmax_name^" )")  ;
+  Format.fprintf fmt "(define-fun delay_to_err_%s () Bool ( %s ))@\n" state_name ("and (not "^ase_name^") (>= "^counter_name^" "^lmax_name^" )");
+  Format.fprintf fmt "(define-fun delay_to_act_%s () Bool ( %s ))@\n" state_name (" and "^ase_name^" (<= "^lmin_name^" "^counter_name^") (<= "^counter_name^" "^lmax_name^" )");
+  Format.fprintf fmt "(define-fun stay_act_%s () Bool ( %s ))@\n" state_name ("and "^ac_name^" (< "^counter_name^" "^amax_name^") (or (not "^aee_name^") (< "^counter_name^" "^amin_name^"))");
+  Format.fprintf fmt "(define-fun act_to_err_%s () Bool ( %s ))@\n" state_name ("or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") (< "^counter_name^" "^amin_name^")) (and (not "^aee_name^") (>= "^counter_name^" "^amax_name^")) (> "^counter_name^" "^amax_name^")");
+  Format.fprintf fmt "(define-fun act_to_idle_%s () Bool ( %s ))@\n" state_name ("and "^aee_name^" (<= "^amin_name^"  "^counter_name^") (<= "^counter_name^" "^amax_name^" )");
+  (*define counter initialisation and transition*)
   Format.fprintf fmt ";these are the function to explicit SUP time counter initial value and transition@\n";
-  Format.fprintf fmt ";for counter and state, transition resulting in -1 shall not happen (this is an error in the state machine transcription in vmtlib)@\n";
-  Format.fprintf fmt ";for counter, transition resulting in -ERR means there is a requirement that is not satisfied @\n";
-  Format.fprintf fmt ";for state, transition resulting in ERR means there is a requirement that is not satisfied @\n";
-  Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :next %s_n))@\n" counter_name clock_type counter_name counter_name;
-  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s 0) :init true))@\n" counter_name counter_name;
-  let counter_trans = "(define-fun ."^counter_name^"_trans () Bool (! (= "^counter_name^"_n 
-                        ( ite  	(= "^state_name^"  IDLE)
-                          (ite (not "^tse_name^") 0 0)
-                          (ite (= "^state_name^"  TRIG)
-                            ( ite 	( or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") (< "^counter_name^" "^tmin_name^")) (and (not "^tee_name^") (>= "^counter_name^" "^tmax_name^" )) (> "^counter_name^"  "^tmax_name^" )) 
-                              0
-                              (ite ( and "^tc_name^" (< "^counter_name^"  "^tmax_name^" ) ( or ( not "^tee_name^")  (< "^counter_name^"  "^tmin_name^" )))
-                                (+ "^counter_name^" 1)
-                                (ite (and "^tee_name^" (<= "^tmin_name^" "^counter_name^") (<= "^counter_name^"  "^tmax_name^" )) 
-                                  0
-                                  (- 1)
-                                            
-                                )
-                              )
-                            )
-                            (ite (= "^state_name^"  DELAY)
-                              (ite (and (not "^ase_name^") (>= "^counter_name^" "^lmax_name^" )) 
-                                (- 2)
-                                (ite (and (< "^counter_name^" "^lmax_name^" ) (or (not "^ase_name^" )(< "^counter_name^" "^lmin_name^")))
-                                    (+ "^counter_name^" 1)
-                                    (ite (and "^ase_name^" (<= "^lmin_name^" "^counter_name^") (<= "^counter_name^" "^lmax_name^" ))
-                                        0
-                                        (- 1)
-                                    )
-                                )
-                              )
-                              (ite (= "^state_name^"  ACTION)
-                                (ite (and "^aee_name^" (<= "^amin_name^"  "^counter_name^") (<= "^counter_name^" "^amax_name^" ))
-                                    0
-                                    (ite (or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") (< "^counter_name^" "^amin_name^")) (and (not "^aee_name^") (>= "^counter_name^" "^amax_name^")) (> "^counter_name^" "^amax_name^"))
-                                      (- 2)
-                                      (ite (and "^ac_name^" (< "^counter_name^" "^amax_name^") (or (not "^aee_name^") (< "^counter_name^" "^amin_name^")))
-                                            (+ "^counter_name^" 1)
-                                            (- 1)
-                                      )
-                                    )
-                                )
-                                (- 1)
-                              )
-                            )
-                          )
-                        )
-                      ) :trans true))" in
-  Format.fprintf fmt "%s@\n" counter_trans;
-  generate_invariant fmt ("(define-fun ."^counter_name^"_p0 () Bool (! (>= "^counter_name^" 0) ")  "))" ;
-
-  Format.fprintf fmt "@\n";
-
+  Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :nextclock %s_n))@\n" counter_name clock_type counter_name counter_name;
+  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s %s) :init true))@\n" counter_name counter_name t0;
+  (*if specified in the command line, check the non vacuity*)
+  if (List.mem req_name args.check_non_vacuity) then
+    begin
+      Format.fprintf fmt ";these are the function to explicit SUP non vacuity initial value and transition@\n";
+      Format.fprintf fmt "(declare-fun %s () Bool)@\n" vacuity_name ;
+      Format.fprintf fmt "(declare-fun %s_n () Bool)@\n" vacuity_name ;
+      Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :next %s_n))@\n" vacuity_name "Bool" vacuity_name vacuity_name;
+      Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s true) :init true))@\n" vacuity_name vacuity_name;
+    end;
+  (*SUP state transition and initialization*)
   Format.fprintf fmt ";these are the function to explicit SUP state initial value and transition@\n";
   Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :next %s_n))@\n" state_name state_type state_name state_name;
   Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s IDLE) :init true))@\n" state_name state_name;
-  let state_trans = "(define-fun ."^state_name^"_trans () Bool (! (= "^state_name^"_n 
-                        ( ite  	(= "^state_name^"  IDLE)
-                          (ite (not "^tse_name^") IDLE TRIG)
-                          (ite (= "^state_name^"  TRIG )
-                            ( ite 	( or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") (< "^counter_name^" "^tmin_name^")) (and (not "^tee_name^") (>= "^counter_name^" "^tmax_name^" )) (> "^counter_name^"  "^tmax_name^" )) 
-                              IDLE 
-                              (ite ( and "^tc_name^" (< "^counter_name^"  "^tmax_name^" ) ( or ( not "^tee_name^")  (< "^counter_name^"  "^tmin_name^" )))
-                                TRIG
-                                (ite (and "^tee_name^" (<= "^tmin_name^" "^counter_name^") (<= "^counter_name^"  "^tmax_name^" )) 
-                                  DELAY
-                                  VACUITY
-                                )
-                              )
-                            )
-                            (ite (= "^state_name^"  DELAY)
-                              (ite (and (not "^ase_name^") (>= "^counter_name^" "^lmax_name^" )) 
-                                ERR
-                                (ite (and (< "^counter_name^" "^lmax_name^" ) (or (not "^ase_name^" )(< "^counter_name^" "^lmin_name^")))
-                                    DELAY
-                                    (ite (and "^ase_name^" (<= "^lmin_name^" "^counter_name^") (<= "^counter_name^" "^lmax_name^" ))
-                                        ACTION
-                                        VACUITY
-                                    )
-                                )
-                              )
-                              (ite (= "^state_name^"  ACTION)
-                                (ite (and "^aee_name^" (<= "^amin_name^"  "^counter_name^") (<= "^counter_name^" "^amax_name^" ))
-                                    IDLE
-                                    (ite (or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") (< "^counter_name^" "^amin_name^")) (and (not "^aee_name^") (>= "^counter_name^" "^amax_name^")) (> "^counter_name^" "^amax_name^"))
-                                      ERR
-                                      (ite (and "^ac_name^" (< "^counter_name^" "^amax_name^") (or (not "^aee_name^") (< "^counter_name^" "^amin_name^")))
-                                            ACTION
-                                            VACUITY
-                                      )
-                                    )
-                                )
-                                VACUITY
-                              )
-                            )
-                          )
-                        )
-                      ) :trans true))" in
+  let state_trans = "(define-fun ."^state_name^"_trans () Bool (!  ( or   
+              ;this is the encoding of a IDLE to ACTION state in one tick if tmin and lmin are equal to 0
+              (and (= " ^ state_name ^ " IDLE) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= "^tmin_name^" "^t0^") (= "^lmin_name^" "^t0^") (= "^state_name^"_n ACTION) (= "^counter_name^"_n "^t0^" ) )
+              ;this is the encoding of a TRIG to IDLE state in one tick if lmin and amin are equal to 0
+              (and (= " ^ state_name ^ " TRIG) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" true) (= "^lmin_name^" "^t0^") (= "^amin_name^" "^t0^") (= "^state_name^"_n IDLE) (= "^counter_name^"_n "^t0^" ) "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")
+
+              ; this is the encoding of a IDLE to DELAY in one tick if tmin is equal to 0
+              (and (= " ^ state_name ^ " IDLE) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true) (or (not (= delay_to_act_" ^state_name^" true) ) (> "^lmin_name^" "^t0^")) (= "^tmin_name^" "^t0^") (= "^state_name^"_n DELAY) (= "^counter_name^"_n "^t0^" ) )
+              ; this is the encoding of a TRIG to ACTION in one tick if lmin is equal to 0
+              (and (= " ^ state_name ^ " TRIG) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (or (not (= act_to_idle_" ^state_name^" true) ) (> "^amin_name^" "^t0^")) (= "^lmin_name^" "^t0^") (= "^state_name^"_n ACTION) (= "^counter_name^"_n "^t0^" ) )
+              ; this is the encoding of a DELAY to IDLE in one tick if amin is equal to 0
+              (and (= " ^ state_name ^ " DELAY) (= delay_to_act_" ^state_name^" true) (= act_to_idle_" ^state_name^" true) (not idle_to_trig_" ^state_name^") (= "^amin_name^" "^t0^") (= "^state_name^"_n IDLE) (= "^counter_name^"_n "^t0^" ) " ^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^ ")
+
+              ; this is the encoding of one state change. 
+              (and (= " ^ state_name ^ " IDLE) (= stay_idle_" ^state_name^" true) (= "^state_name^"_n IDLE) (= "^counter_name^"_n "^t0^") )
+              (and (= " ^ state_name ^ " IDLE) (= idle_to_trig_" ^state_name^" true) (or (not (= trig_to_delay_" ^state_name^" true) ) (> "^tmin_name^" "^t0^")) (= "^state_name^"_n TRIG) (= "^counter_name^"_n "^t0^") )
+              (and (= " ^ state_name ^ " TRIG) (= trig_to_idle_" ^state_name^" true) (= "^state_name^"_n IDLE) (= "^counter_name^"_n "^t0^") )
+              (and (= " ^ state_name ^ " TRIG) (= stay_trig_" ^state_name^" true) (= "^state_name^"_n TRIG)) 
+              (and (= " ^ state_name ^ " TRIG) (= trig_to_delay_" ^state_name^" true) (or (not (= delay_to_act_" ^state_name^" true) ) (> "^lmin_name^" "^t0^")) (= "^state_name^"_n DELAY) (= "^counter_name^"_n "^t0^" ) )
+              (and (= " ^ state_name ^ " DELAY) (= stay_delay_" ^state_name^" true) (= "^state_name^"_n DELAY) )
+              (and (= " ^ state_name ^ " DELAY) (= delay_to_act_" ^state_name^" true) (or (not (= act_to_idle_" ^state_name^" true) ) (> "^amin_name^" "^t0^")) (= "^state_name^"_n ACTION) (= "^counter_name^"_n "^t0^" ) )
+              (and (= " ^ state_name ^ " ACTION) (= stay_act_" ^state_name^" true) (= "^state_name^"_n ACTION) )
+              (and (= " ^ state_name ^ " ACTION) (= act_to_idle_" ^state_name^" true) (= "^state_name^"_n IDLE) (= "^counter_name^"_n "^t0^" ) " ^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^ ")
+              (and (= " ^ state_name ^ " DELAY) (= delay_to_err_" ^state_name^" true) (= "^state_name^"_n ERR) )
+              (and (= " ^ state_name ^ " ACTION) (= act_to_err_" ^state_name^" true)  (= "^state_name^"_n ERR) )
+              ) :trans true))" in   
   Format.fprintf fmt "%s@\n" state_trans;
-  Format.fprintf fmt "%s@\n" ("(define-fun "^state_name^"_err () Bool (= "^state_name^" ERR))") ;
-  generate_invariant fmt ("(define-fun ."^state_name^"_p1 () Bool (! (not (= "^state_name^" VACUITY))") "))" ;
-  Format.fprintf fmt "@\n";
-  state_name^"_err"
+  Format.fprintf fmt "(define-fun %s() Bool (! ( = (b1  %s) true)))@\n" error_name state_name;
+  error_name
 
 (** [generate_var_decl fmt decl] generates the declaration of variable [decl] used in the requirements in the formatter [fmt] *)
 let generate_var_decl fmt decl =  
@@ -272,9 +228,9 @@ let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) (args: Input_a
   
 (** [generate_sup_list fmt req_name (_, req_sups_list)] generates the conversion in the formatter [fmt] of the SUP 
     list [req_sups_list] corresponding to a parsed requirement with name [req_name] in SUP format into VMT lib format *)
-let generate_sup_list fmt req_name (_, req_sups_list) args=
+let generate_sup_list fmt req_name (_, req_sups_list) (args : Input_args.t)=
   (*generate sups*)
-  Format.fprintf fmt ";generation of the SUP state machine for requirement %s @\n" req_name;
+  Format.fprintf fmt "@\n\n\n;generation of the SUP state machine for requirement %s @\n" req_name;
   List.fold_left (fun acc sup -> (generate_sup fmt req_name (List.length acc) sup args)::acc) [] req_sups_list
   
 (** [generate_requirements fmt t] generates the conversion of the parsed requirements [t] in SUP format into VMT lib format

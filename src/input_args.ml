@@ -12,13 +12,14 @@ type t = {
   only_bool_predicates: bool;
   input_file : string option;
   input_dir : string option;
-  keep_simple : bool
+  keep_simple : bool;
+  check_non_vacuity : string list
 }
 
-let mk output_format state_encoding clock_type only_bool_predicates input_file input_dir keep_simple =
+let mk output_format state_encoding clock_type only_bool_predicates input_file input_dir keep_simple req_vacuity=
   {
     output_fmt = (match output_format with 
-    |"nusmv" -> if not only_bool_predicates then raise(Invalid_argument ("The NuSMV format only accept boolean predicates.")); NuSMV
+    |"nusmv" -> if (((input_file <> None) || (input_dir <> None))&& (not only_bool_predicates)) then raise(Invalid_argument ("The NuSMV format only accept boolean predicates.")); NuSMV
     |"vmtlib"-> VMT
     |_ -> raise(Invalid_argument ("The supported format are nusmv and vmtlib.")));
     state_enc = (match state_encoding with
@@ -32,7 +33,8 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
     only_bool_predicates = only_bool_predicates;
     input_file = input_file;
     input_dir = input_dir;
-    keep_simple = keep_simple
+    keep_simple = keep_simple;
+    check_non_vacuity = req_vacuity
   }
 
 
@@ -45,8 +47,9 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
     let which_clock = ref "integer" in
     let state_encode = ref "integer" in
     let bool_only_predicates = ref false in
+    let vacuity = ref "" in
     let fill s =
-      let l = (15-(String.length s)) in
+      let l = (25-(String.length s)) in
       if l < 0 then ""
       else String.make l ' '
     in
@@ -59,7 +62,7 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
         (fill "input")^"Gives the requirement file to process. This option cannot be used with --input-dir.");  
       ("--input-dir",
         Arg.String (fun s -> dir := Some s),
-        (fill "input_valuenput-dir")^"Gives a directory where all requirements file are processed in order to extract a single requirement for each construction kind. This option cannot be used with --input.");  
+        (fill "input-dir")^"Gives a directory where all requirements file are processed in order to extract a single requirement for each construction kind. This option cannot be used with --input.");  
       ("--simple-exp",
         Arg.Bool (fun b -> simple_exp := b),
         (fill "simple_exp")^"When used with --input-dir keep the most simple (true) or complex (false) expressions for the requirements");  
@@ -68,14 +71,17 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
         (fill "output-fmt")^"Specify the generated file format : nusmv or vmtlib");  
       ("--clock-encoding",
         Arg.String (fun s -> which_clock := s),
-        (fill "clock")^"Specify the kind of clock to use : integer or real");  
+        (fill "clock-encoding")^"Specify the kind of clock to use : integer or real");  
       ("--state-encoding",
         Arg.String (fun s -> state_encode := s),
         (fill "state-encoding")^"Specify the variable type to encode the SUP state : integer or boolean");  
       ("--bool-only-predicates",
         Arg.Bool (fun b -> bool_only_predicates := b),
-        (fill "bool-only-predicates")^"If true, convert predicates that involves not boolean variable into boolean predicates");    
+        (fill "bool-only-predicates")^"If true, convert predicates that involves not boolean variable into boolean predicates");   
+      ("--check-non-vacuity",
+        Arg.String (fun s -> vacuity := s),
+        (fill "check-non-vacuity")^"If a list of requirements ids separated by ; is given, the non vacuity will be checked only on those requirements. Otherwise it is tested on all requirements.");    
     ] in 
     Arg.parse speclist print_endline usage;
 
-    (mk !output_fmt !state_encode !which_clock !bool_only_predicates !file !dir !simple_exp , usage)
+    (mk !output_fmt !state_encode !which_clock !bool_only_predicates !file !dir !simple_exp (String.split_on_char ';' !vacuity) , usage)

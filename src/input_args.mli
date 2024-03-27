@@ -11,7 +11,8 @@ type t = {
   only_bool_predicates: bool;
   input_file : string option;
   input_dir : string option;
-  keep_simple : bool
+  keep_simple : bool;
+  check_non_vacuity : string list
 }
 
 val get : unit -> (t * string)
