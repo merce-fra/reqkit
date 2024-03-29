@@ -1,0 +1,6 @@
+Input		x0004 IS bool
+
+ID6 : After "x0004" until "x0004",
+        it is always the case that
+          "x0004"  holds 
+

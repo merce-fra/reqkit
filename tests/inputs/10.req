@@ -1,0 +1,9 @@
+Input		x0028 IS bool
+Input		x0026 IS bool
+Input		x0027 IS bool
+
+ID27 : After "x0026" until "x0027",
+         it is always the case that
+           if "x0026"  holds 
+             , then "x0028"  holds after at most "100" time units
+

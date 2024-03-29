@@ -1,0 +1,11 @@
+CONST	x00049 IS 1 
+CONST	x00260 IS 100.000000 
+CONST	x00261 IS 33 
+CONST	x00069 IS 3 
+Input		x00196 IS int
+
+ID_00170 : Globally,
+             it is always the case that
+               if "(x00196 == x00069)"  holds for at least "x00260" time units
+                 , then "(x00196 == x00049)"  holds afterwards for at least "x00261" time units
+

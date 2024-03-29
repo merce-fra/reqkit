@@ -1,0 +1,9 @@
+Input		x0004 IS bool
+Input		x0011 IS bool
+Input		x0018 IS bool
+
+ID019 : After "x0011",
+          it is always the case that
+            if "x0004"  holds 
+              , then "x0018"  holds 
+

@@ -1,0 +1,8 @@
+Input		x0001 IS bool
+Input		x0010 IS bool
+
+ID008 : Between "x0010" and "!x0001",
+          it is always the case that
+            if "x0001"  holds 
+              , then "x0001"  holds for less than "75" time units
+

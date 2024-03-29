@@ -1,0 +1,7 @@
+Input		x0006 IS bool
+Input		x0005 IS bool
+
+ID5 : Between "x0005" and "x0006",
+        it is always the case that
+          "x0005"  holds 
+

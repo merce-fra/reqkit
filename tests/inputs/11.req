@@ -1,0 +1,9 @@
+Input		x0007 IS bool
+Input		x0004 IS bool
+Input		x0006 IS bool
+
+ID007 : Between "x0004" and "x0006",
+          it is always the case that
+            if "!x0007"  holds 
+              , then "x0006"  holds after at most "10" time units
+

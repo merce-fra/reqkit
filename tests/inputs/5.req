@@ -1,0 +1,8 @@
+Input		x00262 IS bool
+Input		x00340 IS bool
+
+ID_00011 : Globally,
+             it is always the case that
+               if "x00340"  holds for at least "50.000000" time units
+                 , then "x00262"  holds afterwards 
+

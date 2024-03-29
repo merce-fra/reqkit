@@ -1,0 +1,11 @@
+Input		x0007 IS bool
+Input		x0028 IS bool
+Input		x0034 IS bool
+Input		x0014 IS bool
+Input		x0008 IS bool
+
+ID39 : Between "(x0008 || x0014)" and "x0034",
+         it is always the case that
+           if "x0028"  holds 
+             , then "(!x0007 || !x0034)"  holds for at least "19" time units
+

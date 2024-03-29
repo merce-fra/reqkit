@@ -1,0 +1,11 @@
+Output		x00049 IS bool
+CONST	x00051 IS 50 
+CONST	x00020 IS 1 
+Input		x00036 IS int
+
+ID_00030 : Globally,
+             it is always the case that
+               if "!x00049"  holds 
+                 , then "(x00036 == x00020)" toggles "x00049"  at most "x00051" time units later
+                          
+

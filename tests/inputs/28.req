@@ -1,0 +1,7 @@
+Input		x00267 IS bool
+Input		x00407 IS bool
+
+ID_00189 : Before "!x00407",
+             it is always the case that
+               "!x00267"  holds 
+

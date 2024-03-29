@@ -1,0 +1,9 @@
+Input		x0025 IS bool
+Input		x0018 IS bool
+Input		x0009 IS bool
+
+ID17 : Before "x0025",
+         it is always the case that
+           if "x0018"  holds 
+             , then "x0009"  holds for at least "5" time units
+

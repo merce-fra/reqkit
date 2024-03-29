@@ -1,0 +1,8 @@
+Input		x0012 IS bool
+Input		x0006 IS bool
+
+ID006 : Globally,
+          it is always the case that
+            if "x0012"  holds 
+              , then "x0006"  holds after at most "1" time units
+

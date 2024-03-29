@@ -1,0 +1,7 @@
+Input		x0027 IS bool
+Input		x0053 IS bool
+
+ID075 : After "x0053" until "!x0053",
+          it is never the case that
+            "x0027"  holds 
+

@@ -1,0 +1,7 @@
+Input		x0004 IS bool
+
+ID008 : Globally,
+          it is always the case that
+            if "x0004"  holds 
+              , then "x0004"  holds for less than "4" time units
+

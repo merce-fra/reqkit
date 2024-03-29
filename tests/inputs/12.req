@@ -1,0 +1,10 @@
+Input		x00044 IS bool
+Input		x00063 IS bool
+CONST	x00119 IS 50.000000 
+Input		x00031 IS bool
+
+ID_00060 : After "x00044",
+             it is always the case that
+               if "x00063"  holds 
+                 , then "x00031"  holds after at most "x00119" time units
+

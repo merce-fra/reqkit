@@ -1,0 +1,7 @@
+Input		x0024 IS bool
+Input		x0025 IS bool
+
+ID014 : After "x0024" until "!x0024",
+          it is always the case that
+            "x0025"  holds at least every "4" time units
+

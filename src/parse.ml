@@ -180,15 +180,15 @@ let print_hold fmt h=
  ( match h with
   | Empty -> ()
   | Holds -> Format.fprintf fmt " holds "
-  | Holds_afterward -> Format.fprintf fmt " holds afterward "
+  | Holds_afterward -> Format.fprintf fmt " holds afterwards "
   | Previously_held -> Format.fprintf fmt " previously held "
-  | Holds_for_at_least (e) -> Format.fprintf fmt " holds for at least "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Holds_after_at_most (e) -> Format.fprintf fmt " holds after at most, "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Holds_afterward_for_at_least (e) -> Format.fprintf fmt " holds afterwards for at least "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Holds_for_less_than (e) -> Format.fprintf fmt " holds for less than "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Holds_at_list_every (e) -> Format.fprintf fmt " holds at least every "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Holds_and_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by "; print_exp  fmt e
-  | At_most (e) -> Format.fprintf fmt " at most "; print_exp  fmt e;  Format.fprintf fmt " time units later" )
+  | Holds_for_at_least (e) -> Format.fprintf fmt " holds for at least \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
+  | Holds_after_at_most (e) -> Format.fprintf fmt " holds after at most \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
+  | Holds_afterward_for_at_least (e) -> Format.fprintf fmt " holds afterwards for at least \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
+  | Holds_for_less_than (e) -> Format.fprintf fmt " holds for less than \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
+  | Holds_at_list_every (e) -> Format.fprintf fmt " holds at least every \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
+  | Holds_and_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by \""; print_exp  fmt e ; Format.fprintf fmt "\" "
+  | At_most (e) -> Format.fprintf fmt " at most \""; print_exp  fmt e;  Format.fprintf fmt "\" time units later" )
 
 (** [print_exp_as_string e] prints an expression [e] as a string *)
 let print_exp_as_string e =
@@ -227,17 +227,17 @@ let carriage_return fmt =
 let rec print_req fmt r =
   open_box fmt;
   (match r with 
-  | Prop (e, h) -> print_exp  fmt e; print_hold  fmt h;
+  | Prop (e, h) -> Format.fprintf fmt "\""; print_exp  fmt e; Format.fprintf fmt "\" "; print_hold  fmt h;
   | Globally (r) ->  Format.fprintf fmt "Globally,"; carriage_return fmt ; print_req fmt  r
-  | After (e, r) ->   Format.fprintf fmt "After "; print_exp  fmt e; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r;
-  | After_until (e1, e2 ,r ) ->   Format.fprintf fmt "After "; print_exp  fmt e1; Format.fprintf fmt " until "; print_exp  fmt e2; Format.fprintf fmt "," ; carriage_return fmt ; print_req fmt  r;
-  | Before (e,r) ->   Format.fprintf fmt "Before "; print_exp  fmt e; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r;
+  | After (e, r) ->   Format.fprintf fmt "After \""; print_exp  fmt e; Format.fprintf fmt "\",";  carriage_return fmt ; print_req fmt  r;
+  | After_until (e1, e2 ,r ) ->   Format.fprintf fmt "After \""; print_exp  fmt e1; Format.fprintf fmt "\" until \""; print_exp  fmt e2; Format.fprintf fmt "\"," ; carriage_return fmt ; print_req fmt  r;
+  | Before (e,r) ->   Format.fprintf fmt "Before \""; print_exp  fmt e; Format.fprintf fmt "\",";  carriage_return fmt ; print_req fmt  r;
   | Always (r) ->   Format.fprintf fmt "it is always the case that";  carriage_return fmt ; print_req fmt  r;
   | Never (r) ->   Format.fprintf fmt "it is never the case that";  carriage_return fmt ; print_req fmt  r;
   | If (r1, r2) ->   Format.fprintf fmt "if "; print_req fmt  r1;  carriage_return fmt ; Format.fprintf fmt ", then "; print_req fmt  r2;
-  | After_at_most (r, e) -> print_req fmt  r; Format.fprintf fmt " after at most "; print_exp  fmt e; Format.fprintf fmt " time units"
-  | Between (e1, e2, r) ->   Format.fprintf fmt "Between "; print_exp  fmt e1; Format.fprintf fmt " and "; print_exp  fmt e2; Format.fprintf fmt ",";  carriage_return fmt ; print_req fmt  r
-  | Toggles( e1, e2, h) ->  print_exp  fmt e1; Format.fprintf fmt " toggles "; print_exp  fmt e2; Format.fprintf fmt " "; print_hold fmt h; carriage_return fmt 
+  | After_at_most (r, e) -> print_req fmt  r; Format.fprintf fmt " after at most \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
+  | Between (e1, e2, r) ->   Format.fprintf fmt "Between \""; print_exp  fmt e1; Format.fprintf fmt "\" and \""; print_exp  fmt e2; Format.fprintf fmt "\",";  carriage_return fmt ; print_req fmt  r
+  | Toggles( e1, e2, h) ->  Format.fprintf fmt "\""; print_exp  fmt e1; Format.fprintf fmt "\" toggles \""; print_exp  fmt e2; Format.fprintf fmt "\" "; print_hold fmt h; carriage_return fmt 
    );
   close_box fmt
 

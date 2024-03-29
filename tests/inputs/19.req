@@ -1,0 +1,9 @@
+Input		x00976 IS bool
+CONST	x01033 IS 50.000000 
+Input		x00652 IS bool
+
+ID_00515 : Globally,
+             it is always the case that
+               if "x00976"  holds 
+                 , then "x00652"  holds for at least "x01033" time units
+

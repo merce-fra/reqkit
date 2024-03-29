@@ -1,0 +1,8 @@
+Input		x0034 IS bool
+Input		x0033 IS bool
+
+ID026 : Globally,
+          it is always the case that
+            if "x0033"  holds 
+              , then "x0034"  holds 
+

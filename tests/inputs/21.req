@@ -1,0 +1,11 @@
+Input		x00951 IS int
+CONST	x00670 IS 2 
+Input		x00697 IS int
+Input		x00980 IS bool
+CONST	x00833 IS 2 
+
+ID_00571 : Between "(x00951 != x00670)" and "(x00951 == x00670)",
+             it is always the case that
+               if "(x00697 == x00833)"  holds 
+                 , then "x00980"  holds 
+

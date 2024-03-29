@@ -1,0 +1,8 @@
+Input		x0001 IS bool
+Input		x0000 IS bool
+
+ID1 : Globally,
+        it is always the case that
+          if "x0000"  holds 
+            , then "x0001"  previously held 
+

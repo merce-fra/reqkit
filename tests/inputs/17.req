@@ -1,0 +1,10 @@
+CONST	x00054 IS 50.000000 
+Input		x00052 IS bool
+Input		x00048 IS int
+Input		x00020 IS int
+
+ID_00025 : After "x00052",
+             it is always the case that
+               if "!x00052"  holds 
+                 , then "(x00020 == x00048)"  holds for at least "x00054" time units
+

@@ -1,0 +1,14 @@
+Input		x00319 IS bool
+Input		x00343 IS bool
+Input		x00342 IS bool
+Input		x00137 IS bool
+Input		x00074 IS bool
+CONST	x00303 IS 100 
+Input		x00258 IS bool
+Input		x00135 IS bool
+
+ID_00137 : After "(x00343 || x00342)",
+             it is always the case that
+               if "(((!(x00343 || x00342) && !x00135) && !x00319) && (!x00258 || !x00137))"  holds for at least "x00303" time units
+                 , then "x00074"  holds afterwards 
+

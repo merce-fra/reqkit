@@ -1,0 +1,9 @@
+Input		x0004 IS bool
+Input		x0006 IS bool
+Input		x0005 IS bool
+
+ID004 : Globally,
+          it is always the case that
+            if "x0004"  holds and is succeeded by "x0005" 
+              , then "x0006"  previously held 
+
