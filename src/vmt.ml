@@ -39,8 +39,10 @@ let generate_state fmt (args: Input_args.t) =
 (** [time_to_string t] convert the time [t] to string, for now only integer time units *)
 let time_to_string t clock_t=
   let open Input_args in
-  let s = (match  t with
-  | Sup_types.Time(v) -> string_of_int v) in
+  let s = (match t with
+  | Sup_types.Time(v) 
+      -> if v >= 0 then string_of_int v else  "(- "^ (string_of_int (-v))^")"
+  ) in
   if clock_t = RealClock then ("(to_real "^s^")") else s
 
   
@@ -59,7 +61,7 @@ let next = if is_clock then "nextclock" else "next" in
   Format.fprintf fmt "(declare-fun %s () %s)@\n" name typ;
   Format.fprintf fmt "(declare-fun %s_n () %s)@\n" name typ;
   Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :%s %s_n))@\n" name typ name next name;
-  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s %s) :init true))@\n" name  initial_value name
+  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s %s) :init true))@\n" name name initial_value
 
 let generate_SUP_status_variables_and_func fmt state_name args =
   let open Input_args in
@@ -223,8 +225,7 @@ let generate_var_decl fmt decl =
 (** [generate_intermediate_var_decl fmt var_name ] generates the declaration of an intermediate variable [var_name]
     and initialized it to false in the formatter [fmt] *)
 let generate_intermediate_var_decl fmt (var_name :string) =
-  Format.fprintf fmt "(declare-fun %s () Bool)@\n" var_name;
-  Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s false) :init true))@\n" var_name var_name
+  generate_variable_and_its_next_value fmt var_name "Bool" "false" false
 
 (** [generate_generated_var_decl fmt var_name ] generates the declaration of a generated variable [var_name] that replaces a
     non boolean expression in the formatter [fmt] *)
@@ -311,7 +312,7 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
  
   (*creates an invariant property with all error status funtions*)
   let all_func_error = List.fold_left (fun acc s -> (" (not "^s ^") ")^acc) "" list_error_func in
-  let invar_prop = "(define-fun .all_sup_status () Bool (! (and "^all_func_error^")" in 
+  let invar_prop = "(define-fun .all_sup_status () Bool (! (and true "^all_func_error^")" in 
   generate_invariant fmt invar_prop "))" ;
   Format.fprintf fmt "@\n"
 
