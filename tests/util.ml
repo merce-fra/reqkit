@@ -27,5 +27,5 @@ let%expect_test "requirements_identical" =
     Input		x01 IS bool
     Input		x02 IS bool
 
-    ID001 : Globally, it is always the case that if (x01 || x02) holds  , then x03 holds for at least 25 time units |}]
+    ID001 : Globally, it is always the case that if "(x01 || x02)"  holds  , then "x03"  holds for at least "25" time units |}]
 

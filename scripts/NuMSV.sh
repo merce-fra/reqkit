@@ -1,4 +1,4 @@
-
+#!/bin/bash
 function process_file {
     f=$1
     cd ${REQ_2_SOMETHING_PROJECT_DIR}
@@ -10,7 +10,7 @@ function process_file {
 
 	#generation of the python sup
     SUP_FILE_PY=${OUTPUT_FILES_DIR}/${BASENAME_NO_EXT}".py"
-    ./exec --input ${f} > ${SUP_FILE_PY}
+    ./exec --input ${f} --bool-only-predicates true > ${SUP_FILE_PY}
 
     # calling req_verification
     cd ${REQ_VERIFICATION_INSTALL_DIR}"/landing_gear"
@@ -29,9 +29,13 @@ function process_file {
 
     #call NumSMV
     cd ${OUTPUT_FILES_DIR}
-    timeout 60 NuSMV ${BASENAME_NO_EXT}".smv"
+    RES=`timeout 600  NuSMV ${BASENAME_NO_EXT}".smv"`
 
-    echo "Done"	
+    if [ "${RES}" -eq "124" ]
+    then 
+	    echo "Timeout"
+    fi
+   echo "Done" 
 }
 
 

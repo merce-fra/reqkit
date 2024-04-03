@@ -44,6 +44,7 @@ let print fmt (sup : sup_req) first =
   print_action fmt sup.a;
   Format.fprintf fmt "]"
 
+let print_sup  fmt (sup : sup_req) = print fmt sup true
 
 (** [get_value_from_tbl vars s] checks if a variable of name [s] is in the variable declaration hashtable [vars].
     If so and if constant, the value is returned with a 10 multiplicator for SUP Time infos *)

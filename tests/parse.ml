@@ -93,4 +93,4 @@ let%expect_test "print_req_1" =
     Input		x0000 IS bool
     Input		x0001 IS real
 
-    ID000 : Globally, it is always the case that if x0000 holds  , then x0001 holds for at least 25 time units |}]
+    ID000 : Globally, it is always the case that if "x0000"  holds  , then "x0001"  holds for at least "25" time units |}]
