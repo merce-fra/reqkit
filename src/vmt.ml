@@ -217,7 +217,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   Format.fprintf fmt "(define-fun stay_act_%s () Bool ( %s ))@\n" state_name ("and "^ac_name^"  "^ (generate_counter_lt_max counter_name amax args false) ^ " (or (not "^aee_name^") "^ (generate_counter_lt_min counter_name amin args  false)^ ")");
   Format.fprintf fmt "(define-fun act_to_err_%s () Bool ( %s ))@\n" state_name ("or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") "^ (generate_counter_lt_min counter_name amin args true) ^") (and (not "^aee_name^") "^ (generate_counter_ge_max counter_name amax args true)^") "^ (generate_counter_gt_max counter_name amax args true));
   Format.fprintf fmt "(define-fun act_to_idle_%s () Bool ( and (%s)  (= %s_n %s ) ))@\n" state_name ("and "^aee_name^" "^(generate_counter_ge_min counter_name amin args true) ^" "^ (generate_counter_le_max counter_name amax args true)) counter_name t0;
-  Format.fprintf fmt "(define-fun apply_ac_%s () Bool ( %s ))@\n" state_name ("= " ^ac_name^"_n true");
+  (*Format.fprintf fmt "(define-fun apply_ac_%s () Bool ( %s ))@\n" state_name ("= " ^ac_name^"_n true");*)
 
   (*if specified in the command line, check the non vacuity*)
   if (List.mem req_name args.check_non_vacuity) then
@@ -242,75 +242,95 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   
   (*transition function*)
   let state_trans = "(define-fun ."^state_name^"_trans () Bool (!  ( or" ^
-              (*four transiations in one tick*)
-              (if (tmin_is_nul && lmin_is_nul && amin_is_nul) then    
-                "\n;additional transitions because tmin and lmin and amin are equals to 0\n;this is the encoding of a IDLE to IDLE state in one tick 
-                (and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) apply_ac_"^state_name^" (= act_to_idle_" ^state_name^" true)  (= set_"^state_name^"_IDLE true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")"                 
-              else "")^
-              (*three transiations in one tick*)
-              (if (tmin_is_nul && lmin_is_nul && not amin_is_nul) then    
-              "\n;additional transitions because tmin and lmin are equals to 0\n;this is the encoding of a IDLE to ACTION state in one tick 
-              (and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true)  apply_ac_"^state_name^"   )"^
-              "\n;this is the encoding of a IDLE to DELAY in one tick if tmin and lmin are equal to 0
-              (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" false) (= set_"^state_name^"_DELAY true)  )"^
-              "\n;this is the encoding of TRIG TO ACTION in one tick  if tmin and lmin are equal to 0
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true)  apply_ac_"^state_name^"   )"^
-              "\n;this is the encoding of a IDLE to ERR in one tick if tmin and lmin are equal to 0    
-              (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true) )"^
-              "\n;this is the encoding of TRIG to ERR in one tick  if tmin is equal and lmin are equal to 0
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true) ) "
-              else "")^
-              (if (lmin_is_nul && amin_is_nul && not tmin_is_nul) then
-              "\n;additional transitions because lmin and amin are equals to 0\nthis is the encoding of a TRIG to IDLE state in one tick 
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" true)  (= set_"^state_name^"_IDLE true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")"^
-              "\n;this is the encoding of a TRIG to ACTION state in one tick 
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" false)  (= set_"^state_name^"_ACTION true)  apply_ac_"^state_name^"   )"^
-              "\n;this is the encoding of a DELAY to IDLE state in one tick 
-              (and (=  is_" ^ state_name ^ "DELAY true) (= delay_to_act_" ^state_name^" true) (= act_to_idle_" ^state_name^" true)  (= set_"^state_name^"_IDLE true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")" ^
-              "\n;this is the encoding of a TRIG to ERR state in one tick 
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true) ) "^
-              "\n;this is the encoding of a TRIG to ERR state in one tick 
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= act_to_idle_" ^state_name^" true)  (= act_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true)  )"
-              else "")^  
-              (if (amin_is_nul && tmin_is_nul && not lmin_is_nul) then
-              "\n;additional transitions because tmin and amin are equals to 0\nthis is the encoding of a ACTION to DELAY state in one tick 
-              (and (=  is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true)  (= set_"^state_name^"_DELAY true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")" ^
-              "\n;this is the encoding of a ACTION to TRIG state in one tick
-                (and (=  is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" false)  (= set_"^state_name^"_TRIG true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")" ^
-              "\n;this is the encoding of a IDLE to DELAY state in one tick 
-              (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" false)  (= trig_to_delay_" ^state_name^" true)   (= set_"^state_name^"_DELAY true) ) " 
-              else "")^
-              (* two transitions in one ticjk *)
-              (if (tmin_is_nul && not lmin_is_nul && not amin_is_nul) then
-              "\n;additional transitions because tmin is equal to 0\nthis is the encoding of a IDLE to DELAY state in one tick 
-              (and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true)  (= set_"^state_name^"_TRIG true) "
-              else "")^
-              (if (not tmin_is_nul &&  lmin_is_nul && not amin_is_nul) then
-              "\n;additional transitions because lmin is equal to 0\nthis is the encoding of a TRIG to ACTION state in one tick 
-              (and (= is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= set_"^state_name^"_ACTION true)  apply_ac_"^state_name^"   )"^
-              "\n;this is the encoding of a TRIG to ACTION state in one tick 
-              (and (= is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true))"
-              else "")^
-              (if (not tmin_is_nul &&  not lmin_is_nul && amin_is_nul) then
-              "\n;additional transitions because amin is equal to 0\nthis is the encoding of a DELAY to ACTION state in one tick 
-              (and (= is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true) (= act_to_idle_" ^state_name^" true)  (= set_"^state_name^"_IDLE true)  )"^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")" ^
-              "\n;this is the encoding of a DELAY to ERR state in one tick 
-              (and (= is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true) (= act_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true))"
-              else "")^
-              (* single transition in one tick *)
-              "\n;this is the encoding of single state change.
-              (and (=  is_" ^ state_name ^ "_IDLE true) (= stay_idle_" ^state_name^" true) (= set_"^state_name^"_IDLE true) )
-              (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) " ^ check_stop_after_trig ^ " (= set_"^state_name^"_TRIG true)  )
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_idle_" ^state_name^" true) (= set_"^state_name^"_IDLE true) )
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= stay_trig_" ^state_name^" true) (= set_"^state_name^"_TRIG true)) 
-              (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) "^ check_stop_after_delay ^"(= set_"^state_name^"_DELAY true)  )
-              (and (=  is_" ^ state_name ^ "_DELAY true) (= stay_delay_" ^state_name^" true) (= set_"^state_name^"_DELAY true) )
-              (and (=  is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true) " ^ check_stop_after_action ^ " (= set_"^state_name^"_ACTION true)  apply_ac_"^state_name^"   )
-              (and (=  is_" ^ state_name ^ "_ACTION true) (= stay_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true) )
-              (and (=  is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= set_"^state_name^"_IDLE true) " ^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^ ")
-              (and (=  is_" ^ state_name ^ "_DELAY true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true) )
-              (and (=  is_" ^ state_name ^ "_ACTION true) (= act_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true) )
-              ) :trans true))" in   
+      (*four transiations in one tick*)
+      (if (tmin_is_nul && lmin_is_nul && amin_is_nul) then    
+      "\n;additional transitions because tmin and lmin and amin are equals to 0\n;this is the encoding of a IDLE to IDLE state in one tick 
+       (and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= act_to_idle_" ^state_name^" true)  (= set_"^state_name^"_IDLE true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")"^                 
+      "\n(and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" false) (= set_"^state_name^"_ACTION true) )" ^                 
+      "\n(and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" false) (= set_"^state_name^"_DELAY true) )" ^    
+      "\n(and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true)  )" ^                 
+      "\n(and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= act_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true)  )" ^                 
+      
+      "\n(and (= is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true) (= set_"^state_name^"_TRIG true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^") " ^                 
+      "\n(and (= is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" true)  (= idle_to_trig_" ^state_name^" false) (= set_"^state_name^"_IDLE true)" ^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^") " ^                                  
+      "\n(and (= is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" false) (= set_"^state_name^"_ACTION true))" ^                 
+      "\n(and (= is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true)  )" ^       
+
+      "\n(and (= is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" true)  (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true)  (= set_"^state_name^"_DELAY true) "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")"^                 
+      "\n(and (= is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" true)  (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" false) (= set_"^state_name^"_TRIG true) " ^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")"^                 
+      "\n(and (= is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" true)  (= idle_to_trig_" ^state_name^" false) (= set_"^state_name^"_IDLE true) " ^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")"^                 
+      "\n(and (= is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" false) (= set_"^state_name^"_ACTION true) )"^                 
+
+
+      "\n(and (= is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true) " ^(if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^ ")" ^
+      "\n(and (= is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" false) (= set_"^state_name^"_DELAY true) " ^(if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^ ")" ^
+      "\n(and (= is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" false) (= set_"^state_name^"_TRIG true) " ^(if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^ ")" ^
+      "\n(and (= is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" false) (= set_"^state_name^"_ERR true) )" 
+    else "")^
+      (*three transiations in one tick*)
+      (if (tmin_is_nul && lmin_is_nul && not amin_is_nul) then    
+      "\n;additional transitions because tmin and lmin are equals to 0\n;this is the encoding of a IDLE to ACTION state in one tick 
+      (and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true)     )"^
+      "\n;this is the encoding of a IDLE to DELAY in one tick if tmin and lmin are equal to 0
+      (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" false) (= set_"^state_name^"_DELAY true)  )"^
+      "\n;this is the encoding of TRIG TO ACTION in one tick  if tmin and lmin are equal to 0
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true)     )"^
+      "\n;this is the encoding of a IDLE to ERR in one tick if tmin and lmin are equal to 0    
+      (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true) )"^
+      "\n;this is the encoding of TRIG to ERR in one tick  if tmin is equal and lmin are equal to 0
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true) ) "
+      else "")^
+      (if (lmin_is_nul && amin_is_nul && not tmin_is_nul) then
+      "\n;additional transitions because lmin and amin are equals to 0\nthis is the encoding of a TRIG to IDLE state in one tick 
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" true)  (= set_"^state_name^"_IDLE true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")"^
+      "\n;this is the encoding of a TRIG to ACTION state in one tick 
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= act_to_idle_" ^state_name^" false)  (= set_"^state_name^"_ACTION true)     )"^
+      "\n;this is the encoding of a DELAY to IDLE state in one tick 
+      (and (=  is_" ^ state_name ^ "DELAY true) (= delay_to_act_" ^state_name^" true) (= act_to_idle_" ^state_name^" true)  (= set_"^state_name^"_IDLE true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")" ^
+      "\n;this is the encoding of a TRIG to ERR state in one tick 
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true) ) "^
+      "\n;this is the encoding of a TRIG to ERR state in one tick 
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= act_to_idle_" ^state_name^" true)  (= act_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true)  )"
+      else "")^  
+      (if (amin_is_nul && tmin_is_nul && not lmin_is_nul) then
+      "\n;additional transitions because tmin and amin are equals to 0\n;this is the encoding of a ACTION to DELAY state in one tick 
+      (and (=  is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true)  (= set_"^state_name^"_DELAY true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")" ^
+      "\n;this is the encoding of a ACTION to TRIG state in one tick
+        (and (=  is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" false)  (= set_"^state_name^"_TRIG true)  "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")" ^
+      "\n;this is the encoding of a IDLE to DELAY state in one tick 
+      (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" false)  (= trig_to_delay_" ^state_name^" true)   (= set_"^state_name^"_DELAY true) ) " 
+      else "")^
+      (* two transitions in one ticjk *)
+      (if (tmin_is_nul && not lmin_is_nul && not amin_is_nul) then
+      "\n;additional transitions because tmin is equal to 0\n;this is the encoding of a IDLE to DELAY state in one tick 
+      (and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true)  (= set_"^state_name^"_TRIG true) "
+      else "")^
+      (if (not tmin_is_nul &&  lmin_is_nul && not amin_is_nul) then
+      "\n;additional transitions because lmin is equal to 0\n;this is the encoding of a TRIG to ACTION state in one tick 
+      (and (= is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true)  (= set_"^state_name^"_ACTION true)     )"^
+      "\n;this is the encoding of a TRIG to ACTION state in one tick 
+      (and (= is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true))"
+      else "")^
+      (if (not tmin_is_nul &&  not lmin_is_nul && amin_is_nul) then
+      "\n;additional transitions because amin is equal to 0\n;this is the encoding of a DELAY to ACTION state in one tick 
+      (and (= is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true) (= act_to_idle_" ^state_name^" true)  (= set_"^state_name^"_IDLE true) "^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^")" ^
+      "\n;this is the encoding of a DELAY to ERR state in one tick 
+      (and (= is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true) (= act_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true))"
+      else "")^
+      (* single transition in one tick *)
+      "\n;this is the encoding of single state change.
+      (and (=  is_" ^ state_name ^ "_IDLE true) (= stay_idle_" ^state_name^" true) (= set_"^state_name^"_IDLE true) )
+      (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) " ^ check_stop_after_trig ^ " (= set_"^state_name^"_TRIG true)  )
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_idle_" ^state_name^" true) (= set_"^state_name^"_IDLE true) )
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= stay_trig_" ^state_name^" true) (= set_"^state_name^"_TRIG true)) 
+      (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) "^ check_stop_after_delay ^"(= set_"^state_name^"_DELAY true)  )
+      (and (=  is_" ^ state_name ^ "_DELAY true) (= stay_delay_" ^state_name^" true) (= set_"^state_name^"_DELAY true) )
+      (and (=  is_" ^ state_name ^ "_DELAY true) (= delay_to_act_" ^state_name^" true) " ^ check_stop_after_action ^ " (= set_"^state_name^"_ACTION true)     )
+      (and (=  is_" ^ state_name ^ "_ACTION true) (= stay_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true) )
+      (and (=  is_" ^ state_name ^ "_ACTION true) (= act_to_idle_" ^state_name^" true) (= set_"^state_name^"_IDLE true) " ^ (if (String.length vacuity_name) = 0 then "" else  "(= "^vacuity_name^ "_n false)")^ ")
+      (and (=  is_" ^ state_name ^ "_DELAY true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true) )
+      (and (=  is_" ^ state_name ^ "_ACTION true) (= act_to_err_" ^state_name^" true)  (= set_"^state_name^"_ERR true) )
+      ) :trans true))" in   
   Format.fprintf fmt "%s@\n" state_trans;
   "is_" ^ state_name ^ "_ERR"
 
@@ -339,8 +359,8 @@ let generate_intermediate_var_decl fmt (var_name :string) =
 
 (** [generate_generated_var_decl fmt var_name ] generates the declaration of a generated variable [var_name] that replaces a
     non boolean expression in the formatter [fmt] *)
-  let generate_generated_var_decl fmt (var_name :string) =
-    Format.fprintf fmt "(declare-fun %s () Bool)@\n" var_name
+let generate_generated_var_decl fmt (var_name :string) =
+  Format.fprintf fmt "(declare-fun %s () Bool)@\n" var_name
     
 (** [generate_event_content fmt event] generates the content of an [event] into the formatter [fmt] *)
 let rec generate_event_content fmt event use_to_real =
@@ -390,9 +410,9 @@ let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) (args: Input_a
   let a = sup.a in
   generate_event_declaration fmt sup_index ("ase_"^req_name) a.ase args.clock_t;
   generate_event_declaration fmt sup_index ("ac_"^req_name)  a.ac args.clock_t;
-  let var_name = get_var_name ("ac_"^req_name) sup_index in
+  (*let var_name = get_var_name ("ac_"^req_name) sup_index in
   Format.fprintf fmt "(declare-fun %s_n () Bool)@\n" var_name;
-  Format.fprintf fmt "(define-fun .%s_sv0 () Bool (! %s :next %s_n))@\n" var_name var_name var_name ;
+  Format.fprintf fmt "(define-fun .%s_sv0 () Bool (! %s :next %s_n))@\n" var_name var_name var_name ;*)
   generate_event_declaration fmt sup_index ("aee_"^req_name) a.aee args.clock_t;
   generate_SUP_content fmt sup_index req_name t.tmin t.tmax sup.d.lmin sup.d.lmax a.amin a.amax args
   
@@ -432,7 +452,7 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
  
   (*creates an invariant property with all error status funtions*)
   let all_func_error = List.fold_left (fun acc s -> (" (not "^s ^") ")^acc) "" list_error_func in
-  let invar_prop = "(define-fun .all_sup_status () Bool (! (and true "^all_func_error^")" in 
+  let invar_prop = "(define-fun .all_sup_status () Bool (! (and true true "^all_func_error^")" in 
   generate_invariant fmt invar_prop "))" ;
   Format.fprintf fmt "@\n"
 
@@ -441,6 +461,6 @@ let generate_vmt_file fmt t args=
   generate_state fmt args;
   generate_requirements fmt t args;
   Format.fprintf fmt "@\n";
-  Format.fprintf fmt "(check-sat)@\n"
+  Format.fprintf fmt "(assert true)@\n"
 
  
