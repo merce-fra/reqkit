@@ -272,13 +272,13 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
       (if (tmin_is_nul && lmin_is_nul && not amin_is_nul) then    
       "\n;additional transitions because tmin and lmin are equals to 0\n;this is the encoding of a IDLE to ACTION state in one tick 
       (and (= is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true)     )"^
-      "\n;this is the encoding of a IDLE to DELAY in one tick if tmin and lmin are equal to 0
+      "\n;this is the encoding of a IDLE to DELAY in one tick 
       (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" false) (= set_"^state_name^"_DELAY true)  )"^
-      "\n;this is the encoding of TRIG TO ACTION in one tick  if tmin and lmin are equal to 0
+      "\n;this is the encoding of TRIG TO ACTION in one tick 
       (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_act_" ^state_name^" true) (= set_"^state_name^"_ACTION true)     )"^
-      "\n;this is the encoding of a IDLE to ERR in one tick if tmin and lmin are equal to 0    
+      "\n;this is the encoding of a IDLE to ERR in one tick 
       (and (=  is_" ^ state_name ^ "_IDLE true) (= idle_to_trig_" ^state_name^" true)  (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true) )"^
-      "\n;this is the encoding of TRIG to ERR in one tick  if tmin is equal and lmin are equal to 0
+      "\n;this is the encoding of TRIG to ERR in one tick  
       (and (=  is_" ^ state_name ^ "_TRIG true) (= trig_to_delay_" ^state_name^" true) (= delay_to_err_" ^state_name^" true) (= set_"^state_name^"_ERR true) ) "
       else "")^
       (if (lmin_is_nul && amin_is_nul && not tmin_is_nul) then
@@ -390,13 +390,23 @@ let rec generate_event_content fmt event use_to_real =
 let get_var_name prefix sup_index =
   prefix^"_"^(string_of_int sup_index) 
 
+(** [convert_event_with_next event] updates the content of the action [event] to use the variable for the next clock step*)
+let rec convert_event_with_next event =
+  match event with
+  | Sup_types.Var (s) -> if String.starts_with ~prefix:"intermediate" s then Sup_types.Var ( s^"_n") else event
+  | Sup_types.Not (e) -> Sup_types.Not(convert_event_with_next e)
+  |_ -> event
+
 (** [generate_event_declaration fmt sup_index prefix event] generates for a SUP with index [sup_index] a function 
     which return the evaluation of an [event] in the formatter [fmt]. This generation is identical for triggers, actions... 
-    The [prefix] allows to indicate in the name of the function which event is handled *)
-let generate_event_declaration fmt sup_index prefix (event: Sup_types.event) use_to_real = 
+    The [prefix] allows to indicate in the name of the function which event is handled. In case of action event
+    with intermediate variable used to model After, Before ... requirements, those need to be updated and not 
+    read (use of [convert_event_with_next] function)*)
+let generate_event_declaration fmt sup_index prefix (event: Sup_types.event) use_to_real is_action = 
   let var_name = get_var_name prefix sup_index in
   Format.fprintf fmt "(define-fun %s () Bool " var_name;
-  generate_event_content fmt event use_to_real;
+  let event_with_next = (if is_action then convert_event_with_next event else event) in 
+  generate_event_content fmt event_with_next use_to_real;
   Format.fprintf fmt ")@\n"
 
 
@@ -405,16 +415,16 @@ let generate_event_declaration fmt sup_index prefix (event: Sup_types.event) use
 let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) (args: Input_args.t) =
   Format.fprintf fmt "; sup %a @\n"  Sup.print_sup  sup;
   let t = sup.t in 
-  generate_event_declaration fmt sup_index ("tse_"^req_name) t.tse args.clock_t;
-  generate_event_declaration fmt sup_index ("tc_"^req_name)  t.tc args.clock_t;
-  generate_event_declaration fmt sup_index ("tee_"^req_name) t.tee args.clock_t;
+  generate_event_declaration fmt sup_index ("tse_"^req_name) t.tse args.clock_t false;
+  generate_event_declaration fmt sup_index ("tc_"^req_name)  t.tc args.clock_t false;
+  generate_event_declaration fmt sup_index ("tee_"^req_name) t.tee args.clock_t false;
   let a = sup.a in
-  generate_event_declaration fmt sup_index ("ase_"^req_name) a.ase args.clock_t;
-  generate_event_declaration fmt sup_index ("ac_"^req_name)  a.ac args.clock_t;
+  generate_event_declaration fmt sup_index ("ase_"^req_name) a.ase args.clock_t true;
+  generate_event_declaration fmt sup_index ("ac_"^req_name)  a.ac args.clock_t true;
   (*let var_name = get_var_name ("ac_"^req_name) sup_index in
   Format.fprintf fmt "(declare-fun %s_n () Bool)@\n" var_name;
   Format.fprintf fmt "(define-fun .%s_sv0 () Bool (! %s :next %s_n))@\n" var_name var_name var_name ;*)
-  generate_event_declaration fmt sup_index ("aee_"^req_name) a.aee args.clock_t;
+  generate_event_declaration fmt sup_index ("aee_"^req_name) a.aee args.clock_t true;
   generate_SUP_content fmt sup_index req_name t.tmin t.tmax sup.d.lmin sup.d.lmax a.amin a.amax args
   
   
