@@ -11,11 +11,11 @@ let generate_state fmt (args: Input_args.t) =
         Format.fprintf fmt "(define-fun ACTION () Int 3)@\n";
         Format.fprintf fmt "(define-fun ERR () Int 4)@\n";
         Format.fprintf fmt ";some helper functions for SUP status @\n";
-        Format.fprintf fmt "(define-fun is_IDLE ( s Int ) Bool (= s IDLE)@\n";
-        Format.fprintf fmt "(define-fun is_TRIG ( s Int ) Bool (= s TRIG)@\n";
-        Format.fprintf fmt "(define-fun is_DELAY ( s Int ) Bool (= s DELAY)@\n";
-        Format.fprintf fmt "(define-fun is_ACTION ( s Int ) Bool (= s ACTION)@\n";
-        Format.fprintf fmt "(define-fun is_ERR ( s Int ) Bool (= s ERR)@\n"
+        Format.fprintf fmt "(define-fun is_IDLE ( (s Int) ) Bool (= s IDLE))@\n";
+        Format.fprintf fmt "(define-fun is_TRIG ( (s Int) ) Bool (= s TRIG))@\n";
+        Format.fprintf fmt "(define-fun is_DELAY ( (s Int) ) Bool (= s DELAY))@\n";
+        Format.fprintf fmt "(define-fun is_ACTION ( (s Int) ) Bool (= s ACTION))@\n";
+        Format.fprintf fmt "(define-fun is_ERR ( (s Int) ) Bool (= s ERR))@\n"
         )
   | BooleanEncoding -> (
         Format.fprintf fmt ";this boolean variables are used to define the state of the SUP";

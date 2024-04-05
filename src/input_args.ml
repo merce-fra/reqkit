@@ -68,25 +68,25 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
         (fill "input-dir")^"Gives a directory where all requirements file are processed in order to extract a single requirement for each construction kind. This option cannot be used with --input.");  
       ("--simple-exp",
         Arg.Bool (fun b -> simple_exp := b),
-        (fill "simple_exp")^"When used with --input-dir keep the most simple (true) or complex (false) expressions for the requirements");  
+        (fill "simple_exp")^"When used with --input-dir keep the most simple (true) or complex (false, default) expressions for the requirements.");  
       ("--output-fmt",
         Arg.String (fun s -> output_fmt := s),
-        (fill "output-fmt")^"Specify the generated file format : nusmv or vmtlib");  
+        (fill "output-fmt")^"Specify the generated file format : nusmv (default) or vmtlib.");  
       ("--clock-encoding",
         Arg.String (fun s -> which_clock := s),
-        (fill "clock-encoding")^"Specify the kind of clock to use : integer or real");  
+        (fill "clock-encoding")^"Specify the kind of clock to use : integer (default) or real.");  
       ("--state-encoding",
         Arg.String (fun s -> state_encode := s),
-        (fill "state-encoding")^"Specify the variable type to encode the SUP state : integer or boolean");  
+        (fill "state-encoding")^"Specify the variable type to encode the SUP state : integer (default) or boolean.");  
       ("--bool-only-predicates",
         Arg.Bool (fun b -> bool_only_predicates := b),
-        (fill "bool-only-predicates")^"If true, convert predicates that involves not boolean variable into boolean predicates");   
+        (fill "bool-only-predicates")^"If true, convert predicates that involves not boolean variable into boolean predicates (default is false).");   
       ("--check-non-vacuity",
         Arg.String (fun s -> vacuity := s),
-        (fill "check-non-vacuity")^"If a list of requirements ids separated by ; is given, the non vacuity will be checked only on those requirements. Otherwise it is tested on all requirements.");    
+        (fill "check-non-vacuity")^"If a list of requirements ids separated by ; is given, the non vacuity will be checked only on those requirements. Otherwise it is tested on no requirements (default).");    
       ("--check-rt-consistency",
         Arg.Bool (fun b -> check_rt_consistency := b),
-        (fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file.");    
+        (fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");    
 
      ] in 
     Arg.parse speclist print_endline usage;
