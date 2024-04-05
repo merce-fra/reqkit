@@ -13,10 +13,11 @@ type t = {
   input_file : string option;
   input_dir : string option;
   keep_simple : bool;
-  check_non_vacuity : string list
+  check_non_vacuity : string list;
+  check_rt_consistency : bool
 }
 
-let mk output_format state_encoding clock_type only_bool_predicates input_file input_dir keep_simple req_vacuity=
+let mk output_format state_encoding clock_type only_bool_predicates input_file input_dir keep_simple req_vacuity check_rt_consistency =
   {
     output_fmt = (match output_format with 
     |"nusmv" -> if (((input_file <> None) || (input_dir <> None))&& (not only_bool_predicates)) then raise(Invalid_argument ("The NuSMV format only accept boolean predicates.")); NuSMV
@@ -34,7 +35,8 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
     input_file = input_file;
     input_dir = input_dir;
     keep_simple = keep_simple;
-    check_non_vacuity = req_vacuity
+    check_non_vacuity = req_vacuity;
+    check_rt_consistency = check_rt_consistency
   }
 
 
@@ -47,6 +49,7 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
     let which_clock = ref "integer" in
     let state_encode = ref "integer" in
     let bool_only_predicates = ref false in
+    let check_rt_consistency = ref false in
     let vacuity = ref "" in
     let fill s =
       let l = (25-(String.length s)) in
@@ -81,7 +84,11 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
       ("--check-non-vacuity",
         Arg.String (fun s -> vacuity := s),
         (fill "check-non-vacuity")^"If a list of requirements ids separated by ; is given, the non vacuity will be checked only on those requirements. Otherwise it is tested on all requirements.");    
-    ] in 
+      ("--check-rt-consistency",
+        Arg.Bool (fun b -> check_rt_consistency := b),
+        (fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file.");    
+
+     ] in 
     Arg.parse speclist print_endline usage;
 
-    (mk !output_fmt !state_encode !which_clock !bool_only_predicates !file !dir !simple_exp (String.split_on_char ';' !vacuity) , usage)
+    (mk !output_fmt !state_encode !which_clock !bool_only_predicates !file !dir !simple_exp (String.split_on_char ';' !vacuity) !check_rt_consistency, usage)

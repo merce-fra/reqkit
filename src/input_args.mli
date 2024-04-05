@@ -12,7 +12,8 @@ type t = {
   input_file : string option;
   input_dir : string option;
   keep_simple : bool;
-  check_non_vacuity : string list
+  check_non_vacuity : string list;
+  check_rt_consistency : bool
 }
 
 val get : unit -> (t * string)

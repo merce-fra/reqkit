@@ -57,8 +57,8 @@ let generate_invariant fmt content_start content_end =
 
 (** [generate_variable_and_its_next_value fmt name typ initial_value is_clock] generates the smt code for the variable [name]
     of type [typ] with an [initial_value]. If it is a clock, [is_clock] shall be true *)
-let generate_variable_and_its_next_value fmt name typ initial_value is_clock=
-let next = if is_clock then "nextclock" else "next" in
+let generate_variable_and_its_next_value fmt name typ initial_value is_clock check_rt_consistency=
+let next = if is_clock && not check_rt_consistency then "nextclock" else "next" in
   Format.fprintf fmt "(declare-fun %s () %s)@\n" name typ;
   Format.fprintf fmt "(declare-fun %s_n () %s)@\n" name typ;
   Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :%s %s_n))@\n" name typ name next name;
@@ -70,7 +70,7 @@ let next = if is_clock then "nextclock" else "next" in
 let generate_SUP_status_variables_and_func fmt state_name args =
   let open Input_args in
   match args.state_enc with
-  |IntegerEncoding -> (generate_variable_and_its_next_value fmt state_name "Int" "IDLE" false;
+  |IntegerEncoding -> (generate_variable_and_its_next_value fmt state_name "Int" "IDLE" false args.check_rt_consistency;
                       Format.fprintf fmt "(define-fun is_%s_IDLE () Bool (is_IDLE %s) )@\n" state_name state_name;
                       Format.fprintf fmt "(define-fun is_%s_TRIG () Bool (is_TRIG %s) )@\n" state_name state_name;
                       Format.fprintf fmt "(define-fun is_%s_DELAY () Bool (is_DELAY %s) )@\n" state_name state_name;
@@ -83,9 +83,9 @@ let generate_SUP_status_variables_and_func fmt state_name args =
                       Format.fprintf fmt "(define-fun set_%s_ERR () Bool (is_ERR %s_n) )@\n" state_name state_name
                       
                       )
-  |BooleanEncoding -> ( generate_variable_and_its_next_value fmt (state_name^"_err") "Bool" "false" false;
-                        generate_variable_and_its_next_value fmt (state_name^"_loc0") "Bool" "false" false;
-                        generate_variable_and_its_next_value fmt (state_name^"_loc1") "Bool" "false" false;
+  |BooleanEncoding -> ( generate_variable_and_its_next_value fmt (state_name^"_err") "Bool" "false" false args.check_rt_consistency;
+                        generate_variable_and_its_next_value fmt (state_name^"_loc0") "Bool" "false" false args.check_rt_consistency;
+                        generate_variable_and_its_next_value fmt (state_name^"_loc1") "Bool" "false" false args.check_rt_consistency;
                         Format.fprintf fmt "(define-fun is_%s_IDLE () Bool (is_IDLE %s_err %s_loc0 %s_loc1) )@\n" state_name state_name state_name state_name;
                         Format.fprintf fmt "(define-fun is_%s_TRIG () Bool (is_TRIG %s_err %s_loc0 %s_loc1) )@\n" state_name state_name state_name state_name;
                         Format.fprintf fmt "(define-fun is_%s_DELAY () Bool (is_DELAY %s_err %s_loc0 %s_loc1) )@\n" state_name state_name state_name state_name;
@@ -201,28 +201,29 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   |RealClock -> "Real") in
   (* defines the variables needed for the SUP state machine*)
   Format.fprintf fmt ";these are the function to explicit SUP time counter initial value and transition@\n";
-  generate_variable_and_its_next_value fmt counter_name clock_type t0 true;
+  generate_variable_and_its_next_value fmt counter_name clock_type t0 true args.check_rt_consistency;
+  Format.fprintf fmt "%s@\n" ("(define-fun "^ counter_name^"_unchanged () Bool (= "^counter_name^"_n "^ counter_name^ "))");
+  Format.fprintf fmt "%s@\n" ("(define-fun "^ counter_name^"_reset () Bool (= "^counter_name^"_n "^ t0 ^ "))");
   Format.fprintf fmt "@\n";
 
   (*define all guards*)
-  Format.fprintf fmt ";these are the functions that explicit the guards of the SUP@\n";
-  Format.fprintf fmt "(define-fun stay_idle_%s () Bool ( and (not %s) (= %s_n %s ) ))@\n"  state_name tse_name counter_name t0 ;
-  Format.fprintf fmt "(define-fun idle_to_trig_%s () Bool ( and (= %s true)  (= %s_n %s ) ))@\n" state_name tse_name  counter_name t0 ;
-  Format.fprintf fmt "(define-fun trig_to_idle_%s () Bool ( and (%s) (= %s_n %s ) ))@\n" state_name (" or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") "^(generate_counter_lt_min counter_name tmin args true)^" ) (and (not "^tee_name^") "^ (generate_counter_ge_max counter_name tmax args true) ^") "^ (generate_counter_gt_max counter_name tmax args true)) counter_name t0 ;
-  Format.fprintf fmt "(define-fun stay_trig_%s () Bool  ( %s )) @\n" state_name (" and "^tc_name^" "^(generate_counter_lt_max counter_name tmax args false)^" ( or ( not "^tee_name^")  "^(generate_counter_lt_min counter_name tmin args false)^")") ;
-  Format.fprintf fmt "(define-fun trig_to_delay_%s () Bool ( and (%s) (= %s_n %s ) ))@\n" state_name ("and "^tee_name^" "^(generate_counter_ge_min counter_name tmin args true)^" "^ (generate_counter_le_max counter_name tmax args true))  counter_name t0 ;
-  Format.fprintf fmt "(define-fun stay_delay_%s () Bool ( %s ))@\n" state_name ("and "^(generate_counter_lt_max counter_name lmax args false)^ " ( or (not "^ ase_name^") " ^ (generate_counter_lt_min counter_name lmin args false) ^")" );
-  Format.fprintf fmt "(define-fun delay_to_err_%s () Bool ( %s ))@\n" state_name ("and (= "^ase_name^" false) " ^ (generate_counter_ge_max counter_name lmax args true) );
-  Format.fprintf fmt "(define-fun delay_to_act_%s () Bool ( and (%s) (= %s_n %s ) ))@\n" state_name (" and "^ase_name^" " ^ (generate_counter_ge_min counter_name lmin args true) ^" "^(generate_counter_le_max counter_name lmax args true)) counter_name t0;
-  Format.fprintf fmt "(define-fun stay_act_%s () Bool ( %s ))@\n" state_name ("and "^ac_name^"  "^ (generate_counter_lt_max counter_name amax args false) ^ " (or (not "^aee_name^") "^ (generate_counter_lt_min counter_name amin args  false)^ ")");
-  Format.fprintf fmt "(define-fun act_to_err_%s () Bool ( %s ))@\n" state_name ("or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") "^ (generate_counter_lt_min counter_name amin args true) ^") (and (not "^aee_name^") "^ (generate_counter_ge_max counter_name amax args true)^") "^ (generate_counter_gt_max counter_name amax args true));
-  Format.fprintf fmt "(define-fun act_to_idle_%s () Bool ( and (%s)  (= %s_n %s ) ))@\n" state_name ("and "^aee_name^" "^(generate_counter_ge_min counter_name amin args true) ^" "^ (generate_counter_le_max counter_name amax args true)) counter_name t0;
-  (*Format.fprintf fmt "(define-fun apply_ac_%s () Bool ( %s ))@\n" state_name ("= " ^ac_name^"_n true");*)
+  Format.fprintf fmt ";these are the functions that explicit the guards of the SUP and  the counter reset/not changed@\n";
+  Format.fprintf fmt "(define-fun stay_idle_%s () Bool ( and (not %s) %s_unchanged ))@\n"  state_name tse_name counter_name  ;
+  Format.fprintf fmt "(define-fun idle_to_trig_%s () Bool ( and (= %s true)  %s_reset  ))@\n" state_name tse_name  counter_name  ;
+  Format.fprintf fmt "(define-fun trig_to_idle_%s () Bool ( and (%s) %s_reset))@\n" state_name (" or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") "^(generate_counter_lt_min counter_name tmin args true)^" ) (and (not "^tee_name^") "^ (generate_counter_ge_max counter_name tmax args true) ^") "^ (generate_counter_gt_max counter_name tmax args true)) counter_name  ;
+  Format.fprintf fmt "(define-fun stay_trig_%s () Bool  ( and ( %s) %s_unchanged )) @\n" state_name (" and "^tc_name^" "^(generate_counter_lt_max counter_name tmax args false)^" ( or ( not "^tee_name^")  "^(generate_counter_lt_min counter_name tmin args false)^")") counter_name ;
+  Format.fprintf fmt "(define-fun trig_to_delay_%s () Bool ( and (%s) %s_reset ))@\n" state_name ("and "^tee_name^" "^(generate_counter_ge_min counter_name tmin args true)^" "^ (generate_counter_le_max counter_name tmax args true))  counter_name  ;
+  Format.fprintf fmt "(define-fun stay_delay_%s () Bool (  and ( %s ) %s_unchanged ))@\n" state_name ("and "^(generate_counter_lt_max counter_name lmax args false)^ " ( or (not "^ ase_name^") " ^ (generate_counter_lt_min counter_name lmin args false) ^")" ) counter_name;
+  Format.fprintf fmt "(define-fun delay_to_err_%s () Bool ( and ( %s ) %s_unchanged ))@\n" state_name ("and (= "^ase_name^" false) " ^ (generate_counter_ge_max counter_name lmax args true) ) counter_name;
+  Format.fprintf fmt "(define-fun delay_to_act_%s () Bool ( and (%s) %s_reset ))@\n" state_name (" and "^ase_name^" " ^ (generate_counter_ge_min counter_name lmin args true) ^" "^(generate_counter_le_max counter_name lmax args true)) counter_name ;
+  Format.fprintf fmt "(define-fun stay_act_%s () Bool ( and ( %s ) %s_unchanged ))@\n" state_name ("and "^ac_name^"  "^ (generate_counter_lt_max counter_name amax args false) ^ " (or (not "^aee_name^") "^ (generate_counter_lt_min counter_name amin args  false)^ ")") counter_name;
+  Format.fprintf fmt "(define-fun act_to_err_%s () Bool ( and ( %s ) %s_unchanged ))@\n" state_name ("or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") "^ (generate_counter_lt_min counter_name amin args true) ^") (and (not "^aee_name^") "^ (generate_counter_ge_max counter_name amax args true)^") "^ (generate_counter_gt_max counter_name amax args true)) counter_name;
+  Format.fprintf fmt "(define-fun act_to_idle_%s () Bool ( and (%s)  %s_reset ))@\n" state_name ("and "^aee_name^" "^(generate_counter_ge_min counter_name amin args true) ^" "^ (generate_counter_le_max counter_name amax args true)) counter_name ;
 
   (*if specified in the command line, check the non vacuity*)
   if (List.mem req_name args.check_non_vacuity) then
     begin
-      Format.fprintf fmt ";these are the function to explicit SUP non vacuity initial value and transition@\n";
+      Format.fprintf fmt "\n;these are the function to explicit SUP non vacuity initial value and transition@\n";
       Format.fprintf fmt "(declare-fun %s () Bool)@\n" vacuity_name ;
       Format.fprintf fmt "(declare-fun %s_n () Bool)@\n" vacuity_name ;
       Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :next %s_n))@\n" vacuity_name "Bool" vacuity_name vacuity_name;
@@ -354,8 +355,8 @@ let generate_var_decl fmt decl =
   
 (** [generate_intermediate_var_decl fmt var_name ] generates the declaration of an intermediate variable [var_name]
     and initialized it to false in the formatter [fmt] *)
-let generate_intermediate_var_decl fmt (var_name :string) =
-  generate_variable_and_its_next_value fmt var_name "Bool" "false" false
+let generate_intermediate_var_decl fmt (var_name :string) check_rt_consistency  =
+  generate_variable_and_its_next_value fmt var_name "Bool" "false" false check_rt_consistency
 
 (** [generate_generated_var_decl fmt var_name ] generates the declaration of a generated variable [var_name] that replaces a
     non boolean expression in the formatter [fmt] *)
@@ -443,7 +444,7 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
   (*print generated variables used to convert requirements to SUP*)
   if (List.length intermediate_variables) > 0 then (
     Format.fprintf fmt "@\n;these are generated variables to model Before, After ... requirements @\n";
-    List.iter (fun var_name -> (generate_intermediate_var_decl fmt var_name)) intermediate_variables
+    List.iter (fun var_name -> (generate_intermediate_var_decl fmt var_name args.check_rt_consistency)) intermediate_variables
   );
 
   (*print the SUPs and get the list of functions that detects error status*)
@@ -457,7 +458,7 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
   Format.fprintf fmt "@\n"
 
 (** [generate_vmt_file fmt t] generates a file in the vmt-lib format containing the parsed requirements [t] in the formatter [fmt]*)
-let generate_vmt_file fmt t args=
+let generate_vmt_file fmt t (args : Input_args.t)=
   generate_state fmt args;
   generate_requirements fmt t args;
   Format.fprintf fmt "@\n";
