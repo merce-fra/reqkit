@@ -10,9 +10,7 @@ function process_file {
 
     #generation of the vmtlib file 
     SUP_FILE_VMT=${OUTPUT_FILES_DIR}/${BASENAME_NO_EXT}".vmt"
-    ./exec --input ${f} --output-fmt vmtlib --bool-only-predicates false --state-encoding boolean --clock-encoding integer --bool-only-predicates true --check-rt-consistency true > ${SUP_FILE_VMT}
-    #echo " ${PONO_INSTALL_DIR}/pono -e ind --smt-solver cvc5 -ta --witness ${SUP_FILE_VMT}" 
-    echo "./pono -e ind --smt-solver cvc5 --rt-consistency 0 ${SUP_FILE_VMT}"
+    ./exec --input ${f} --output-fmt vmtlib --bool-only-predicates false --state-encoding boolean --clock-encoding real  --bool-only-predicates true --check-rt-consistency true > ${SUP_FILE_VMT}
     #${PONO_INSTALL_DIR}/pono -e ind --smt-solver cvc5 -ta --witness ${SUP_FILE_VMT}
     ${PONO_INSTALL_DIR}/pono -e ind --smt-solver cvc5 --rt-consistency 0 ${SUP_FILE_VMT}
     echo "Done"	

@@ -4,6 +4,7 @@ let get_args file =
   { output_fmt = VMT;
   state_enc = BooleanEncoding;
   clock_t = IntegerClock;
+  clock_mult = 10;
   only_bool_predicates = false ;
   input_file = Some file;
   input_dir= None;

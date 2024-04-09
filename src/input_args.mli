@@ -8,6 +8,7 @@ type t = {
   output_fmt : output_format;
   state_enc: state_encoding;
   clock_t : clock_type;
+  clock_mult: int;
   only_bool_predicates: bool;
   input_file : string option;
   input_dir : string option;

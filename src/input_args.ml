@@ -9,6 +9,7 @@ type t = {
   output_fmt : output_format;
   state_enc: state_encoding;
   clock_t : clock_type;
+  clock_mult: int;
   only_bool_predicates: bool;
   input_file : string option;
   input_dir : string option;
@@ -17,7 +18,7 @@ type t = {
   check_rt_consistency : bool
 }
 
-let mk output_format state_encoding clock_type only_bool_predicates input_file input_dir keep_simple req_vacuity check_rt_consistency =
+let mk output_format state_encoding clock_type clock_mult only_bool_predicates input_file input_dir keep_simple req_vacuity check_rt_consistency =
   {
     output_fmt = (match output_format with 
     |"nusmv" -> if (((input_file <> None) || (input_dir <> None))&& (not only_bool_predicates)) then raise(Invalid_argument ("The NuSMV format only accept boolean predicates.")); NuSMV
@@ -29,14 +30,18 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
     |_ -> raise(Invalid_argument ("The supported state encoding are integer and boolean.")));
     clock_t=(match clock_type with 
     |"integer"-> IntegerClock
-    |"real"-> RealClock
+    |"real"-> (if output_format = "nusmv" then raise(Invalid_argument ("Nusmv checking only support integer clock.")) else  RealClock)
     |_ -> raise(Invalid_argument ("The supported clock encoding are integer and real.")));
     only_bool_predicates = only_bool_predicates;
     input_file = input_file;
     input_dir = input_dir;
     keep_simple = keep_simple;
     check_non_vacuity = req_vacuity;
-    check_rt_consistency = check_rt_consistency
+    check_rt_consistency = check_rt_consistency;
+    clock_mult =(match clock_type with 
+          |"integer"-> clock_mult
+          |"real" -> 1
+          |_ -> raise(Invalid_argument ("The supported clock encoding are integer and real."))); 
   }
 
 
@@ -48,6 +53,7 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
     let simple_exp = ref false in
     let which_clock = ref "integer" in
     let state_encode = ref "integer" in
+    let clock_mult = ref 10 in
     let bool_only_predicates = ref false in
     let check_rt_consistency = ref false in
     let vacuity = ref "" in
@@ -75,6 +81,9 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
       ("--clock-encoding",
         Arg.String (fun s -> which_clock := s),
         (fill "clock-encoding")^"Specify the kind of clock to use : integer (default) or real.");  
+      ("--clock-multiplier",
+        Arg.Int (fun i -> clock_mult := i),
+        (fill "clock-multiplier")^"Specify the multiplier to use for integer clock (default 10).");  
       ("--state-encoding",
         Arg.String (fun s -> state_encode := s),
         (fill "state-encoding")^"Specify the variable type to encode the SUP state : integer (default) or boolean.");  
@@ -90,5 +99,4 @@ let mk output_format state_encoding clock_type only_bool_predicates input_file i
 
      ] in 
     Arg.parse speclist print_endline usage;
-
-    (mk !output_fmt !state_encode !which_clock !bool_only_predicates !file !dir !simple_exp (String.split_on_char ';' !vacuity) !check_rt_consistency, usage)
+    (mk !output_fmt !state_encode !which_clock !clock_mult !bool_only_predicates !file !dir !simple_exp (String.split_on_char ';' !vacuity) !check_rt_consistency, usage)
