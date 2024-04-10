@@ -1,3 +1,5 @@
+#!/bin/bash
+
 dune clean
 rm -Rf _coverage
 rm *.coverage

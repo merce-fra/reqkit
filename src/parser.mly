@@ -91,8 +91,8 @@ hold:
 | HOLDS; FOR; AT_LEAST; e1_ = exp; TIME_UNITS; { Holds_for_at_least (e1_ ) }
 | HOLDS; AFTER; AT_MOST; e1_ = exp; TIME_UNITS;  {Holds_after_at_most (e1_ )}
 | HOLDS; FOR; LESS_THAN; e1_ = exp; TIME_UNITS; { Holds_for_less_than (e1_ ) }
-| HOLDS; AT_LEAST; EVERY; e1_ = exp;  TIME_UNITS; {Holds_at_list_every(e1_)}
-| HOLDS; AND2; IS_SUCCEEDED_BY; e1_ = exp; {Holds_and_succeded_by(e1_)}
+| HOLDS; AT_LEAST; EVERY; e1_ = exp;  TIME_UNITS; {Holds_at_least_every(e1_)}
+| HOLDS; AND2; IS_SUCCEEDED_BY; e1_ = exp; {Holds_and_succeeded_by(e1_)}
 | PREVIOUSLY_HELD; { Previously_held }
 | AT_MOST; e1_=exp; TIME_UNITS; LATER; {At_most(e1_) }
 ;

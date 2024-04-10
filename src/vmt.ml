@@ -54,8 +54,8 @@ let invariant_index = ref 0
 (** [generate_invariant fmt content_start content_end] generates an invariant with a unique id in the formatter [fmt]
     [content_start] is what is before the invar property definition and [content_end] is what is after*)
 let generate_invariant fmt content_start content_end =
-  invariant_index := !invariant_index + 1;
-  Format.fprintf fmt "%s@\n" (content_start ^ " :invar-property " ^ (string_of_int !invariant_index) ^content_end)
+  Format.fprintf fmt "%s@\n" (content_start ^ " :invar-property " ^ (string_of_int !invariant_index) ^content_end);
+  invariant_index := !invariant_index + 1
 
 (** [generate_variable_and_its_next_value fmt name typ initial_value is_clock] generates the smt code for the variable [name]
     of type [typ] with an [initial_value]. If it is a clock, [is_clock] shall be true *)
@@ -104,7 +104,7 @@ let generate_SUP_status_variables_and_func fmt state_name args =
     that compares the counter [counter_name] to [tmin]. [tmin] is converted to real or integer 
     depending the option in [args]. If tmin is -1, the function returns true or false depending
     if the guards allows to leave the state ([to_leave_state] = true) or not *)
-let rec generate_counter_lt_min counter_name tmin args to_leave_state =
+let generate_counter_lt_min counter_name tmin args (*to_leave_state*) _ =
   let open Input_args in
   let op = (match tmin with
   |  Sup_types.GreaterThan (_)-> "<="
@@ -112,20 +112,28 @@ let rec generate_counter_lt_min counter_name tmin args to_leave_state =
   try
     let t = time_to_string tmin args.clock_t in
     "("^op^" " ^counter_name ^ " "^ t ^" )"
-  with Failure _ -> if to_leave_state then " false " else " true "
+  with Failure _ -> (*if to_leave_state then " false " else " true "*) " true "
 
 (** [generate_counter_ge_min counter_name tmin args to_leave_state] generates an smt expression
     that compares the counter [counter_name] to [tmin]. [tmin] is converted to real or integer 
     depending the option in [args]. If tmin is -1, the function returns true or false depending
     if the guards allows to leave the state ([to_leave_state] = true) or not *)
-and generate_counter_ge_min counter_name tmin args to_leave_state  =
-    "(not "^(generate_counter_lt_min counter_name tmin args to_leave_state) ^")"
+and generate_counter_ge_min counter_name tmin args (*to_leave_state*) _  =
+    let open Input_args in
+    let op = (match tmin with
+    |  Sup_types.GreaterThan (_)-> ">"
+    | _-> ">=") in 
+    try
+      let t = time_to_string tmin args.clock_t in
+      "("^op^" " ^counter_name ^ " "^ t ^" )"
+    with Failure _ -> (*if to_leave_state then " false " else " true "*) " false "
+
 
 (** [generate_counter_gt_max counter_name tmax args to_leave_state] generates an smt expression
     that compares the counter [counter_name] to [tmax]. [tmax] is converted to real or integer 
     depending the option in [args]. If tmax is -1, the function returns true or false depending
     if the guards allows to leave the state ([to_leave_state] = true) or not *)
-and generate_counter_gt_max counter_name tmax args to_leave_state =
+and generate_counter_gt_max counter_name tmax args (*to_leave_state*) _ =
   let open Input_args in
   let op = (match tmax with
   |  Sup_types.LesserThan (_)-> ">="
@@ -133,32 +141,43 @@ and generate_counter_gt_max counter_name tmax args to_leave_state =
   try
     let t = time_to_string tmax args.clock_t in
     "("^op^" " ^counter_name ^ " "^ t ^" )"
-  with Failure _ -> if to_leave_state then " false " else " true "
+  with Failure _ -> (*if to_leave_state then " false " else " true "*) " false "
 
 (** [generate_counter_le_max counter_name tmax args to_leave_state] generates an smt expression
     that compares the counter [counter_name] to [tmax]. [tmax] is converted to real or integer 
     depending the option in [args]. If tmax is -1, the function returns true or false depending
     if the guards allows to leave the state ([to_leave_state] = true) or not *)
-let generate_counter_le_max counter_name tmax args to_leave_state =
-  "(not "^(generate_counter_gt_max counter_name tmax args to_leave_state) ^")"
+let generate_counter_le_max counter_name tmax args (*to_leave_state*) _ =
+  let open Input_args in
+  let op = (match tmax with
+  |  Sup_types.LesserThan (_)-> "<"
+  | _-> "<=") in 
+  try
+    let t = time_to_string tmax args.clock_t in
+    "("^op^" " ^counter_name ^ " "^ t ^" )"
+  with Failure _ -> (*if to_leave_state then " false " else " true "*) " true "
 
 (** [generate_counter_ge_max counter_name tmax args to_leave_state] generates an smt expression
     that compares the counter [counter_name] to [tmax]. [tmax] is converted to real or integer 
     depending the option in [args]. If tmax is -1, the function returns true or false depending
     if the guards allows to leave the state ([to_leave_state] = true) or not *)
-let generate_counter_ge_max counter_name tmax args to_leave_state =
+let generate_counter_ge_max counter_name tmax args (*to_leave_state*) _ =
   let open Input_args in
   try
     let t = time_to_string tmax args.clock_t in
     "(>= " ^counter_name ^ " "^ t ^" )"
-  with Failure _ -> if to_leave_state then " false " else " true "
+  with Failure _ -> (*if to_leave_state then " false " else " true "*) " false "
   
 (** [generate_counter_lt_max counter_name tmax args to_leave_state] generates an smt expression
     that compares the counter [counter_name] to [tmax]. [tmax] is converted to real or integer 
     depending the option in [args]. If tmax is -1, the function returns true or false depending
     if the guards allows to leave the state ([to_leave_state] = true) or not *)
-let generate_counter_lt_max counter_name tmax args to_leave_state =
-  "(not "^(generate_counter_ge_max counter_name tmax args to_leave_state) ^")"
+let generate_counter_lt_max counter_name tmax args (*to_leave_state*) _ =
+  let open Input_args in
+  try
+    let t = time_to_string tmax args.clock_t in
+    "(< " ^counter_name ^ " "^ t ^" )"
+  with Failure _ -> (*if to_leave_state then " false " else " true "*) " true "
   
 (** [is_t_nul t] returns true if [t] is equal to 0*)
 let is_t_nul t =
@@ -170,6 +189,11 @@ let is_t_nul t =
     -> false
   ) 
 
+
+let need_vacuity_prop req_name args need_vacuity =
+  let open Input_args in
+  need_vacuity && ((List.mem req_name args.check_non_vacuity) || (List.mem "__all__" args.check_non_vacuity))
+
   
 (** [generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax] generates the states machine for the state and counter of the SUP 
     with index [sup_index] and name [req_name] in the formatter [fmt]
@@ -180,10 +204,10 @@ let is_t_nul t =
     The SUP action start event is [amin]
     The SUP action end event is [amax]
      *)
-let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (args : Input_args.t)=
+let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (args : Input_args.t) candidate_to_vacuity =
   let state_name = "state_"^req_name^"_"^(string_of_int sup_index) in
   let counter_name = "c_"^req_name^"_"^(string_of_int sup_index) in
-  let vacuity_name = if (List.mem req_name args.check_non_vacuity) then "vacuity_"^req_name^"_"^(string_of_int sup_index) else "" in
+  let vacuity_name = if need_vacuity_prop req_name args candidate_to_vacuity then "vacuity_"^req_name^"_"^(string_of_int sup_index) else "" in
   let tse_name = "tse_"^req_name^"_"^(string_of_int sup_index) in
   let tee_name = "tee_"^req_name^"_"^(string_of_int sup_index) in
   let tc_name = "tc_"^req_name^"_"^(string_of_int sup_index) in
@@ -208,14 +232,17 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   Format.fprintf fmt "@\n";
 
   (*if specified in the command line, check the non vacuity*)
-  if (List.mem req_name args.check_non_vacuity) then
+  if (String.length vacuity_name > 0) then
     begin
       Format.fprintf fmt "\n;these are the function to explicit SUP non vacuity initial value and transition@\n";
       Format.fprintf fmt "(declare-fun %s () Bool)@\n" vacuity_name ;
       Format.fprintf fmt "(declare-fun %s_n () Bool)@\n" vacuity_name ;
       Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :next %s_n))@\n" vacuity_name "Bool" vacuity_name vacuity_name;
       Format.fprintf fmt "(define-fun .%s_init () Bool (! (= %s true) :init true))@\n" vacuity_name vacuity_name;
-      Format.fprintf fmt "(define-fun %s_unchanged () Bool (= %s_n  %s ))" vacuity_name vacuity_name vacuity_name
+      Format.fprintf fmt "(define-fun %s_unchanged () Bool (= %s_n  %s ))@\n" vacuity_name vacuity_name vacuity_name;
+      let invar_prop = "(define-fun ."^vacuity_name^"_prop () Bool (! (and "^vacuity_name^ " (not is_" ^ state_name ^ "_ERR ) )" in 
+                          generate_invariant fmt invar_prop "))" ;
+                          Format.fprintf fmt "@\n"
     end;
     
   let vacuity_constraint = (if (String.length vacuity_name) = 0 then "" else  "(not "^vacuity_name^ "_n )") in
@@ -224,15 +251,15 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   (*define all guards*)
   Format.fprintf fmt ";these are the functions that explicit the guards of the SUP and  the counter reset/not changed@\n";
   Format.fprintf fmt "(define-fun stay_idle_%s () Bool ( and (not %s) %s_unchanged ))@\n"  state_name tse_name counter_name  ;
-  Format.fprintf fmt "(define-fun idle_to_trig_%s () Bool ( and (= %s true)  %s_reset  ))@\n" state_name tse_name  counter_name  ;
+  Format.fprintf fmt "(define-fun idle_to_trig_%s () Bool ( and %s %s_reset  ))@\n" state_name tse_name  counter_name  ;
   Format.fprintf fmt "(define-fun trig_to_idle_%s () Bool ( and (%s) %s_reset))@\n" state_name (" or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") "^(generate_counter_lt_min counter_name tmin args true)^" ) (and (not "^tee_name^") "^ (generate_counter_ge_max counter_name tmax args true) ^") "^ (generate_counter_gt_max counter_name tmax args true)) counter_name  ;
   Format.fprintf fmt "(define-fun stay_trig_%s () Bool  ( and ( %s) %s_unchanged )) @\n" state_name (" and "^tc_name^" "^(generate_counter_lt_max counter_name tmax args false)^" ( or ( not "^tee_name^")  "^(generate_counter_lt_min counter_name tmin args false)^")") counter_name ;
   Format.fprintf fmt "(define-fun trig_to_delay_%s () Bool ( and (%s) %s_reset ))@\n" state_name ("and "^tee_name^" "^(generate_counter_ge_min counter_name tmin args true)^" "^ (generate_counter_le_max counter_name tmax args true))  counter_name  ;
-  Format.fprintf fmt "(define-fun stay_delay_%s () Bool (  and ( %s ) %s_unchanged ))@\n" state_name ("and "^(generate_counter_lt_max counter_name lmax args false)^ " ( or (not "^ ase_name^") " ^ (generate_counter_lt_min counter_name lmin args false) ^")" ) counter_name;
-  Format.fprintf fmt "(define-fun delay_to_err_%s () Bool ( and ( %s ) %s_unchanged ))@\n" state_name ("and (not "^ase_name^") " ^ (generate_counter_ge_max counter_name lmax args true) ) counter_name;
+  Format.fprintf fmt "(define-fun stay_delay_%s () Bool (  and (%s) %s_unchanged ))@\n" state_name ("and "^(generate_counter_lt_max counter_name lmax args false)^ " ( or (not "^ ase_name^") " ^ (generate_counter_lt_min counter_name lmin args false) ^")" ) counter_name;
+  Format.fprintf fmt "(define-fun delay_to_err_%s () Bool ( and (%s) %s_unchanged ))@\n" state_name ("and (not "^ase_name^") " ^ (generate_counter_ge_max counter_name lmax args true) ) counter_name;
   Format.fprintf fmt "(define-fun delay_to_act_%s () Bool ( and (%s) %s_reset ))@\n" state_name (" and "^ase_name^" " ^ (generate_counter_ge_min counter_name lmin args true) ^" "^(generate_counter_le_max counter_name lmax args true)) counter_name ;
-  Format.fprintf fmt "(define-fun stay_act_%s () Bool ( and ( %s ) %s_unchanged ))@\n" state_name ("and "^ac_name^"  "^ (generate_counter_lt_max counter_name amax args false) ^ " (or (not "^aee_name^") "^ (generate_counter_lt_min counter_name amin args  false)^ ")") counter_name;
-  Format.fprintf fmt "(define-fun act_to_err_%s () Bool ( and ( %s ) %s_unchanged ))@\n" state_name ("or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") "^ (generate_counter_lt_min counter_name amin args true) ^") (and (not "^aee_name^") "^ (generate_counter_ge_max counter_name amax args true)^") "^ (generate_counter_gt_max counter_name amax args true)) counter_name;
+  Format.fprintf fmt "(define-fun stay_act_%s () Bool ( and (%s) %s_unchanged ))@\n" state_name ("and "^ac_name^"  "^ (generate_counter_lt_max counter_name amax args false) ^ " (or (not "^aee_name^") "^ (generate_counter_lt_min counter_name amin args  false)^ ")") counter_name;
+  Format.fprintf fmt "(define-fun act_to_err_%s () Bool ( and (%s) %s_unchanged ))@\n" state_name ("or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") "^ (generate_counter_lt_min counter_name amin args true) ^") (and (not "^aee_name^") "^ (generate_counter_ge_max counter_name amax args true)^") "^ (generate_counter_gt_max counter_name amax args true)) counter_name;
   Format.fprintf fmt "(define-fun act_to_idle_%s () Bool ( and (%s) %s %s_reset ))@\n" state_name ("and "^aee_name^" "^(generate_counter_ge_min counter_name amin args true) ^" "^ (generate_counter_le_max counter_name amax args true)) vacuity_constraint counter_name ;
 
   (*SUP state transition and initialization*)
@@ -385,7 +412,7 @@ let generate_var_decl fmt decl =
     and initialized it to false in the formatter [fmt] *)
 let generate_intermediate_var_decl fmt (var_name :string) check_rt_consistency  =
   generate_variable_and_its_next_value fmt var_name "Bool" "false" false check_rt_consistency;
-  Format.fprintf fmt "(define-fun %s_unchanged () Bool (= %s_n  %s ))" var_name var_name var_name
+  Format.fprintf fmt "(define-fun %s_unchanged () Bool (= %s_n  %s ))\n" var_name var_name var_name
 
 (** [generate_generated_var_decl fmt var_name ] generates the declaration of a generated variable [var_name] that replaces a
     non boolean expression in the formatter [fmt] *)
@@ -426,6 +453,7 @@ let rec convert_event_with_next event =
   | Sup_types.Not (e) -> Sup_types.Not(convert_event_with_next e)
   |_ -> event
 
+
 (** [generate_event_declaration fmt sup_index prefix event] generates for a SUP with index [sup_index] a function 
     which return the evaluation of an [event] in the formatter [fmt]. This generation is identical for triggers, actions... 
     The [prefix] allows to indicate in the name of the function which event is handled. In case of action event
@@ -454,7 +482,9 @@ let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) (args: Input_a
   Format.fprintf fmt "(declare-fun %s_n () Bool)@\n" var_name;
   Format.fprintf fmt "(define-fun .%s_sv0 () Bool (! %s :next %s_n))@\n" var_name var_name var_name ;*)
   generate_event_declaration fmt sup_index ("aee_"^req_name) a.aee args.clock_t true;
-  generate_SUP_content fmt sup_index req_name t.tmin t.tmax sup.d.lmin sup.d.lmax a.amin a.amax args
+
+  let candidate_to_vacuity = sup.vacuity in
+  generate_SUP_content fmt sup_index req_name t.tmin t.tmax sup.d.lmin sup.d.lmax a.amin a.amax args candidate_to_vacuity
   
   
 (** [generate_sup_list fmt req_name (_, req_sups_list)] generates the conversion in the formatter [fmt] of the SUP 

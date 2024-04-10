@@ -101,11 +101,11 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     let e1_ = event_of_exp (Ast_types.And(Ast_types.Not(req_var),Ast_types.Not(generated_var))) in
     let t = {tse=e1_; tc=e1_; tee=e1_; tmin = Time(0); tmax= Time(0)} in
     let d = {lmin=Sup_types.Time(0); lmax=Sup_types.Time(0)} in
-    let a = {ase=Constant(true); ac=Constant(true); aee=event_of_exp(Ast_types.Not(generated_var)); amin=GreaterThan(0); amax=GreaterThan(0)} in
+    let a = {ase=Constant(true); ac=Constant(true); aee=event_of_exp(Ast_types.Not(generated_var)); amin=GreaterThan(0); amax=Time(-1)} in
     let h = if hold_indefinitely then Ast_types.Holds_indefinitely else  Ast_types.Holds_afterward in
     let new_req = Ast_types.Globally(Ast_types.Always(Ast_types.If( Ast_types.Prop(req_var, Ast_types.Holds), Ast_types.Prop(generated_var, h)))) in      
     let (_ , res)   = convert_sup1 vars intermediate_hashtbl new_req event_of_exp args in
-    res @ [{t=t;d=d;a=a}] 
+    res @ [{t=t;d=d;a=a; vacuity=false}] 
   in
 
   (* allow to model intermediate variables behavior in SUP format*)
@@ -120,20 +120,20 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     let e1_ = event_of_exp (Ast_types.And(req_var_after,Ast_types.Not(req_var_until))) in
     let t1 = {tse=e1_; tc=e1_; tee=e1_; tmin = Time(0); tmax= Time(0)} in
     let d = {lmin=Sup_types.Time(0); lmax=Sup_types.Time(0)} in
-    let a1 = {ase=Constant(true); ac=Constant(true); aee=event_of_exp(generated_var); amin=GreaterThan(0); amax=GreaterThan(0)} in
+    let a1 = {ase=Constant(true); ac=event_of_exp(generated_var); aee=event_of_exp(generated_var); amin=GreaterThan(0); amax=Time(-1)} in
 
     (*if (!req_var_after && !intermediate) || req_var_until at t then at t+1  !intermediate *)
     let e2_ = event_of_exp (Ast_types.Or(Ast_types.And(Ast_types.Not(req_var_after),Ast_types.Not(generated_var)),req_var_until)) in
     let t2 = {tse=e2_; tc=e2_; tee=e2_; tmin = Time(0); tmax= Time(0)} in
-    let a2 = {ase=Constant(true); ac=Constant(true); aee=event_of_exp(Not(generated_var)); amin=GreaterThan(0); amax=GreaterThan(0)} in
+    let a2 = {ase=Constant(true); ac=event_of_exp(Not(generated_var)); aee=event_of_exp(Not(generated_var)); amin=GreaterThan(0); amax=Time(-1)} in
 
-    (*creates the requirements related to the toggle itself*)
+    (*creates the requirements related to the after until itself*)
     let e3_ = event_of_exp (Ast_types.And(Ast_types.And(Ast_types.Not(req_var_after),Ast_types.Not(req_var_until)),generated_var)) in
     let t3 = {tse=e3_; tc=e3_; tee=e3_; tmin = Time(0); tmax= Time(0)} in
-    let a3 = {ase=Constant(true); ac=Constant(true); aee=event_of_exp(generated_var); amin=GreaterThan(0); amax=GreaterThan(0)} in
+    let a3 = {ase=Constant(true); ac=event_of_exp(generated_var); aee=event_of_exp(generated_var); amin=GreaterThan(0); amax=Time(-1)} in
 
     (* generated SUPs*)
-    [{t=t1;d=d;a=a1};{t=t2;d=d;a=a2};{t=t3;d=d;a=a3}]
+    [{t=t1;d=d;a=a1; vacuity=false};{t=t2;d=d;a=a2; vacuity=false};{t=t3;d=d;a=a3; vacuity=false}]
   in
 
   (* creates a new intermediate variable and model its behavior with SUPs*)
@@ -158,17 +158,17 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         let d0 = { lmin=Time(0); lmax=Time(0)} in       
         match r with
         | Ast_types.Prop(e2, Holds_for_at_least (e3)) -> 
-              [{t=t;d=d0;a={ase=Constant(true); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(const_of_h vars (Holds_for_at_least (e3))); amax= Time(const_of_h vars (Holds_for_at_least (e3)))}}]
+              [{t=t;d=d0;a={ase=Constant(true); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(const_of_h vars (Holds_for_at_least (e3))); amax= Time(const_of_h vars (Holds_for_at_least (e3)))}; vacuity=true}]
         | Ast_types.Prop(e2, Holds_after_at_most(e3)) -> 
-              [{t=t;d=d0;a={ase=Constant(true); ac=event_of_exp (Ast_types.Not(e2)); aee=event_of_exp (e2); amin = Time(const_of_h vars (Holds_after_at_most (e3))); amax= Time(const_of_h vars (Holds_after_at_most (e3)))}}]
+              [{t=t;d=d0;a={ase=Constant(true); ac=event_of_exp (Ast_types.Not(e2)); aee=event_of_exp (e2); amin = Time(0); amax= Time(const_of_h vars (Holds_after_at_most (e3)))}; vacuity=true}]
         | Ast_types.Prop(e2, Holds_for_less_than(e3)) ->
-              [{t=t;d=d0;a={ase=Constant(true); ac=(event_of_exp e2); aee=(Not(event_of_exp e2)); amin = Time(0); amax= LesserThan(const_of_h vars (Holds_for_less_than (e3)))}}]
+              [{t=t;d=d0;a={ase=Constant(true); ac=(event_of_exp e2); aee=(Not(event_of_exp e2)); amin = Time(0); amax= LesserThan(const_of_h vars (Holds_for_less_than (e3)))}; vacuity=true}]
         | Ast_types.Prop(e2, Holds) ->
-              [{t=t;d=d0;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(0); amax= Time(0)}}]
+              [{t=t;d=d0;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(0); amax= Time(0)}; vacuity=true}]
         | Ast_types.Prop(e2, Holds_afterward) ->
-              [{t=t;d=d0;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = GreaterThan(0); amax= GreaterThan(0)}}]
+              [{t=t;d=d0;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = GreaterThan(0); amax= Time(-1)}; vacuity=true}]
         | Ast_types.Prop(e2, Holds_indefinitely) ->
-          [{t=t;d=d0;a={ase=Constant(true); ac=Constant(true); aee=(event_of_exp e2); amin = Time(-1); amax= Time(-1)}}]
+          [{t=t;d=d0;a={ase=Constant(true); ac=(event_of_exp e2); aee=Constant(true); amin = Time(-1); amax= Time(-1)}; vacuity=false}]
         | Ast_types.Toggles(e2, e3, Ast_types.At_most(h))->
             begin
               let t1 = And(event_of_exp e1, And(event_of_exp e2, event_of_exp e3)) in
@@ -179,11 +179,11 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
               let amax = const_of_h vars (Ast_types.At_most(h)) in 
               [{t={tse=t1; tc=t1; tee=t1; tmin = Time(0); tmax= Time(0)}; 
                 d=d0;
-                a={ase=Constant(true); ac=Constant(true);aee=a1; amin = Time(0); amax= Time(amax)}
+                a={ase=Constant(true); ac=Constant(true);aee=a1; amin = Time(0); amax= Time(amax)}; vacuity=true
               };
               {t={tse=t2; tc=t2; tee=t2; tmin = Time(0); tmax= Time(0)}; 
                 d=d0;
-                a={ase=Constant(true); ac=Constant(true);aee=a2; amin = Time(0); amax= Time(amax)}
+                a={ase=Constant(true); ac=Constant(true);aee=a2; amin = Time(0); amax= Time(amax)}; vacuity=true
               }] 
             end
         | Ast_types.Toggles(e2, e3, Ast_types.Holds)->
@@ -194,11 +194,11 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
             let a2 = event_of_exp e3 in
             [{t={tse=t1; tc=t1; tee=t1; tmin = Time(0); tmax= Time(0)}; 
               d={lmin=Time(0); lmax= Time(0)};
-              a={ase=a1; ac=a1;aee=a1; amin = Time(0); amax= Time(0)}
+              a={ase=a1; ac=a1;aee=a1; amin = Time(0); amax= Time(0)}; vacuity=true
             };
             {t={tse=t2; tc=t2; tee=t2; tmin = Time(0); tmax= Time(0)}; 
               d={lmin=Time(0); lmax= Time(0)};
-              a={ase=a2; ac=a2;aee=a2; amin = Time(0); amax= Time(0)}
+              a={ase=a2; ac=a2;aee=a2; amin = Time(0); amax= Time(0)}; vacuity=true
             }] 
           end
         | Ast_types.Prop(e2,Ast_types.Previously_held) ->
@@ -208,7 +208,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
           let a1 = event_of_exp intermediate_e2 in 
           reqs_intermediate_e2 @ [{t={tse=t1; tc=t1; tee=t1; tmin = Time(0); tmax= Time(0)}; 
                                     d={lmin=Time(0); lmax= Time(0)};
-                                    a={ase=Constant(true); ac=Constant(true);aee=a1; amin = Time(0); amax= Time(0)}
+                                    a={ase=Constant(true); ac=Constant(true);aee=a1; amin = Time(0); amax= Time(0)}; vacuity=true
                                   }] 
            )
         | _ -> raise (Invalid_argument ("(5) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string r)))
@@ -219,22 +219,22 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         let e1_ = event_of_exp e1 in
       [{t={tse=Constant(true); tc=Constant(true); tee=Constant(true); tmin = Time(0); tmax= Time(0)};
         d={ lmin=Time(0); lmax=Time(0)};
-        a={ase=Constant(true); ac=e1_; aee=Constant(true); amin = Time(-1); amax= Time(-1)}}]
+        a={ase=Constant(true); ac=e1_; aee=Constant(true); amin = Time(-1); amax= Time(-1)}; vacuity=true}]
       end
     | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_for_at_least(e2)), Ast_types.Prop(e3,Ast_types.Holds_afterward) ) ->
         ( let tt = const_of_h vars (Ast_types.Holds_for_at_least(e2)) in 
           [{t={tse=(event_of_exp e1); tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(tt); tmax= Time(tt)}; 
               d={lmin=Time(0); lmax= Time(0)};
-              a={ase=Constant(true); ac=Constant(true);aee=(event_of_exp e3); amin = GreaterThan(0); amax= GreaterThan(0)}
+              a={ase=Constant(true); ac=Constant(true);aee=(event_of_exp e3); amin = GreaterThan(0); amax= Time(-1)}; vacuity=true
           }] )
     | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_for_at_least(e2)), Ast_types.Prop(e3,Ast_types.Holds_afterward_for_at_least(e4)) ) ->
       ( let tt = const_of_h vars (Ast_types.Holds_for_at_least(e2)) in 
         let at = const_of_h vars (Ast_types.Holds_for_at_least(e4)) in 
         [{t={tse=(event_of_exp e1); tc=(event_of_exp e1); tee=(event_of_exp e1); tmin = Time(tt); tmax= Time(tt)}; 
             d={lmin=Time(0); lmax= Time(0)};
-            a={ase=Constant(true); ac=(event_of_exp e3);aee=(event_of_exp e3); amin = Time(at); amax= Time(at)}
+            a={ase=Constant(true); ac=(event_of_exp e3);aee=(event_of_exp e3); amin = Time(at); amax= Time(at)}; vacuity=true
         }] )
-    | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_and_succeded_by(e2)), Ast_types.Prop(e3,Ast_types.Previously_held) ) ->
+    | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_and_succeeded_by(e2)), Ast_types.Prop(e3,Ast_types.Previously_held) ) ->
       (
         let (intermediate_e3, reqs_intermediate_e3) = get_intermediate_var intermediate_hashtbl [e3] true in
         let (intermediate_e1, reqs_intermediate_e1) = get_intermediate_var intermediate_hashtbl [e1] true in    
@@ -251,7 +251,13 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
       let new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.Prop(Ast_types.Not(e1),Ast_types.Holds))) in
       let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 event_of_exp args in
       res1
-    | _-> raise (Invalid_argument ("(7) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) in
+    |  Ast_types.If( Ast_types.Prop(e1,Holds),Ast_types.Prop(e2,Holds)) -> (
+      let new_req1 = Ast_types.Globally(Ast_types.Always(Ast_types.Prop(Ast_types.Or(Ast_types.Not(e1),Ast_types.Not(e2)), Holds))) in
+      let (_, res1) = convert_sup1 vars intermediate_hashtbl new_req1 event_of_exp args in
+      res1
+    )
+      
+    |_-> raise (Invalid_argument ("(7) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) in
 
   (* converts the end of requirements that starts with After [e1], it is always the case that*)  
   let  convert_after_always e1 vars intermediate_hashtbl req =
@@ -279,7 +285,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
           let  new_req3 = (
             match req with  
             | Ast_types.Prop(e3,Ast_types.Holds) ->  
-                Ast_types.Globally(Ast_types.Never( Ast_types.If(Ast_types.Prop(Ast_types.And(intermediate_e1_e2, e3), Ast_types.Holds), Ast_types.Prop( e3, Ast_types.Holds))))
+                Ast_types.Globally(Ast_types.Never( Ast_types.Prop(Ast_types.And(intermediate_e1_e2, e3), Ast_types.Holds)))
             | _ -> (raise (Invalid_argument ("(10) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) ) )in 
           let (_, res3) = convert_sup1 vars intermediate_hashtbl new_req3 event_of_exp args in
           req_intermediate_e1_e2 @ res3 
@@ -312,7 +318,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
     let (intermediate_e1, reqs_intermediate_e1) = get_intermediate_var intermediate_hashtbl [e1] true in
     let new_req2 = (match req with 
     | Ast_types.Prop(e2,Ast_types.Holds) ->
-        Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop( Ast_types.And(e1 , Ast_types.Not(intermediate_e1)), Ast_types.Holds),  Ast_types.Prop(e2,Ast_types.Holds))))
+        Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop( Ast_types.Not(intermediate_e1), Ast_types.Holds),  Ast_types.Prop(e2,Ast_types.Holds))))
     | Ast_types.If( Ast_types.Prop(e2,Ast_types.Holds),r) ->
         Ast_types.Globally(Ast_types.Always(Ast_types.If(Ast_types.Prop(And(e2,Not(intermediate_e1)),Ast_types.Holds),r)))
     |_ -> raise (Invalid_argument ("(15) This node is not supported in SUP conversion " ^ (Parse.print_req_as_string req))) )in
@@ -422,8 +428,8 @@ let extract_non_bool_exp vars hashtbl req_content =
     | Holds_after_at_most(e) -> Holds_after_at_most(aux_exp e)
     | Holds_afterward_for_at_least (e) -> Holds_afterward_for_at_least (aux_exp e)
     | Holds_for_less_than (e) -> Holds_for_less_than(aux_exp e)
-    | Holds_at_list_every (e) -> Holds_at_list_every(aux_exp e)
-    | Holds_and_succeded_by(e) -> Holds_and_succeded_by( aux_exp e )
+    | Holds_at_least_every (e) -> Holds_at_least_every(aux_exp e)
+    | Holds_and_succeeded_by(e) -> Holds_and_succeeded_by( aux_exp e )
     | At_most (e) -> At_most( aux_exp e )
 
   in aux_req req_content

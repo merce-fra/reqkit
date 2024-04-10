@@ -1,3 +1,5 @@
+#!/bin/bash
+
 REQ_2_SOMETHING_PROJECT_DIR=${HOME}/req2something
 cd ${REQ_2_SOMETHING_PROJECT_DIR}
 
