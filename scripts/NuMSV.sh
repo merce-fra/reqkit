@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 function process_file {
     f=$1
     cd ${REQ_2_SOMETHING_PROJECT_DIR}
@@ -39,7 +40,7 @@ function process_file {
 }
 
 
-REQ_2_SOMETHING_PROJECT_DIR=${HOME}/req2something
+REQ_2_SOMETHING_PROJECT_DIR=/home/osankur/inria/requirements_transformer
 cd ${REQ_2_SOMETHING_PROJECT_DIR}
 
 INPUT_FILES_DIR=${REQ_2_SOMETHING_PROJECT_DIR}/reqs
