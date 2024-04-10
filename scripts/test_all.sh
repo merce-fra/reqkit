@@ -1,3 +1,5 @@
+#!/bin/bash
+
 REQ_2_SOMETHING_PROJECT_DIR=${HOME}/req2something
 cd ${REQ_2_SOMETHING_PROJECT_DIR}
 
@@ -10,7 +12,7 @@ INPUT_FILES=${INPUT_FILES_DIR}/*.req
 for f in ${INPUT_FILES}
 do
 	echo "Processing file ${f}"
-	./exec --input ${f} ${OUTPUT_FMT}
+	./exec --input ${f} --bool-only-predicates true --output-fmt ${OUTPUT_FMT}
 	echo " "	
 done
 

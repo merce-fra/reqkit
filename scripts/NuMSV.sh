@@ -65,3 +65,4 @@ else
     echo "    - NuMSV.sh with no arguments launches the SUP checking on all the requirements files on the directory reqs"
     echo "    - NuMSV.sh <req file>  launches the SUP checking on a specific requirements file"
 fi
+

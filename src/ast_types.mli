@@ -44,8 +44,9 @@ type hold=
   | Holds_after_at_most of exp   (*holds after at most [exp] time units*) 
   | Holds_afterward_for_at_least of exp (*holds afterwards for at least [exp] time units*) 
   | Holds_for_less_than of exp  (*holds for less [exp] time units*) 
-  | Holds_at_list_every of exp  (*holds at least every [exp] time units*) 
-  | Holds_and_succeded_by of exp  (*holds and is succeeded by [exp]*) 
+  | Holds_at_least_every of exp  (*holds at least every [exp] time units*) 
+  | Holds_and_succeeded_by of exp  (*holds and is succeeded by [exp]*) 
+  | Holds_indefinitely (*used for internal mechanism*)
   | At_most of exp  (*at most [exp] time units*) 
          
 type req =

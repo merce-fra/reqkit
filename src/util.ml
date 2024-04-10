@@ -39,9 +39,10 @@ let hold_to_int h =
   | Holds_after_at_most (_) -> 25
   | Holds_afterward_for_at_least (_) -> 26
   | Holds_for_less_than (_) -> 27
-  | Holds_at_list_every (_) -> 28
-  | Holds_and_succeded_by (_) -> 29
+  | Holds_at_least_every (_) -> 28
+  | Holds_and_succeeded_by (_) -> 29
   | At_most (_) -> 30
+  | Holds_indefinitely -> 31
 
 
 (** [extract_vars_from_req req list_vars] for a requirement [req] this function 
@@ -81,15 +82,17 @@ let extract_vars_from_req req list_vars=
     | Empty
     | Holds
     | Holds_afterward
+    | Holds_indefinitely
     | Previously_held -> (vars, nb_expr, (hold_to_int h)::list_op)
     | Holds_for_at_least (e)   
     | Holds_after_at_most (e)
     | Holds_afterward_for_at_least (e)
     | Holds_for_less_than (e)
-    | Holds_at_list_every (e)
-    | Holds_and_succeded_by (e) -> aux_e (vars, nb_expr +1, (hold_to_int h)::list_op) e
+    | Holds_at_least_every (e)
+    | Holds_and_succeeded_by (e) -> aux_e (vars, nb_expr +1, (hold_to_int h)::list_op) e
     (*| Toggles_at_most (e1, e2) -> aux_e (aux_e (vars, nb_expr + 2, (hold_to_int h)::list_op) e2 ) e1*)
     | At_most (e) -> aux_e  (vars, nb_expr +1, (hold_to_int h)::list_op) e    
+    
 
   in
   let rec aux_r (vars, nb_expr, list_op) req = 

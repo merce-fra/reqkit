@@ -186,8 +186,9 @@ let print_hold fmt h=
   | Holds_after_at_most (e) -> Format.fprintf fmt " holds after at most \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
   | Holds_afterward_for_at_least (e) -> Format.fprintf fmt " holds afterwards for at least \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
   | Holds_for_less_than (e) -> Format.fprintf fmt " holds for less than \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
-  | Holds_at_list_every (e) -> Format.fprintf fmt " holds at least every \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
-  | Holds_and_succeded_by (e) -> Format.fprintf fmt " holds and is succeeded by \""; print_exp  fmt e ; Format.fprintf fmt "\" "
+  | Holds_at_least_every (e) -> Format.fprintf fmt " holds at least every \""; print_exp  fmt e; Format.fprintf fmt "\" time units"
+  | Holds_and_succeeded_by (e) -> Format.fprintf fmt " holds and is succeeded by \""; print_exp  fmt e ; Format.fprintf fmt "\" "
+  | Holds_indefinitely ->  Format.fprintf fmt " holds indefinitely "
   | At_most (e) -> Format.fprintf fmt " at most \""; print_exp  fmt e;  Format.fprintf fmt "\" time units later" )
 
 (** [print_exp_as_string e] prints an expression [e] as a string *)
