@@ -60,7 +60,7 @@ let generate_invariant fmt content_start content_end =
 (** [generate_variable_and_its_next_value fmt name typ initial_value is_clock] generates the smt code for the variable [name]
     of type [typ] with an [initial_value]. If it is a clock, [is_clock] shall be true *)
 let generate_variable_and_its_next_value fmt name typ initial_value is_clock check_rt_consistency=
-let next = if is_clock && not check_rt_consistency then "nextclock" else "next" in
+  let next = if is_clock && not check_rt_consistency then "nextclock" else "next" in
   Format.fprintf fmt "(declare-fun %s () %s)@\n" name typ;
   Format.fprintf fmt "(declare-fun %s_n () %s)@\n" name typ;
   Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :%s %s_n))@\n" name typ name next name;
@@ -189,14 +189,14 @@ let is_t_nul t =
     -> false
   ) 
 
-let is_t_infinite t =
+(* let is_t_infinite t =
   (match t with
   | Sup_types.Time(v) 
       -> if v = -1 then true else false
   | Sup_types.GreaterThan(_)
   | Sup_types.LesserThan (_)
     -> false
-  )
+  ) *)
 
 let need_vacuity_prop req_name args need_vacuity =
   let open Input_args in
@@ -260,7 +260,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
     end;
   
 
-  if not (is_t_infinite tmax) then   
+  (* if not (is_t_infinite tmax) then   
     begin
     let t = time_to_string tmax args.clock_t in
     generate_invariant fmt ("(define-fun ."^state_name^"_locinvar1 () Bool (! (=> is_"^state_name^"_TRIG (<= "^counter_name^" "^t^")) ") "))"; Format.fprintf fmt "@\n"
@@ -276,7 +276,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
     begin
     let t = time_to_string amax args.clock_t in
     generate_invariant fmt ("(define-fun ."^state_name^"_locinvar0 () Bool (! (=> is_"^state_name^"_ACTION (<= "^counter_name^" "^t^")) ") "))"; Format.fprintf fmt "@\n"
-    end;
+    end; *)
 
   let vacuity_constraint = (if (String.length vacuity_name) = 0 then "" else  "(not "^vacuity_name^ "_n )") in
   let vacuity_unchanged = (if (String.length vacuity_name) = 0 then "" else  " "^vacuity_name^ "_unchanged ") in
@@ -317,7 +317,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   Format.fprintf fmt "(define-fun act_to_idle_no_clock_%s () Bool ( and %s %s %s_reset ))@\n" state_name aee_name vacuity_constraint counter_name ;
 
   (*SUP state transition and initialization*)
-  Format.fprintf fmt "\n;this is the function to explicit SUP transition@\n";
+  Format.fprintf fmt "\n; SUP transitions\n";
 
   
   
@@ -330,12 +330,18 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   (*transition function*)
   let state_trans = "(define-fun ."^state_name^"_trans () Bool (!  ( or" ^
     (if (tmin_is_nul && lmin_is_nul && amin_is_nul && tmax_is_nul && amax_is_nul && lmax_is_nul) then
-      "\n;all timer are nul so the state machine is more simple
+      "\n; all constants are 0 so the state machine is simpler"
+      ^"\n; TODO in this case, all clock and state variables can be removed altogether, except for the variable err"
+      ^"\n  (and " ^ tse_name ^ " " ^ tee_name ^ " (not (and " ^ ase_name ^ " " ^ aee_name ^ ")) set_" ^ state_name ^ "_ERR "  ^ vacuity_unchanged ^ ")"
+      ^"\n  (and (not is_" ^ state_name ^ "_ERR) (not (and " ^ tse_name ^ " " ^ tee_name ^ ")) set_" ^ state_name ^ "_IDLE " ^ vacuity_unchanged ^ ")"
+      ^"\n  (and " ^ tse_name ^ " " ^ tee_name ^ " " ^ ase_name ^ " " ^ aee_name ^ " set_" ^ state_name ^ "_IDLE " ^ vacuity_constraint ^ ")"
+      ^"\n) :trans true))" 
+      (* "\n;all timer are nul so the state machine is more simple
       (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^" delay_to_act_no_clock_" ^state_name^" act_to_idle_no_clock_" ^state_name^" set_"^state_name^"_IDLE) 
       (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^ " (not delay_to_act_no_clock_" ^state_name^ ") set_"^state_name^"_ERR"^vacuity_unchanged^")
       (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^ " delay_to_act_no_clock_" ^state_name^ " (not act_to_idle_no_clock_" ^state_name^") set_"^state_name^"_ERR "^vacuity_unchanged^")
       (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^" (not trig_to_delay_no_clock_"^state_name^ ") set_"^state_name^"_IDLE"  ^vacuity_unchanged^ ")"^
-      ") :trans true))" 
+      ") :trans true))"  *)
       else
         begin
         (*four transiations in one tick*)
