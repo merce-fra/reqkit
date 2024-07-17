@@ -31,6 +31,15 @@ To install them, run the script "./scripts/install.sh" in the project directory
 
 Run the command "dune build" in the project directory
 
+## Usage and Examples
+To check rt-consistency via Pono:
+  ./scripts/VMTlib.sh reqs/simple_consistent.req
+  ./scripts/VMTlib.sh reqs/simple_inconsistent.req
+
+To check non-vacuity:
+  ./scripts/check_nonvacuity_pono.sh reqs/simple_consistent.req ID000
+  ./scripts/check_nonvacuity_pono.sh reqs/simple_consistent.req ID001
+
 ## How to run ocn all requirements file
 
 Run the script ./scripts/VMTlib.sh from project directory to generate in the output directory all the .vmt files on all requirements files

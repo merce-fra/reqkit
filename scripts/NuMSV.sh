@@ -1,5 +1,6 @@
 #!/bin/bash
 set -x
+set -e
 function process_file {
     f=$1
     cd ${REQ_2_SOMETHING_PROJECT_DIR}
