@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 function process_file {
     f=$1
     cd ${REQ_2_SOMETHING_PROJECT_DIR}
@@ -12,12 +12,18 @@ function process_file {
     #generation of the vmtlib file 
     SUP_FILE_VMT=${OUTPUT_FILES_DIR}/${BASENAME_NO_EXT}".vmt"
     ./exec --input ${f} --output-fmt vmtlib --state-encoding boolean --clock-encoding integer  --bool-only-predicates true --check-rt-consistency true  > ${SUP_FILE_VMT}
-    ${PONO_INSTALL_DIR}/pono -e bmc --smt-solver cvc5 -ta --rt-consistency 1 --witness ${SUP_FILE_VMT}
+    if ! command -v pono &> /dev/null
+    then
+        echo "pono could not be found"
+        exit 1
+    fi
+    pono -e bmc --smt-solver cvc5 -ta --rt-consistency 1 --witness ${SUP_FILE_VMT}
     echo "Done"	
 }
 
-REQ_2_SOMETHING_PROJECT_DIR=/home/osankur/inria/requirements_transformer
-PONO_INSTALL_DIR=${HOME}/tools/pono/build/
+if [ -z "${REQ_2_SOMETHING_PROJECT_DIR}" ]; then 
+    REQ_2_SOMETHING_PROJECT_DIR=./
+fi
 cd ${REQ_2_SOMETHING_PROJECT_DIR}
 
 INPUT_FILES_DIR=${REQ_2_SOMETHING_PROJECT_DIR}/reqs

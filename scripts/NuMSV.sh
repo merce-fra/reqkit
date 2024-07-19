@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 set -e
 function process_file {
     f=$1
@@ -16,6 +15,7 @@ function process_file {
 
     # calling req_verification
     cd ${REQ_VERIFICATION_INSTALL_DIR}"/landing_gear"
+    echo `pwd`
     cp ${SUP_FILE_PY} .
     `python3 supreq.py ${BASENAME_NO_EXT}.py > tmp.smv`
 
@@ -41,7 +41,9 @@ function process_file {
 }
 
 
-REQ_2_SOMETHING_PROJECT_DIR=/home/osankur/inria/requirements_transformer
+if [ -z "${REQ_2_SOMETHING_PROJECT_DIR}" ]; then 
+    REQ_2_SOMETHING_PROJECT_DIR=./
+fi
 cd ${REQ_2_SOMETHING_PROJECT_DIR}
 
 INPUT_FILES_DIR=${REQ_2_SOMETHING_PROJECT_DIR}/reqs
