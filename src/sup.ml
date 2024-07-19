@@ -219,7 +219,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         let e1_ = event_of_exp e1 in
       [{t={tse=Constant(true); tc=Constant(true); tee=Constant(true); tmin = Time(0); tmax= Time(0)};
         d={ lmin=Time(0); lmax=Time(0)};
-        a={ase=Constant(true); ac=e1_; aee=Constant(true); amin = Time(-1); amax= Time(-1)}; vacuity=true}]
+        a={ase=Constant(true); ac=Constant(true); aee=e1_; amin = Time(0); amax= Time(0)}; vacuity=true}]
       end
     | Ast_types.If (Ast_types.Prop(e1,Ast_types.Holds_for_at_least(e2)), Ast_types.Prop(e3,Ast_types.Holds_afterward) ) ->
         ( let tt = const_of_h vars (Ast_types.Holds_for_at_least(e2)) in 

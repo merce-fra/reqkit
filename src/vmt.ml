@@ -59,8 +59,8 @@ let generate_invariant fmt content_start content_end =
 
 (** [generate_variable_and_its_next_value fmt name typ initial_value is_clock] generates the smt code for the variable [name]
     of type [typ] with an [initial_value]. If it is a clock, [is_clock] shall be true *)
-let generate_variable_and_its_next_value fmt name typ initial_value is_clock check_rt_consistency=
-  let next = if is_clock && not check_rt_consistency then "nextclock" else "next" in
+let generate_variable_and_its_next_value fmt name typ initial_value is_clock =
+  let next = if is_clock then "nextclock" else "next" in
   Format.fprintf fmt "(declare-fun %s () %s)@\n" name typ;
   Format.fprintf fmt "(declare-fun %s_n () %s)@\n" name typ;
   Format.fprintf fmt "(define-fun .%s_sv0 () %s (!  %s :%s %s_n))@\n" name typ name next name;
@@ -72,7 +72,7 @@ let generate_variable_and_its_next_value fmt name typ initial_value is_clock che
 let generate_SUP_status_variables_and_func fmt state_name args =
   let open Input_args in
   match args.state_enc with
-  |IntegerEncoding -> (generate_variable_and_its_next_value fmt state_name "Int" "IDLE" false args.check_rt_consistency;
+  |IntegerEncoding -> (generate_variable_and_its_next_value fmt state_name "Int" "IDLE" false;
                       Format.fprintf fmt "(define-fun is_%s_IDLE () Bool (is_IDLE %s) )@\n" state_name state_name;
                       Format.fprintf fmt "(define-fun is_%s_TRIG () Bool (is_TRIG %s) )@\n" state_name state_name;
                       Format.fprintf fmt "(define-fun is_%s_DELAY () Bool (is_DELAY %s) )@\n" state_name state_name;
@@ -85,9 +85,9 @@ let generate_SUP_status_variables_and_func fmt state_name args =
                       Format.fprintf fmt "(define-fun set_%s_ERR () Bool (is_ERR %s_n) )@\n" state_name state_name
                       
                       )
-  |BooleanEncoding -> ( generate_variable_and_its_next_value fmt (state_name^"_err") "Bool" "false" false args.check_rt_consistency;
-                        generate_variable_and_its_next_value fmt (state_name^"_loc0") "Bool" "false" false args.check_rt_consistency;
-                        generate_variable_and_its_next_value fmt (state_name^"_loc1") "Bool" "false" false args.check_rt_consistency;
+  |BooleanEncoding -> ( generate_variable_and_its_next_value fmt (state_name^"_err") "Bool" "false" false;
+                        generate_variable_and_its_next_value fmt (state_name^"_loc0") "Bool" "false" false;
+                        generate_variable_and_its_next_value fmt (state_name^"_loc1") "Bool" "false" false;
                         Format.fprintf fmt "(define-fun is_%s_IDLE () Bool (is_IDLE %s_err %s_loc0 %s_loc1) )@\n" state_name state_name state_name state_name;
                         Format.fprintf fmt "(define-fun is_%s_TRIG () Bool (is_TRIG %s_err %s_loc0 %s_loc1) )@\n" state_name state_name state_name state_name;
                         Format.fprintf fmt "(define-fun is_%s_DELAY () Bool (is_DELAY %s_err %s_loc0 %s_loc1) )@\n" state_name state_name state_name state_name;
@@ -227,7 +227,7 @@ let generate_SUP_status fmt sup_index req_name (args : Input_args.t)  =
   |RealClock -> "Real") in
   (* defines the variables needed for the SUP state machine*)
   Format.fprintf fmt ";these are the function to explicit SUP time counter initial value and transition@\n";
-  generate_variable_and_its_next_value fmt counter_name clock_type t0 true args.check_rt_consistency;
+  generate_variable_and_its_next_value fmt counter_name clock_type t0 true;
   Format.fprintf fmt "%s@\n" ("(define-fun "^ counter_name^"_unchanged () Bool (= "^counter_name^"_n "^ counter_name^ "))");
   Format.fprintf fmt "%s@\n" ("(define-fun "^ counter_name^"_reset () Bool (= "^counter_name^"_n "^ t0 ^ "))");
   Format.fprintf fmt "@\n";
@@ -328,22 +328,21 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   let check_stop_after_action = if not amin_is_nul then "" else "(not act_to_idle_" ^state_name^") " in
 
   (*transition function*)
-  let state_trans = "(define-fun ."^state_name^"_trans () Bool (!  ( or" ^
+  let state_trans = 
     (if (tmin_is_nul && lmin_is_nul && amin_is_nul && tmax_is_nul && amax_is_nul && lmax_is_nul) then
+      "(define-fun ."^state_name^"_trans () Bool (!  ( and" ^
       "\n; all constants are 0 so the state machine is simpler"
       ^"\n; TODO in this case, all clock and state variables can be removed altogether, except for the variable err"
-      ^"\n  (and " ^ tse_name ^ " " ^ tee_name ^ " (not (and " ^ ase_name ^ " " ^ aee_name ^ ")) set_" ^ state_name ^ "_ERR "  ^ vacuity_unchanged ^ ")"
-      ^"\n  (and (not is_" ^ state_name ^ "_ERR) (not (and " ^ tse_name ^ " " ^ tee_name ^ ")) set_" ^ state_name ^ "_IDLE " ^ vacuity_unchanged ^ ")"
-      ^"\n  (and " ^ tse_name ^ " " ^ tee_name ^ " " ^ ase_name ^ " " ^ aee_name ^ " set_" ^ state_name ^ "_IDLE " ^ vacuity_constraint ^ ")"
+      ^"\n  (=> is_" ^ state_name ^ "_ERR set_" ^ state_name ^ "_ERR) ; make the err state absorbing"
+      ^"\n  (or "
+      ^"\n    (and " ^ tse_name ^ " " ^ tee_name ^ " (not (and " ^ ase_name ^ " " ^ aee_name ^ ")) set_" ^ state_name ^ "_ERR "  ^ vacuity_unchanged ^ ")"
+      ^"\n    (and (not is_" ^ state_name ^ "_ERR) (not (and " ^ tse_name ^ " " ^ tee_name ^ ")) set_" ^ state_name ^ "_IDLE " ^ vacuity_unchanged ^ ")"
+      ^"\n    (and (not is_" ^ state_name ^ "_ERR)" ^ tse_name ^ " " ^ tee_name ^ " " ^ ase_name ^ " " ^ aee_name ^ " set_" ^ state_name ^ "_IDLE " ^ vacuity_constraint ^ ")"
+      ^"\n  )"
       ^"\n) :trans true))" 
-      (* "\n;all timer are nul so the state machine is more simple
-      (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^" delay_to_act_no_clock_" ^state_name^" act_to_idle_no_clock_" ^state_name^" set_"^state_name^"_IDLE) 
-      (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^ " (not delay_to_act_no_clock_" ^state_name^ ") set_"^state_name^"_ERR"^vacuity_unchanged^")
-      (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^ " delay_to_act_no_clock_" ^state_name^ " (not act_to_idle_no_clock_" ^state_name^") set_"^state_name^"_ERR "^vacuity_unchanged^")
-      (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^" (not trig_to_delay_no_clock_"^state_name^ ") set_"^state_name^"_IDLE"  ^vacuity_unchanged^ ")"^
-      ") :trans true))"  *)
       else
         begin
+        "(define-fun ."^state_name^"_trans () Bool (!  (or" ^
         (*four transiations in one tick*)
         (if (tmin_is_nul && lmin_is_nul && amin_is_nul) then    
         "\n;additional transitions because tmin and lmin and amin are equals to 0\n;this is the encoding of a IDLE to IDLE state in one tick 
@@ -377,8 +376,10 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
         (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  (not delay_to_act_no_clock_" ^state_name^") set_"^state_name^"_DELAY" ^vacuity_unchanged^")"^
         "\n;this is the encoding of TRIG TO ACTION in one tick 
         (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^
-        "\n;this is the encoding of a IDLE to ERR in one tick 
+        "\n;this is the encoding of a IDLE to ERR via DELAY in one tick 
         (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")"^
+        "\n;this is the encoding of a IDLE to ERR via ACT in one tick 
+        (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^ "  act_to_err_no_clock_" ^ state_name ^ "  set_"^state_name^"_ERR" ^vacuity_unchanged^")"^        
         "\n;this is the encoding of TRIG to ERR in one tick  
         (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^") "
         else "")^
@@ -464,8 +465,8 @@ let generate_var_decl fmt decl =
   
 (** [generate_intermediate_var_decl fmt var_name ] generates the declaration of an intermediate variable [var_name]
     and initialized it to false in the formatter [fmt] *)
-let generate_intermediate_var_decl fmt (var_name :string) check_rt_consistency  =
-  generate_variable_and_its_next_value fmt var_name "Bool" "false" false check_rt_consistency;
+let generate_intermediate_var_decl fmt (var_name :string) =
+  generate_variable_and_its_next_value fmt var_name "Bool" "false" false;
   Format.fprintf fmt "(define-fun %s_unchanged () Bool (= %s_n  %s ))\n" var_name var_name var_name
 
 (** [generate_generated_var_decl fmt var_name ] generates the declaration of a generated variable [var_name] that replaces a
@@ -587,7 +588,7 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
   (*print generated variables used to convert requirements to SUP*)
   if (List.length intermediate_variables) > 0 then (
     Format.fprintf fmt "@\n;these are generated variables to model Before, After ... requirements @\n";
-    List.iter (fun var_name -> (generate_intermediate_var_decl fmt var_name args.check_rt_consistency)) intermediate_variables
+    List.iter (fun var_name -> (generate_intermediate_var_decl fmt var_name)) intermediate_variables
   );
 
   (*print the SUPs*)
