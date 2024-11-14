@@ -11,7 +11,7 @@ FILE=
 ANALYSIS=
 REQIDS=
 ENGINE=pono
-ALGORITHM=ind
+ALGORITHM=
 TIMEDOMAIN=real
 STRICT_DELAYS=1
 DELAY_FIRST=1
@@ -156,7 +156,11 @@ function generate_vmt {
   elif [ "$ANALYSIS" = "rtc" ]; then
     ./exec --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $TIMEDOMAIN --bool-only-predicates true --check-rt-consistency true > ${SUP_FILE_VMT}
   fi
-  DisplayInfo "Generated ${SUP_FILE_VMT}"
+  if [ $? = 0 ]; then
+    DisplayInfo "Generated ${SUP_FILE_VMT}"
+  else
+    DisplayError "Error generating VMT file"
+  fi
 }
 
 function check_vacuity {
@@ -206,8 +210,14 @@ if [ "${ANALYSIS}" = "vacuity" ]; then
     DisplayError "Vacuity analysis needs a list of requirement ids given with option -r"
     exit 1
   fi
+  if [ -z ${ALGORITHM} ]; then
+    ALGORITHM=ind
+  fi
   check_vacuity
 elif [ "${ANALYSIS}" = "rtc" ]; then
+  if [ -z ${ALGORITHM} ]; then
+    ALGORITHM=bmc
+  fi
   check_rtc
 else 
   DisplayError "Unknown analysis"
