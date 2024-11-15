@@ -176,8 +176,11 @@ function check_vacuity {
     fi
     set +e # This is to avoid the script to exit if pono returns 1
     pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${SUP_FILE_VMT}
-    if [ $? = 0 ]; then
+    ret_value=$?
+    if [ $ret_value = 0 ]; then
       echo -e "${GREEN}Non-vacuity established$ENDCOLOR"
+    elif [ $ret_value = 255 ]; then
+      echo -e "${RED}${BOLD}Non-vacuity witness could not be found; this might indicate vacuity$ENDCOLOR"
     else
       echo -e "${RED}${BOLD}Requirement is vacuous$ENDCOLOR"
     fi
@@ -197,10 +200,11 @@ function check_rtc {
     fi
     set +e # This is to avoid the script to exit if pono returns 1
     pono --smt-solver cvc5 --rt-consistency $RTC_MODE --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta --witness ${SUP_FILE_VMT}
-    if [ $? = 1 ]; then
-      echo -e "${GREEN}Requirements are rt-consistent$ENDCOLOR"
+    ret_value=$?
+    if [ $ret_value = 255 ]; then
+      echo -e "${GREEN}No rt-inconsistencies found$ENDCOLOR"
     else
-      echo -e "${RED}${BOLD}Requirements are not rt-consistent$ENDCOLOR"
+      echo -e "${RED}${BOLD}rt-inconsistency found$ENDCOLOR"
     fi
 }
 
