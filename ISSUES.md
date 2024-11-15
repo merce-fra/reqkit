@@ -1,37 +1,28 @@
-# req2something
+# Questions
+- in `input_args.ml`
 
-Utility to convert RE2019 "Scalable Analysis of Real-Time
-Requirements" paper benchmark real-time requirements to some other
-format :
-  - nusmv 
-  - vmtlib
+    ```(fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");```
 
-## Prerequisites
+# Tasks
+- [review] Could Francois check all transitions:
+  - if a transition goes through act->idle, then add `vacuity_constraint`; otherwise add `vacuity_unchanged`.
+  - a single transition must not contain contradictory next-clock constraints
+    (see the fix by removing next-clock constraints from `*_no_clock` functions)
+  - for each transition that stops at state s, add `(not s_to_s_no_clock')` for all successor states s' (including err) if such a transition is feasible immediately.
 
-In order to validate the generated smv code using the script NuSMV.sh, the environment variable REQ_VERIFICATION_INSTALL_DIR shall point to the installation directory of the tool req_verification.
+- [task] A simple input format for SUP, and a parser:
+  - .req input files are processed as structured English
+  - .sup input files are processed directly as SUP
 
-The tool NuSMV 2.6.0 shall also be installed (https://nusmv.fbk.eu/downloads.html)
+- [task] Do not restrict identifiers to start with x
 
+- Tool integration:
+  - None zero return value on error
+  - Integrate Reiya's SMV script within this tool
+  - Integrate Reiya's repair script within this tool
+  - Add script to launch the repair program
 
-## Installation
-
-Opam shall be installed using the command (depending on your linux distribution): 
-sudo apt install opam
-
-The project has the folowing dependancies:
-- dune
-- merlin
-- alcotest
-- ppx_inline_test
-- bisect_ppx
-
-To install them, run the script "./scripts/install.sh" in the project directory
-
-## How to compile
-
-Run the command "dune build" in the project directory
-
-## Usage and Examples
+# Examples
 - `simple_consistent.req` is rt-consistent (real and integer) since both triggers are "independent".
 
       ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent.req --time-domain integer
@@ -45,7 +36,7 @@ Run the command "dune build" in the project directory
       ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent2.req --time-domain integer --algorithm ic3ia
 
 - [fixme] `simple_consistent3.req` should be rt-inconsistent in my opinion (check this)
-
+- [fixme] `simple_inconsistent2.req` should be rt-inconsistent in my opinion (check this)
 - [todo] `simple_inconsistent.req` used to be rt-inconsistent in the integer semantics:
 
       ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent.req --time-domain integer
@@ -74,30 +65,3 @@ Run the command "dune build" in the project directory
 - An example of a non-vacuous requirement:
 
       ./scripts/reqkit.sh -a vacuity -r "ID000" -f reqs/simple_consistent.req
-
-
-## How to run on all requirements file
-
-Run the script ./scripts/VMTlib.sh from project directory to generate in the output directory all the .vmt files on all requirements files
-Run the script ./scripts/NuSMV.sh from project directory to generate in the output directory all the .smv files on all requirements files
-
-## How to run unit tests
-
-Run the command "dune runtest" in the project directory
-
-## How to get coverage info when processing all requirements files
-
-Run the script ./scripts/coverage.sh
-
-## How to use the tool
-
-Run the command "./exec --help" in the project directory
-
-## Directories content
-
-* README.md: basic instructions
-* reqs/: requirements from RE2019 "Scalable Analysis of Real-Time
-  Requirements" paper benchmark (https://zenodo.org/records/3341453)
-* scripts/: all scripts used to install and launch the tool
-* src/: all source files
-  

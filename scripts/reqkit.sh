@@ -2,6 +2,9 @@ BOLD="\e[1m"
 BLUE="\e[34m"
 GREEN="\e[32m"
 RED="\e[31m"
+LIGHTRED="\e[91m"
+LIGHTGREEN="\e[92m"
+CYAN="\e[36m"
 ENDCOLOR="\e[0m"
 OUTPUT_DIR=reqkit_output
 VERBOSE=0
@@ -13,7 +16,7 @@ REQIDS=
 ENGINE=pono
 ALGORITHM=
 TIMEDOMAIN=real
-STRICT_DELAYS=1
+STRICT_DELAYS=0
 DELAY_FIRST=1
 BMC_BOUND=10
 ALPHA=30
@@ -41,7 +44,7 @@ Help()
    echo "-e ENGINE             Analysis engine: pono | nusmv (default: pono)"
    echo "--algorithm ALG       Algorithm to be used by Pono: ind | bmc | ic3ia | ic3bits (default: ind for non-vacuity, and bmc for rtc)"
    echo "--time-domain T       Time domain in the timed automata semantics: real | integer | unit (default: $TIMEDOMAIN)"
-   echo "--strict-delays       Disallow null delays in the timed automata semantics (default: $STRICT_DELAYS)"
+   echo "--delay-domain        Strictly positive delays (0); positive or null delays (1); delays >=1 (2) (default: $STRICT_DELAYS)"
    echo "--delay-first         Timed automata semantics where a single atomic transition is a delay + discrete transition; when false, an atomic transition is a discrete transition + delay (default: $DELAY_FIRST)"
    echo "--bmc-bound           Bound up to which bounded model checking is to be performed (default: $BMC_BOUND)."
    echo "--alpha ALPHA         Replace all constants above ALPHA by infinity (default: $ALPHA); only for the nusmv engine."
@@ -104,8 +107,9 @@ while getopts ${OPTSTRING} opt; do
                 val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                 BMC_BOUND=$val
                 ;;
-            strict-delays)
-                STRICT_DELAYS=1
+            delay-domain)
+                val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                STRICT_DELAYS=$val
                 ;;
             rtc-mode)
                 val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
@@ -175,12 +179,12 @@ function check_vacuity {
       external_interpolator="--external-interpolator opensmt"
     fi
     set +e # This is to avoid the script to exit if pono returns 1
-    pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${SUP_FILE_VMT}
+    pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS   $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${SUP_FILE_VMT}
     ret_value=$?
     if [ $ret_value = 0 ]; then
       echo -e "${GREEN}Non-vacuity established$ENDCOLOR"
     elif [ $ret_value = 255 ]; then
-      echo -e "${RED}${BOLD}Non-vacuity witness could not be found; this might indicate vacuity$ENDCOLOR"
+      echo -e "${RED}Non-vacuity witness could not be found; this might indicate vacuity$ENDCOLOR"
     else
       echo -e "${RED}${BOLD}Requirement is vacuous$ENDCOLOR"
     fi
@@ -201,8 +205,10 @@ function check_rtc {
     set +e # This is to avoid the script to exit if pono returns 1
     pono --smt-solver cvc5 --rt-consistency $RTC_MODE --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta --witness ${SUP_FILE_VMT}
     ret_value=$?
-    if [ $ret_value = 255 ]; then
-      echo -e "${GREEN}No rt-inconsistencies found$ENDCOLOR"
+    if [ $ret_value = 1 ]; then
+      echo -e "${GREEN}rt-consistency proved$ENDCOLOR"
+    elif [ $ret_value = 255 ]; then
+      echo -e "${CYAN}No rt-inconsistencies found$ENDCOLOR"
     else
       echo -e "${RED}${BOLD}rt-inconsistency found$ENDCOLOR"
     fi
