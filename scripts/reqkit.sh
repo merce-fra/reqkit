@@ -200,7 +200,7 @@ function check_rtc {
     if [ $? = 1 ]; then
       echo -e "${GREEN}Requirements are rt-consistent$ENDCOLOR"
     else
-      echo -e "${RED}${BOLD}Requirements are not rt-consistency$ENDCOLOR"
+      echo -e "${RED}${BOLD}Requirements are not rt-consistent$ENDCOLOR"
     fi
 }
 

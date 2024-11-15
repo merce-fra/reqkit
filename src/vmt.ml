@@ -290,45 +290,66 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   let lmax_is_nul = is_t_nul lmax in
 
   (*define all guards*)
-  Format.fprintf fmt ";these are the functions that explicit the guards of the SUP and  the counter reset/not changed@\n";
+  (* Without next clock constraint on "no_clock" *)
+  Format.fprintf fmt "; these are the functions that explicit the guards of the SUP and  the counter reset/not changed@\n";
   Format.fprintf fmt "(define-fun stay_idle_%s () Bool ( and (not %s) %s_unchanged ))@\n"  state_name tse_name counter_name  ;
   Format.fprintf fmt "(define-fun idle_to_trig_%s () Bool ( and %s %s_reset  ))@\n" state_name tse_name  counter_name  ;
+  Format.fprintf fmt "(define-fun idle_to_trig_no_clock_%s () Bool %s)@\n" state_name tse_name;
   Format.fprintf fmt "(define-fun trig_to_idle_%s () Bool ( and (%s) %s_reset))@\n" state_name (" or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") "^(generate_counter_lt_min counter_name tmin args true)^" ) (and (not "^tee_name^") "^ (generate_counter_ge_max counter_name tmax args true) ^") "^ (generate_counter_gt_max counter_name tmax args true)) counter_name  ;
   Format.fprintf fmt "(define-fun stay_trig_%s () Bool  ( and ( %s) %s_unchanged )) @\n" state_name (" and "^tc_name^" "^(generate_counter_lt_max counter_name tmax args false)^" ( or ( not "^tee_name^")  "^(generate_counter_lt_min counter_name tmin args false)^")") counter_name ;
   Format.fprintf fmt "(define-fun trig_to_delay_%s () Bool ( and (%s) %s_reset ))@\n" state_name ("and "^tee_name^" "^(generate_counter_ge_min counter_name tmin args true)^" "^ (generate_counter_le_max counter_name tmax args true))  counter_name  ;
-  Format.fprintf fmt "(define-fun trig_to_delay_no_clock_%s () Bool ( and %s %s_reset ))@\n" state_name tee_name  counter_name  ;
+  Format.fprintf fmt "(define-fun trig_to_delay_no_clock_%s () Bool %s )@\n" state_name tee_name;
   Format.fprintf fmt "(define-fun stay_delay_%s () Bool (  and (%s) %s_unchanged ))@\n" state_name ("and "^(generate_counter_lt_max counter_name lmax args false)^ " ( or (not "^ ase_name^") " ^ (generate_counter_lt_min counter_name lmin args false) ^")" ) counter_name;
   Format.fprintf fmt "(define-fun delay_to_err_%s () Bool ( and (%s) %s_unchanged ))@\n" state_name ("and (not "^ase_name^") " ^ (generate_counter_ge_max counter_name lmax args true) ) counter_name;
   if lmax_is_nul then 
-    Format.fprintf fmt "(define-fun delay_to_err_no_clock_%s () Bool ( and %s %s_unchanged ))@\n" state_name ("(not "^ase_name^") ") counter_name
+    Format.fprintf fmt "(define-fun delay_to_err_no_clock_%s () Bool %s )@\n" state_name ("(not "^ase_name^") ")
   else
     Format.fprintf fmt "(define-fun delay_to_err_no_clock_%s () Bool (  %s  ))@\n"  ("false") counter_name;
-
   Format.fprintf fmt "(define-fun delay_to_act_%s () Bool ( and (%s) %s_reset ))@\n" state_name (" and "^ase_name^" " ^ (generate_counter_ge_min counter_name lmin args true) ^" "^(generate_counter_le_max counter_name lmax args true)) counter_name ;
-  Format.fprintf fmt "(define-fun delay_to_act_no_clock_%s () Bool ( and %s %s_reset ))@\n" state_name ase_name counter_name ;
+  Format.fprintf fmt "(define-fun delay_to_act_no_clock_%s () Bool %s )@\n" state_name ase_name ;
   Format.fprintf fmt "(define-fun stay_act_%s () Bool ( and (%s) %s_unchanged ))@\n" state_name ("and "^ac_name^"  "^ (generate_counter_lt_max counter_name amax args false) ^ " (or (not "^aee_name^") "^ (generate_counter_lt_min counter_name amin args  false)^ ")") counter_name;
   Format.fprintf fmt "(define-fun act_to_err_%s () Bool ( and (%s) %s_unchanged ))@\n" state_name ("or (and (not "^ac_name^") (not "^aee_name^")) (and (not "^ac_name^") "^ (generate_counter_lt_min counter_name amin args true) ^") (and (not "^aee_name^") "^ (generate_counter_ge_max counter_name amax args true)^") "^ (generate_counter_gt_max counter_name amax args true)) counter_name;
   if amax_is_nul then 
-    Format.fprintf fmt "(define-fun act_to_err_no_clock_%s () Bool ( and (%s) %s_unchanged ))@\n" state_name (" not "^aee_name^" ") counter_name
+    Format.fprintf fmt "(define-fun act_to_err_no_clock_%s () Bool %s )@\n" state_name (" (not "^aee_name^") ")
+  else if amin_is_nul then
+    Format.fprintf fmt "(define-fun act_to_err_no_clock_%s () Bool %s )@\n" state_name (" (not "^ac_name^") ")
   else
-    Format.fprintf fmt "(define-fun act_to_err_no_clock_%s () Bool ( and (%s) %s_unchanged ))@\n" state_name ("and (not "^ac_name^") (not "^aee_name^") ") counter_name;
-
+    Format.fprintf fmt "(define-fun act_to_err_no_clock_%s () Bool %s )@\n" state_name ("(and (not "^ac_name^") (not "^aee_name^"))");
   Format.fprintf fmt "(define-fun act_to_idle_%s () Bool ( and (%s) %s %s_reset ))@\n" state_name ("and "^aee_name^" "^(generate_counter_ge_min counter_name amin args true) ^" "^ (generate_counter_le_max counter_name amax args true)) vacuity_constraint counter_name ;
-  Format.fprintf fmt "(define-fun act_to_idle_no_clock_%s () Bool ( and %s %s %s_reset ))@\n" state_name aee_name vacuity_constraint counter_name ;
+  Format.fprintf fmt "(define-fun act_to_idle_no_clock_%s () Bool ( and true %s %s ))@\n" state_name aee_name vacuity_constraint;
 
   (*SUP state transition and initialization*)
   Format.fprintf fmt "\n; SUP transitions\n";
-
   
-  
-  (*in case of possible multiple transitions in one tick, to model single transition and be deterministic, 
-    it is needed in the guard to check that the next transition guard is not valid*)
-  let check_stop_after_trig = if not tmin_is_nul then "" else "(not trig_to_delay_" ^state_name^") " in
-  let check_stop_after_delay = if not lmin_is_nul then "" else "(not delay_to_act_" ^state_name^") " in
-  let check_stop_after_action = if not amin_is_nul then "" else "(not act_to_idle_" ^state_name^") " in
-
+  (* in case of possible multiple transitions in one tick, to model single transition and be deterministic, 
+    it is needed in the guard to check that the next transition guard is not valid immediately *)
+  let check_stop_after_trig = 
+    if tmax_is_nul then 
+      "(and " ^ tee_name ^" (not trig_to_delay_no_clock_"^state_name^"))"
+    else if tmin_is_nul then 
+      "(and (or " ^ tc_name ^" " ^ tee_name ^") (not trig_to_delay_no_clock_"^state_name^"))"
+    else 
+      "(and " ^ tc_name ^ " (not trig_to_delay_no_clock_" ^state_name^"))" 
+  in
+  let check_stop_after_delay = 
+    if lmax_is_nul then 
+      ase_name 
+    else if lmin_is_nul then 
+      "(not delay_to_act_no_clock_" ^state_name^") "
+    else 
+      "" 
+    in
+  let check_stop_after_action = 
+    if amax_is_nul then 
+      "(and (not act_to_idle_no_clock_" ^ state_name ^") " ^ aee_name ^ ")"
+    else if amin_is_nul then
+      "(and (or " ^ ac_name ^ " " ^ aee_name ^ ")(not act_to_idle_no_clock_" ^state_name^") )"
+    else ""
+  in
   (*transition function*)
   let state_trans = 
+    (* let clock_unchanged = state_name ^ "_unchanged" in
+    let clock_reset = state_name ^ "_reset" in *)
     (if (tmin_is_nul && lmin_is_nul && amin_is_nul && tmax_is_nul && amax_is_nul && lmax_is_nul) then
       "(define-fun ."^state_name^"_trans () Bool (!  ( and" ^
       "\n; all constants are 0 so the state machine is simpler"
@@ -343,100 +364,113 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
       else
         begin
         "(define-fun ."^state_name^"_trans () Bool (!  (or" ^
-        (*four transiations in one tick*)
+        (*four transitions in one tick*)
         (if (tmin_is_nul && lmin_is_nul && amin_is_nul) then    
-        "\n;additional transitions because tmin and lmin and amin are equals to 0\n;this is the encoding of a IDLE to IDLE state in one tick 
-        (and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^" delay_to_act_no_clock_" ^state_name^" act_to_idle_no_clock_" ^state_name^" set_"^state_name^"_IDLE)"^                 
-        "\n(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  (not act_to_idle_no_clock_" ^state_name^") set_"^state_name^"_ACTION" ^vacuity_unchanged^")" ^                 
-        "\n(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  (not delay_to_act_no_clock_" ^state_name^" ) set_"^state_name^"_DELAY" ^vacuity_unchanged^")" ^    
-        "\n(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_err_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^                 
-        "\n(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  act_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^                 
-        
-        "\n(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"  idle_to_trig_" ^state_name^"  set_"^state_name^"_TRIG) " ^                 
-        "\n(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   (not idle_to_trig_" ^state_name^") set_"^state_name^"_IDLE) " ^                                  
-        "\n(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   (not act_to_idle_no_clock_" ^state_name^") set_"^state_name^"_ACTION" ^vacuity_unchanged^")" ^                 
-        "\n(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^       
-
-        "\n(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"   set_"^state_name^"_DELAY)"^                 
-        "\n(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   idle_to_trig_" ^state_name^"  (not trig_to_delay_no_clock_" ^state_name^") set_"^state_name^"_TRIG)"^                 
-        "\n(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   (not idle_to_trig_" ^state_name^") set_"^state_name^"_IDLE)"^                 
-        "\n(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   (not act_to_idle_no_clock_" ^state_name^") set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^                 
-
-
-        "\n(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  set_"^state_name^"_ACTION)" ^
-        "\n(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  (not delay_to_act_no_clock_" ^state_name^") set_"^state_name^"_DELAY)" ^
-        "\n(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"  (not trig_to_delay_no_clock_" ^state_name^") set_"^state_name^"_TRIG)" ^
-        "\n(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"   delay_to_err_no_clock_" ^state_name^" set_"^state_name^"_ERR)" 
+        "\n\n; Combined transitions for: tmin = lmin = amin = 0\n; IDLE -> TRIG -> DELAY -> IDLE\n"^
+        "(and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^" delay_to_act_no_clock_" ^state_name^" act_to_idle_no_clock_" ^state_name^" set_"^state_name^"_IDLE" ^ vacuity_constraint ^")"^
+        "\n; IDLE -> TRIG -> DELAY -> ACT \n"^
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  (not act_to_idle_no_clock_" ^state_name^") (not act_to_err_no_clock_" ^ state_name ^ ") set_"^state_name^"_ACTION" ^vacuity_unchanged^")" ^
+        "\n; IDLE -> TRIG -> DELAY \n"^
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  (not delay_to_act_no_clock_" ^state_name^" ) (not delay_to_err_no_clock_" ^state_name^" ) set_"^state_name^"_DELAY" ^vacuity_unchanged^")" ^
+        "\n; IDLE -> TRIG -> DELAY -> ERR \n"^
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_err_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^
+        "\n; IDLE -> TRIG -> DELAY -> ACT -> ERR \n"^
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  act_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^        
+        "\n; TRIG -> DELAY -> ACT -> IDLE -> TRIG \n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"  idle_to_trig_" ^state_name^"  set_"^state_name^"_TRIG" ^ vacuity_constraint ^ ") " ^
+        "\n; TRIG -> DELAY -> ACT -> IDLE \n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   (not idle_to_trig_" ^state_name^") set_"^state_name^"_IDLE" ^ vacuity_constraint ^ ") " ^
+        "\n; TRIG -> DELAY -> ACT \n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   (not act_to_idle_no_clock_" ^state_name^") (not act_to_err_no_clock_" ^state_name^") set_"^state_name^"_ACTION" ^vacuity_unchanged^")" ^
+        "\n; TRIG -> DELAY -> ERR \n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^
+        "\n; DELAY -> ACT -> IDLE -> TRIG -> DELAY \n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"   set_"^state_name^"_DELAY " ^ vacuity_constraint ^ ")"^
+        "\n; DELAY -> ACT -> IDLE -> TRIG \n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   idle_to_trig_" ^state_name^"  (not trig_to_delay_no_clock_" ^state_name^") set_"^state_name^"_TRIG" ^ vacuity_constraint ^ ")"^
+        "\n; DELAY -> ACT -> IDLE \n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   (not idle_to_trig_" ^state_name^") set_"^state_name^"_IDLE" ^ vacuity_constraint ^ ")"^
+        "\n; DELAY -> ACT \n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   (not act_to_idle_no_clock_" ^state_name^") (not act_to_err_no_clock_" ^state_name^") set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^
+        "\n; ACT -> IDLE -> TRIG -> DELAY -> ACT \n"^
+        "(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  set_"^state_name^"_ACTION" ^ vacuity_constraint ^ ")" ^
+        "\n; ACT -> IDLE -> TRIG -> DELAY \n"^
+        "(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  (not delay_to_act_no_clock_" ^state_name^") (not delay_to_err_no_clock_" ^state_name^") set_"^state_name^"_DELAY" ^ vacuity_constraint ^ ")" ^
+        "\n; ACT -> IDLE -> TRIG  \n"^
+        "(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"  (not trig_to_delay_no_clock_" ^state_name^") set_"^state_name^"_TRIG" ^ vacuity_constraint ^ ")" ^
+        "\n; ACT -> IDLE -> TRIG -> DELAY -> ERR\n"^
+        "(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"   delay_to_err_no_clock_" ^state_name^" set_"^state_name^"_ERR" ^ vacuity_unchanged ^ ")" 
         else "")^
-        (*three transiations in one tick*)
+        (*three transitions in one tick*)
         (if (tmin_is_nul && lmin_is_nul && not amin_is_nul) then    
-        "\n;additional transitions because tmin and lmin are equals to 0\n;this is the encoding of a IDLE to ACTION state in one tick 
-        (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^
-        "\n;this is the encoding of a IDLE to DELAY in one tick 
-        (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  (not delay_to_act_no_clock_" ^state_name^") set_"^state_name^"_DELAY" ^vacuity_unchanged^")"^
-        "\n;this is the encoding of TRIG TO ACTION in one tick 
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^
-        "\n;this is the encoding of a IDLE to ERR via DELAY in one tick 
-        (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")"^
-        "\n;this is the encoding of a IDLE to ERR via ACT in one tick 
-        (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^ "  act_to_err_no_clock_" ^ state_name ^ "  set_"^state_name^"_ERR" ^vacuity_unchanged^")"^        
-        "\n;this is the encoding of TRIG to ERR in one tick  
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^") "
+        "\n\n; Combined transitions for: tmin = lmin = 0, amin != 0"^
+        "\n; IDLE -> TRIG -> DELAY -> ACT\n" ^ 
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^" (not act_to_err_no_clock_" ^ state_name ^ ") set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^
+        "\n; IDLE -> TRIG -> DELAY\n" ^ 
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  (not delay_to_act_no_clock_" ^state_name^") (not delay_to_err_no_clock_" ^state_name ^ ") set_"^state_name^"_DELAY" ^vacuity_unchanged^")"^
+        "\n; TRIG -> DELAY -> ACTION\n" ^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^" (not act_to_err_no_clock_"^ state_name^") set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^
+        "\n; IDLE -> TRIG -> DELAY -> ERR\n"^
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")"^
+        "\n; IDLE -> TRIG -> DELAY -> ACT -> ERR\n"^
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^ "  act_to_err_no_clock_" ^ state_name ^ "  set_"^state_name^"_ERR" ^vacuity_unchanged^")"^
+        "\n; TRIG -> DELAY -> ERR\n"
+        ^"(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^") "
         else "")^
         (if (lmin_is_nul && amin_is_nul && not tmin_is_nul) then
-        "\n;additional transitions because lmin and amin are equals to 0\n;this is the encoding of a TRIG to IDLE state in one tick 
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   set_"^state_name^"_IDLE)"^
-        "\n;this is the encoding of a TRIG to ACTION state in one tick 
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   (not act_to_idle_no_clock_" ^state_name^")  set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^
-        "\n;this is the encoding of a DELAY to IDLE state in one tick 
-        (and is_" ^ state_name ^ "DELAY  delay_to_act_" ^state_name^"  act_to_idle_no_clock_" ^state_name^"   set_"^state_name^"_IDLE)" ^
-        "\n;this is the encoding of a TRIG to ERR state in one tick 
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR " ^vacuity_unchanged^") "^
-        "\n;this is the encoding of a TRIG to ERR state in one tick 
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  act_to_idle_no_clock_" ^state_name^"   act_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR)"
-        else "")^  
+        "\n\n; Combined transitions for: lmin = amin = 0, tmin != 0 \n; TRIG -> DELAY -> ACT -> IDLE\n
+        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   set_"^state_name^"_IDLE"^vacuity_constraint^")"^
+        "\n; TRIG -> DELAY -> ACT\n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   (not act_to_idle_no_clock_" ^state_name^") (not act_to_err_no_clock_" ^state_name^")  set_"^state_name^"_ACTION" ^vacuity_unchanged^")"^
+        "\n; DELAY -> ACT -> IDLE \n"^
+        "(and is_" ^ state_name ^ "DELAY  delay_to_act_" ^state_name^"  act_to_idle_no_clock_" ^state_name^" (not idle_to_trig_no_clock_" ^state_name^")  set_"^state_name^"_IDLE"^vacuity_constraint^")" ^
+        "\n; TRIG -> DELAY -> ERR\n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR " ^vacuity_unchanged^") "^
+        "\n; TRIG -> DELAY -> ACT -> ERR\n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR" ^vacuity_unchanged^") "
+        else "")^
         (if (amin_is_nul && tmin_is_nul && not lmin_is_nul) then
-        "\n;additional transitions because tmin and amin are equals to 0\n;this is the encoding of a ACTION to DELAY state in one tick 
-        (and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"   set_"^state_name^"_DELAY)" ^
-        "\n;this is the encoding of a ACTION to TRIG state in one tick
-          (and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"   (not trig_to_delay_no_clock_" ^state_name^")  set_"^state_name^"_TRIG)" ^
-        "\n;this is the encoding of a IDLE to DELAY state in one tick 
-        (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^" trig_to_delay_no_clock_" ^state_name^"    set_"^state_name^"_DELAY  " ^vacuity_unchanged^") "^
-        "\n;this is the encoding of a DELAY to TRIG state in one tick 
-        (and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^" act_to_idle_no_clock_" ^state_name^"  idle_to_trig_" ^state_name^ "  trig_to_delay_no_clock_" ^state_name^ "  set_"^state_name^"_DELAY) " ^
-        "\n;this is the encoding of a DELAY to TRIG state in one tick 
-        (and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^" act_to_idle_no_clock_" ^state_name^"  idle_to_trig_" ^state_name^ " (not trig_to_delay_no_clock_" ^state_name^ ")  set_"^state_name^"_TRIG) " ^
-        "\n;this is the encoding of a DELAY to IDLE state in one tick 
-        (and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^" act_to_idle_no_clock_" ^state_name^"  (not idle_to_trig" ^state_name^ ")  set_"^state_name^"_IDLE) " 
+        "\n\n; Combined transitions for: tmin = amin = 0, lmin != 0 \n; ACTION -> IDLE -> TRIG -> DELAY\n
+        (and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"   trig_to_delay_no_clock_" ^state_name^"   set_"^state_name^"_DELAY" ^vacuity_constraint^")" ^
+        "\n; ACTION -> IDLE -> TRIG\n"^
+        "(and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  idle_to_trig_" ^state_name^"   (not trig_to_delay_no_clock_" ^state_name^")  set_"^state_name^"_TRIG" ^vacuity_constraint^")" ^
+        "\n; IDLE -> TRIG -> DELAY\n"^
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^" trig_to_delay_no_clock_" ^state_name^"    set_"^state_name^"_DELAY  " ^vacuity_unchanged^") "^
+        "\n; DELAY -> ACT -> IDLE -> TRIG -> DELAY\n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^" act_to_idle_no_clock_" ^state_name^"  idle_to_trig_" ^state_name^ "  trig_to_delay_no_clock_" ^state_name^ "  set_"^state_name^"_DELAY" ^vacuity_constraint^") " ^
+        "\n; DELAY -> ACT -> IDLE -> TRIG\n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^" act_to_idle_no_clock_" ^state_name^"  idle_to_trig_" ^state_name^ " (not trig_to_delay_no_clock_" ^state_name^ ")  set_"^state_name^"_TRIG" ^vacuity_constraint^")" ^
+        "\n; DELAY -> ACT -> IDLE\n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^" act_to_idle_no_clock_" ^state_name^"  (not idle_to_trig_no_clock " ^state_name^ ")  set_"^state_name^"_IDLE" ^vacuity_constraint^") " 
         else "")^
         (* two transitions in one tick *)
         (if (tmin_is_nul && not lmin_is_nul && not amin_is_nul) then
-        "\n;additional transitions because tmin is equal to 0\n;this is the encoding of a IDLE to DELAY state in one tick 
-        (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"   set_"^state_name^"_TRIG)"
+        "\n\n; Combined transitions for: tmin=0, lmin !=0, amin != 0\n; IDLE -> TRIG -> DELAY\n"^
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"   set_"^state_name^"_TRIG" ^vacuity_unchanged^")"
         else "")^
         (if (not tmin_is_nul &&  lmin_is_nul && not amin_is_nul) then
-        "\n;additional transitions because lmin is equal to 0\n;this is the encoding of a TRIG to ACTION state in one tick 
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   set_"^state_name^"_ACTION)"^
-        "\n;this is the encoding of a TRIG to ACTION state in one tick 
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR)"
+        "\n\n; Combined transitions for: tmin != 0, lmin = 0, amin != 0 \n; TRIG -> DELAY -> ACTION\n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^" (not act_to_err_no_clock_" ^state_name^") set_"^state_name^"_ACTION" ^vacuity_unchanged ^")"^
+        "\n; TRIG -> DELAY -> ERR\n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR" ^vacuity_unchanged ^")"
         else "")^
         (if (not tmin_is_nul &&  not lmin_is_nul && amin_is_nul) then
-        "\n;additional transitions because amin is equal to 0\n;this is the encoding of a DELAY to ACTION state in one tick 
-        (and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"  act_to_idle_no_clock_" ^state_name^"   set_"^state_name^"_IDLE)" ^
-        "\n;this is the encoding of a DELAY to ERR state in one tick 
-        (and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"  act_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR)"
+        "\n\n; Combined transitions for: tmin != 0, lmin != 0, amin = 0\n; DELAY -> ACTION -> IDLE\n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"  act_to_idle_no_clock_" ^state_name^" (not idle_to_trig_no_clock_" ^state_name^")  set_"^state_name^"_IDLE" ^vacuity_constraint ^")" ^
+        "\n; DELAY -> ACT -> ERR\n"^
+        "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"  act_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR" ^vacuity_unchanged ^")"
         else "")^
         (* single transition in one tick *)
-        "\n;this is the encoding of single state change.
+        "\n\n; Single transitions:
         (and is_" ^ state_name ^ "_IDLE  stay_idle_" ^state_name^"  set_"^state_name^"_IDLE " ^vacuity_unchanged^")
         (and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  " ^ check_stop_after_trig ^ " set_"^state_name^"_TRIG " ^vacuity_unchanged^")
-        (and is_" ^ state_name ^ "_TRIG  trig_to_idle_" ^state_name^"  set_"^state_name^"_IDLE " ^vacuity_unchanged^")
+        (and is_" ^ state_name ^ "_TRIG  trig_to_idle_" ^state_name^" (not idle_to_trig_no_clock_" ^ state_name ^ ") set_"^state_name^"_IDLE " ^vacuity_unchanged^")
         (and is_" ^ state_name ^ "_TRIG  stay_trig_" ^state_name^"  set_"^state_name^"_TRIG " ^vacuity_unchanged^") 
-        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  "^ check_stop_after_delay ^"set_"^state_name^"_DELAY " ^vacuity_unchanged^")
+        (and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  "^ check_stop_after_delay ^" set_"^state_name^"_DELAY " ^vacuity_unchanged^")
         (and is_" ^ state_name ^ "_DELAY  stay_delay_" ^state_name^"  set_"^state_name^"_DELAY " ^vacuity_unchanged^")
         (and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"  " ^ check_stop_after_action ^ " set_"^state_name^"_ACTION " ^vacuity_unchanged^")
         (and is_" ^ state_name ^ "_ACTION  stay_act_" ^state_name^"  set_"^state_name^"_ACTION " ^vacuity_unchanged^")
-        (and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  set_"^state_name^"_IDLE)
+        (and is_" ^ state_name ^ "_ACTION  act_to_idle_" ^state_name^"  set_"^state_name^"_IDLE" ^vacuity_constraint^")
         (and is_" ^ state_name ^ "_DELAY  delay_to_err_" ^state_name^"  set_"^state_name^"_ERR " ^vacuity_unchanged^")
         (and is_" ^ state_name ^ "_ACTION  act_to_err_" ^state_name^"   set_"^state_name^"_ERR " ^vacuity_unchanged^")
         ) :trans true))" 
