@@ -6,7 +6,10 @@ LIGHTRED="\e[91m"
 LIGHTGREEN="\e[92m"
 CYAN="\e[36m"
 ENDCOLOR="\e[0m"
+
 OUTPUT_DIR=reqkit_output
+TMP_OUTPUT_FILE=`mktemp`
+
 VERBOSE=0
 SHOW_TRACE=0
 VERSION=0.1
@@ -22,6 +25,8 @@ BMC_BOUND=10
 ALPHA=30
 BETA=10
 RTC_MODE=0 # Pono-rt's rtc algorithm: 0 or 1
+
+
 
 DisplayError()
 {
@@ -179,8 +184,9 @@ function check_vacuity {
       external_interpolator="--external-interpolator opensmt"
     fi
     set +e # This is to avoid the script to exit if pono returns 1
-    pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS   $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${SUP_FILE_VMT}
+    pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS   $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${SUP_FILE_VMT} > ${TMP_OUTPUT_FILE}
     ret_value=$?
+    python3 scripts/parse_pono.py < ${TMP_OUTPUT_FILE}
     if [ $ret_value = 0 ]; then
       echo -e "${GREEN}Non-vacuity established$ENDCOLOR"
     elif [ $ret_value = 255 ]; then
@@ -203,8 +209,9 @@ function check_rtc {
       external_interpolator="--external-interpolator opensmt"
     fi
     set +e # This is to avoid the script to exit if pono returns 1
-    pono --smt-solver cvc5 --rt-consistency $RTC_MODE --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta --witness ${SUP_FILE_VMT}
+    pono --smt-solver cvc5 --rt-consistency $RTC_MODE --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta --witness ${SUP_FILE_VMT} > ${TMP_OUTPUT_FILE}
     ret_value=$?
+    python3 scripts/parse_pono.py < ${TMP_OUTPUT_FILE}
     if [ $ret_value = 1 ]; then
       echo -e "${GREEN}rt-consistency proved$ENDCOLOR"
     elif [ $ret_value = 255 ]; then
@@ -213,8 +220,6 @@ function check_rtc {
       echo -e "${RED}${BOLD}rt-inconsistency found$ENDCOLOR"
     fi
 }
-
-
 if [ "${ANALYSIS}" = "vacuity" ]; then
   if [ -z ${REQIDS} ]; then
     DisplayError "Vacuity analysis needs a list of requirement ids given with option -r"
@@ -232,4 +237,7 @@ elif [ "${ANALYSIS}" = "rtc" ]; then
 else 
   DisplayError "Unknown analysis"
   exit 1
+fi
+if [ ${VERBOSE} == 1 ]; then
+  echo -e "Temporary file:  ${TMP_OUTPUT_FILE}"
 fi
