@@ -329,11 +329,11 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
     else if tmin_is_nul then 
       "(and (or " ^ tc_name ^" " ^ tee_name ^") (not trig_to_delay_no_clock_"^state_name^"))"
     else 
-      "(and " ^ tc_name ^ " (not trig_to_delay_no_clock_" ^state_name^"))" 
+      ""
   in
   let check_stop_after_delay = 
     if lmax_is_nul then 
-      ase_name 
+      "(and (not delay_to_err_no_clock_" ^state_name^") (not delay_to_act_no_clock_" ^state_name^")) "
     else if lmin_is_nul then 
       "(not delay_to_act_no_clock_" ^state_name^") "
     else 
@@ -427,7 +427,11 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
         "\n; TRIG -> DELAY -> ERR\n"^
         "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR " ^vacuity_unchanged^") "^
         "\n; TRIG -> DELAY -> ACT -> ERR\n"^
-        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR" ^vacuity_unchanged^") "
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR" ^vacuity_unchanged^") "^
+        "\n; IDLE -> TRIG -> DELAY\n"^
+        "(and is_" ^ state_name ^ "_IDLE idle_to_delay_" ^ state_name ^" trig_to_delay_" ^state_name^" " ^ check_stop_after_delay ^ "    set_"^state_name^"_ERR" ^vacuity_unchanged ^")"^
+        "\n; IDLE -> TRIG -> DELAY -> ACT\n" ^ 
+        "(and is_" ^ state_name ^ "_IDLE  idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"  delay_to_act_no_clock_" ^state_name^" (not act_to_err_no_clock_" ^ state_name ^ ") set_"^state_name^"_ACTION" ^vacuity_unchanged^")"
         else "")^
         (if (amin_is_nul && tmin_is_nul && not lmin_is_nul) then
         "\n\n; Combined transitions for: tmin = amin = 0, lmin != 0 \n; ACTION -> IDLE -> TRIG -> DELAY\n
@@ -452,7 +456,9 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
         "\n\n; Combined transitions for: tmin != 0, lmin = 0, amin != 0 \n; TRIG -> DELAY -> ACTION\n"^
         "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^" (not act_to_err_no_clock_" ^state_name^") set_"^state_name^"_ACTION" ^vacuity_unchanged ^")"^
         "\n; TRIG -> DELAY -> ERR\n"^
-        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR" ^vacuity_unchanged ^")"
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"   set_"^state_name^"_ERR" ^vacuity_unchanged ^")"^
+        "\n; IDLE -> TRIG -> DELAY\n"^
+        "(and is_" ^ state_name ^ "_IDLE idle_to_trig_" ^ state_name ^" trig_to_delay_" ^state_name^" " ^ check_stop_after_delay ^ "    set_"^state_name^"_ERR" ^vacuity_unchanged ^")"
         else "")^
         (if (not tmin_is_nul &&  not lmin_is_nul && amin_is_nul) then
         "\n\n; Combined transitions for: tmin != 0, lmin != 0, amin = 0\n; DELAY -> ACTION -> IDLE\n"^

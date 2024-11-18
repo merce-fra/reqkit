@@ -158,7 +158,7 @@ let rec convert_sup1 vars (intermediate_hashtbl :(string,string) Hashtbl.t) req 
         let d0 = { lmin=Time(0); lmax=Time(0)} in       
         match r with
         | Ast_types.Prop(e2, Holds_for_at_least (e3)) -> 
-              [{t=t;d=d0;a={ase=Constant(true); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(const_of_h vars (Holds_for_at_least (e3))); amax= Time(const_of_h vars (Holds_for_at_least (e3)))}; vacuity=true}]
+              [{t=t;d=d0;a={ase=(event_of_exp e2); ac=(event_of_exp e2); aee=(event_of_exp e2); amin = Time(const_of_h vars (Holds_for_at_least (e3))); amax= Time(const_of_h vars (Holds_for_at_least (e3)))}; vacuity=true}]
         | Ast_types.Prop(e2, Holds_after_at_most(e3)) -> 
               [{t=t;d=d0;a={ase=Constant(true); ac=event_of_exp (Ast_types.Not(e2)); aee=event_of_exp (e2); amin = Time(0); amax= Time(const_of_h vars (Holds_after_at_most (e3)))}; vacuity=true}]
         | Ast_types.Prop(e2, Holds_for_less_than(e3)) ->

@@ -4,4 +4,4 @@ Input x0002 is bool
 
 ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 25 time units
 ID001: Globally, it is always the case that if "x0000" holds, then "!x0001" holds for at least 20 time units
-ID002: Globally, it is always the case that if "x0002"  holds for at least 50 time units, then "x0000"  holds afterwards 
+ID002: Globally, it is always the case that if "x0002"  holds for at least 50 time units, then "x0000" holds afterwards

@@ -16,12 +16,12 @@ REQIDS=
 ENGINE=pono
 ALGORITHM=
 TIMEDOMAIN=real
-STRICT_DELAYS=0
+STRICT_DELAYS=1
 DELAY_FIRST=1
 BMC_BOUND=10
 ALPHA=30
 BETA=10
-RTC_MODE=1 # Pono-rt's rtc algorithm: 0 or 1
+RTC_MODE=0 # Pono-rt's rtc algorithm: 0 or 1
 
 DisplayError()
 {
@@ -44,7 +44,7 @@ Help()
    echo "-e ENGINE             Analysis engine: pono | nusmv (default: pono)"
    echo "--algorithm ALG       Algorithm to be used by Pono: ind | bmc | ic3ia | ic3bits (default: ind for non-vacuity, and bmc for rtc)"
    echo "--time-domain T       Time domain in the timed automata semantics: real | integer | unit (default: $TIMEDOMAIN)"
-   echo "--delay-domain        Strictly positive delays (0); positive or null delays (1); delays >=1 (2) (default: $STRICT_DELAYS)"
+   echo "--delay-domain        Strictly positive or null delays (0); positive delays (1); delays >=1 (2) (default: $STRICT_DELAYS)"
    echo "--delay-first         Timed automata semantics where a single atomic transition is a delay + discrete transition; when false, an atomic transition is a discrete transition + delay (default: $DELAY_FIRST)"
    echo "--bmc-bound           Bound up to which bounded model checking is to be performed (default: $BMC_BOUND)."
    echo "--alpha ALPHA         Replace all constants above ALPHA by infinity (default: $ALPHA); only for the nusmv engine."
