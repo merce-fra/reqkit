@@ -5,14 +5,12 @@ import sys
 import os
 import supreq
 import bounded_rt
-import qfree_zinf
-from qfree_zinf import Literal, dc, pos, neg
 from timeout_decorator import timeout, TimeoutError
 
 VERBOSE = True
 MAX_CLAUSE = 1
 DUP_SUFFIX = '$'
-# Literal, (dc, pos, neg) = EnumSort('Literal', ['dc', 'pos', 'neg'])
+Literal, (dc, pos, neg) = EnumSort('Literal', ['dc', 'pos', 'neg'])
 MAIN_TIMEOUT = 3600
 
 def print_trace(sup, sigma, step):
@@ -212,6 +210,10 @@ def vacuity_trace(sup, req_set, req, t_list, alpha, beta):
 				s.add( r.st[k+l] != supreq.err )
 				# sigma[k...k+l] can be iterated infinitely many times without error
 				s.add( r.st[k] == r.st[k+l], r.cnt[k] == r.cnt[k+l] )
+				#s.add( Or(
+				#	r.st[k+l] == supreq.init,
+				#	And( r.st[k] == r.st[k+l], r.cnt[k] == r.cnt[k+l] )
+				#))
 
 			if s.check() == sat:
 				sigma = s.model()
@@ -219,9 +221,12 @@ def vacuity_trace(sup, req_set, req, t_list, alpha, beta):
 
 			# Restore the formula at S2
 			s.pop()
+
 		# Restore the formula at S1
 		s.pop()
+		# There is no such traces
 		#return [], -1
+
 	# There is no such traces
 	return [], -1
 
@@ -313,17 +318,9 @@ def refine_vacuity(sup, solver, idx, req_check, req_gen_orig, param_time, param_
 			]
 		) )
 
-		# maxsat
-		cost = Int('cost')
-		opt = Optimize()
-		opt.add(solver.assertions())
-		opt.add(cost == cost_exp)
-		lb = opt.minimize(cost)
-
-		if opt.check() == sat:
+		if solver.check() == sat:
 			gen_label += 1
-			model = opt.model()
-			print("cost = " + str(opt.lower(lb)))
+			model = solver.model()
 			print("NewReq." + str(gen_label) + " generated:", end=' ')
 			req_gen = decode_req(sup, model, param_time, param_cond, max_cl)
 			print_req(sup, req_gen)
@@ -375,15 +372,12 @@ def fix_rt(sup, solver, idx, sigma, step, param_time, param_cond, gen_label, max
 	MAX_ITER = 1000
 	cnt = 1
 
-	# maxsat
-	cost = Int('cost')
-
 	while True:
 		if cnt > MAX_ITER:
 			print("Iteration reached to the upperbound")
 			return [], None, None, gen_label
 
-		"""copy = sup.duplicate( DUP_SUFFIX + str(idx) )
+		copy = sup.duplicate( DUP_SUFFIX + str(idx) )
 		req_gen = encode_req(copy, param_time, param_cond, max_cl)
 		req_gen = supreq.Requirement(copy, req_gen, idx)
 
@@ -395,7 +389,7 @@ def fix_rt(sup, solver, idx, sigma, step, param_time, param_cond, gen_label, max
 				if sigma[ v[j] ] is not None:
 					trace.append( copy.SYS_VAR[i][j] == sigma[ v[j] ] )
 				else:
-					var_dc.append(copy.SYS_VAR[i][j])"""
+					var_dc.append(copy.SYS_VAR[i][j])
 
 		# C1 <- sigma: generated requirements cannot remove the conflict caused by 'sigma'
 		if is_witness(sup, sigma, step) == unsat:
@@ -407,7 +401,7 @@ def fix_rt(sup, solver, idx, sigma, step, param_time, param_cond, gen_label, max
 				print_trace(sup, sigma, step)
 				print()
 
-			"""req_gen.model(0, step)
+			req_gen.model(0, step)
 
 			# Generated requirement should be violated by the trace
 			if var_dc == []:
@@ -423,13 +417,7 @@ def fix_rt(sup, solver, idx, sigma, step, param_time, param_cond, gen_label, max
 						#req_gen.st[0] != supreq.err, 
 						req_gen.st[step] == supreq.err
 					]
-				) ) )"""
-
-			st = qfree_zinf.qfree_encode(sup, sigma, step, param_time, param_cond)
-			solver.add( Not( st['err'][0] ) )
-			solver.add( And( 
-				st['err'][step], Not( st['init'][step] ), Not( st['trg'][step] ), Not( st['loc'][step] ), Not( st['act'][step] ) 
-			) )
+				) ) )
 
 		# C2 <- sigma: generated requirements introduced the new conflict caused by 'sigma'
 		else:
@@ -440,11 +428,7 @@ def fix_rt(sup, solver, idx, sigma, step, param_time, param_cond, gen_label, max
 				print_trace(sup, sigma, step)
 				print()
 
-			copy = sup.duplicate( DUP_SUFFIX + str(idx) )
 			copy, idx = sup.duplicate_req( copy, DUP_SUFFIX + str(idx), idx + 1 )
-			solver = qfree_zinf.qfree_test(sup, sigma, step, param_time, param_cond, solver, copy)
-
-			"""copy, idx = sup.duplicate_req( copy, DUP_SUFFIX + str(idx), idx + 1 )
 			req_gen.model(0, step+1)
 			for r in copy.REQ_SET:
 				r.model(0, step+1)
@@ -476,22 +460,15 @@ def fix_rt(sup, solver, idx, sigma, step, param_time, param_cond, gen_label, max
 						req_gen.st[step] == supreq.err,
 						And( [ r.st[step+1] != supreq.err for r in copy.REQ_SET + [req_gen] ] )
 					)
-				)))"""
+				)))
 
 		print("Inconsistency resolving, Iteration: " + str(cnt))
 
-		# maxsat
-		opt = Optimize()
-		opt.add(solver.assertions())
-		opt.add(cost == cost_exp)
-		lb = opt.minimize(cost)
-		
-		if opt.check() == unsat:
+		if solver.check() == unsat:
 			print("Generation failed: no solution for maxsat")
 			return [], solver, idx, gen_label
 
-		model = opt.model()
-		print("cost = " + str(opt.lower(lb)))
+		model = solver.model()
 
 		print("NewReq." + str(gen_label) + " generated:", end=' ')
 		req_gen = decode_req(sup, model, param_time, param_cond, max_cl)
@@ -558,18 +535,15 @@ def main():
 	# file input
 	if len(sys.argv) < 2:
 		print("Error: no input file")
-		sys.exit()
+		sys.exit(-1)
 
 	arg = sys.argv[1]
-	if len(arg) > 3:
-		if arg[len(arg)-3:len(arg)] == '.py':
-			arg = arg[:len(arg)-3]
-
-	if os.path.isfile(arg + '.py') == False:
+	if not os.path.isfile(arg):
 		print("Error: file not found")
-		sys.exit()
+		sys.exit(-1)
 
-	mod = import_module(arg)
+	sys.path.append(os.path.dirname(arg))
+	mod = import_module(os.path.splitext(os.path.basename(arg))[0])
 	sup = supreq.SUPInput(mod)
 
 	print("Input requirements:")
@@ -685,12 +659,12 @@ def main():
 	# configure solver instance
 	s = Solver()
 	s.add(
-		#0 == param_time['tmin'],
-		#0 == param_time['lmin'],
-		#0 == param_time['amin'],
-		#Or( 0 == param_time['tmax'], -1 == param_time['tmax'] ),
-		#Or( 0 == param_time['lmax'], -1 == param_time['lmax'] ),
-		#Or( 0 == param_time['amax'], -1 == param_time['amax'] ),
+		#0 <= param_time['tmin'],
+		#0 <= param_time['lmin'],
+		#0 <= param_time['amin'],
+		#Or( param_time['tmin'] <= param_time['tmax'], -1 == param_time['tmax'] ),
+		#Or( param_time['lmin'] <= param_time['lmax'], -1 == param_time['lmax'] ),
+		#Or( param_time['amin'] <= param_time['amax'], -1 == param_time['amax'] ),
 		0 == param_time['tmin'],
 		0 == param_time['lmin'],
 		0 == param_time['amin'],

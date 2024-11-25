@@ -8,6 +8,7 @@ CYAN="\e[36m"
 ENDCOLOR="\e[0m"
 
 OUTPUT_DIR=output
+REPAIR_DIR=scripts/repair/
 TMP_OUTPUT_FILE=`mktemp`
 
 VERBOSE=0
@@ -26,7 +27,7 @@ BMC_BOUND=10
 ALPHA=30
 BETA=10
 RTC_MODE=1 # Pono-rt's rtc algorithm: 0 or 1
-
+REPAIRALGORITHM=min-instant
 
 
 DisplayError()
@@ -53,6 +54,7 @@ Help()
    echo "--delay-domain        Strictly positive or null delays (0); positive delays (1); delays >=1 (2) (default: $STRICT_DELAYS)"
    echo "--delay-first         Timed automata semantics where a single atomic transition is a delay + discrete transition; when false, an atomic transition is a discrete transition + delay (default: $DELAY_FIRST)"
    echo "--bmc-bound           Bound up to which bounded model checking is to be performed (default: $BMC_BOUND)."
+   echo "--repair-algorithm    Algorithm to be used for repair: min-instant | instant | generate | modify | instant (default: $REPAIRALGORITHM)"
    echo "--alpha ALPHA         Replace all constants above ALPHA by infinity (default: $ALPHA); only for the nusmv engine."
    echo "--beta BETA           The other constant beta from Reiya's script (default: $BETA); only for the nusmv engine."
    echo "-v                    Verbose mode: show executed instructions."
@@ -185,8 +187,7 @@ function generate_smv {
 
   # calling req_verification
   cd ${OUTPUT_DIR}
-  cp ../scripts/sup2smv/supreq2.py ../scripts/sup2smv/template.smv .
-  python3 supreq2.py ${BASENAME_NO_EXT}.py > tmp.smv
+  python3 ../$REPAIR_DIR/supreq.py ${BASENAME_NO_EXT}.py > tmp.smv
 
   #take only first half of the result file
   cat test.smv > ${BASENAME_NO_EXT}".smv"
@@ -202,6 +203,28 @@ function generate_smv {
 
   cd ..
   VC_SMV_FILE=${OUTPUT_DIR}/${BASENAME_NO_EXT}".smv"
+}
+
+function generate_sup {
+  # TODO Generate SUP, and copy it as a .py module in output
+  VC_SUP_FILE=output/cruise_add.py
+}
+
+function repair_sup {
+
+  if [ "${REPAIRALGORITHM}" = "min-instant" ]; then
+    exec=reqgen_instant_maxsmt.py
+  elif [ "${REPAIRALGORITHM}" = "instant" ]; then
+    exec=reqgen_instant.py
+  elif [ "${REPAIRALGORITHM}" = "modify" ]; then
+    exec=reqgen_maxsmt.py
+  elif [ "${REPAIRALGORITHM}" = "generate" ]; then
+    exec=reqgen.py
+  else
+    DisplayError "Unknown repair algorithm"
+    exit -1
+  fi
+  python $REPAIR_DIR/$exec $VC_SUP_FILE
 }
 
 function check_rtc_smv {
@@ -303,6 +326,10 @@ elif [ "${ANALYSIS}" = "rtc" ]; then
     DisplayError "Unknown engine"
     exit 1
   fi
+elif [ "${ANALYSIS}" = "repair" ]; then
+  # TODO Generate .sup
+  generate_sup
+  repair_sup
 else 
   DisplayError "Unknown analysis"
   exit 1

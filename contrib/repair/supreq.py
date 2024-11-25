@@ -798,15 +798,19 @@ if __name__ == "__main__":
   parser.add_argument('input', default=None)
   args = parser.parse_args()
   arg = args.input
-  if len(arg) > 4:
-    if arg[len(arg)-3:len(arg)] == '.py':
-      arg = arg[:len(arg)-3]
 
-  if os.path.isfile(arg + '.py') == False:
+  # file input
+  if len(sys.argv) < 2:
+    print("Error: no input file")
+    sys.exit(-1)
+
+  arg = sys.argv[1]
+  if not os.path.isfile(arg):
     print("Error: file not found")
     sys.exit(-1)
 
-  mod = import_module(arg)
+  sys.path.append(os.path.dirname(arg))
+  mod = import_module(os.path.splitext(os.path.basename(arg))[0])
   sup = SUPInput(mod)
 
   if args.mode == "repair":

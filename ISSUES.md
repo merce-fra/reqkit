@@ -2,13 +2,26 @@
 - in `input_args.ml`
 
     ```(fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");```
-# Python installation
-- Python 3.10
-- Requirements:
-  - timeout-decorators, z3-solver
+# Installation
+This program is written partly in OCaml and in Python.
+Pip3 and Opam are assumed to be installed on the system.
+
+Python (>=3.10) requirements are as follows:
+- timeout-decorators
+- z3-solver
+
+Ocaml (>=5.1) requirements as follows:
+- dune
+- merlin
+- alcotest
+- ppx_inline_test
+- bisect_ppx
+
+All these requirements can be installed by running `./scripts/install.sh` (assuming opam and pip3 are available).
+
 # Examples
 
-## Using the Pono-RT engine
+## RT-Consistency and Vacuity Checking Using the Pono-RT engine
 - Consider `sample1.req`
 
       ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds after at most 25 time units
@@ -115,3 +128,5 @@
 ## Using the NuSMV engine
 
         ./reqkit.sh -a rtc -f reqs/sample1.req -e nusmv
+
+## Repair

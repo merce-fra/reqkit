@@ -8,7 +8,7 @@ import bounded_rt
 from timeout_decorator import timeout, TimeoutError
 
 VERBOSE = True
-MAX_CLAUSE = 1
+MAX_CLAUSE = 2
 DUP_SUFFIX = '$'
 Literal, (dc, pos, neg) = EnumSort('Literal', ['dc', 'pos', 'neg'])
 MAIN_TIMEOUT = 3600
@@ -223,9 +223,9 @@ def vacuity_trace(sup, req_set, req, t_list, alpha, beta):
 			s.pop()
 
 		# Restore the formula at S1
-		s.pop()
+		#s.pop()
 		# There is no such traces
-		#return [], -1
+		return [], -1
 
 	# There is no such traces
 	return [], -1
@@ -318,15 +318,23 @@ def refine_vacuity(sup, solver, idx, req_check, req_gen_orig, param_time, param_
 			]
 		) )
 
-		if solver.check() == sat:
+		# maxsat
+		cost = Int('cost')
+		opt = Optimize()
+		opt.add(solver.assertions())
+		opt.add(cost == cost_exp)
+		lb = opt.minimize(cost)
+
+		if opt.check() == sat:
 			gen_label += 1
-			model = solver.model()
+			model = opt.model()
+			print("cost = " + str(opt.lower(lb)))
 			print("NewReq." + str(gen_label) + " generated:", end=' ')
 			req_gen = decode_req(sup, model, param_time, param_cond, max_cl)
 			print_req(sup, req_gen)
 			req_gen = supreq.Requirement(sup, req_gen, req_gen_orig.id)
 
-			sigma, step = bounded_rt.bounded_check( sup, sup.REQ_SET + [req_gen], sup.ALPHA )
+			sigma, step = sup.rt_check( sup.REQ_SET + [req_gen] )
 			if sigma == []: 
 				print('Refinement on vacuity for Req.' + str(req_check.id) + ' succeeded\n')
 				return req_gen, solver, idx + 1, gen_label
@@ -371,6 +379,9 @@ def refine_vacuity(sup, solver, idx, req_check, req_gen_orig, param_time, param_
 def fix_rt(sup, solver, idx, sigma, step, param_time, param_cond, gen_label, max_cl, cost_exp):
 	MAX_ITER = 1000
 	cnt = 1
+
+	# maxsat
+	cost = Int('cost')
 
 	while True:
 		if cnt > MAX_ITER:
@@ -464,18 +475,25 @@ def fix_rt(sup, solver, idx, sigma, step, param_time, param_cond, gen_label, max
 
 		print("Inconsistency resolving, Iteration: " + str(cnt))
 
-		if solver.check() == unsat:
+		# maxsat
+		opt = Optimize()
+		opt.add(solver.assertions())
+		opt.add(cost == cost_exp)
+		lb = opt.minimize(cost)
+		
+		if opt.check() == unsat:
 			print("Generation failed: no solution for maxsat")
 			return [], solver, idx, gen_label
 
-		model = solver.model()
+		model = opt.model()
+		print("cost = " + str(opt.lower(lb)))
 
 		print("NewReq." + str(gen_label) + " generated:", end=' ')
 		req_gen = decode_req(sup, model, param_time, param_cond, max_cl)
 		print_req(sup, req_gen)
 
-		sigma, step = bounded_rt.bounded_check(
-			sup, sup.REQ_SET + [ supreq.Requirement( sup, req_gen, len(sup.REQ_SET) ) ], sup.ALPHA
+		sigma, step = sup.rt_check(
+			sup.REQ_SET + [ supreq.Requirement( sup, req_gen, len(sup.REQ_SET) ) ]
 		)
 
 		if sigma == []: 
@@ -535,18 +553,15 @@ def main():
 	# file input
 	if len(sys.argv) < 2:
 		print("Error: no input file")
-		sys.exit()
+		sys.exit(-1)
 
 	arg = sys.argv[1]
-	if len(arg) > 3:
-		if arg[len(arg)-3:len(arg)] == '.py':
-			arg = arg[:len(arg)-3]
-
-	if os.path.isfile(arg + '.py') == False:
+	if not os.path.isfile(arg):
 		print("Error: file not found")
-		sys.exit()
+		sys.exit(-1)
 
-	mod = import_module(arg)
+	sys.path.append(os.path.dirname(arg))
+	mod = import_module(os.path.splitext(os.path.basename(arg))[0])
 	sup = supreq.SUPInput(mod)
 
 	print("Input requirements:")
@@ -556,7 +571,7 @@ def main():
 	print()
 
 	# consistency check
-	sigma, step = bounded_rt.bounded_check(sup, sup.REQ_SET, sup.ALPHA)
+	sigma, step = sup.rt_check(sup.REQ_SET)
 	if sigma == []:
 		print("Given requirements are consistent: no need to fix")
 		sys.exit()
