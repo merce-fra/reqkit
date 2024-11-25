@@ -7,7 +7,7 @@ LIGHTGREEN="\e[92m"
 CYAN="\e[36m"
 ENDCOLOR="\e[0m"
 
-OUTPUT_DIR=reqkit_output
+OUTPUT_DIR=output
 TMP_OUTPUT_FILE=`mktemp`
 
 VERBOSE=0
@@ -16,15 +16,16 @@ VERSION=0.1
 FILE=
 ANALYSIS=
 REQIDS=
-ENGINE=pono
+ENGINE=pono-rt
 ALGORITHM=
 TIMEDOMAIN=real
+CLOCKENCODING=real
 STRICT_DELAYS=1
 DELAY_FIRST=1
 BMC_BOUND=10
 ALPHA=30
 BETA=10
-RTC_MODE=0 # Pono-rt's rtc algorithm: 0 or 1
+RTC_MODE=1 # Pono-rt's rtc algorithm: 0 or 1
 
 
 
@@ -46,8 +47,8 @@ Help()
    echo "-a ANALYSIS           Analysis: vacuity | rtc | repair"
    echo "-f FILE               Input requirements file."
    echo "-r REQ_IDS            A sequence of requirement IDs to be analyzed from the given input file (required for vacuity and repair analyses)."
-   echo "-e ENGINE             Analysis engine: pono | nusmv (default: pono)"
-   echo "--algorithm ALG       Algorithm to be used by Pono: ind | bmc | ic3ia | ic3bits (default: ind for non-vacuity, and bmc for rtc)"
+   echo "-e ENGINE             Analysis engine: pono-rt | nusmv (default: pono-rt)"
+   echo "--algorithm ALG       Algorithm to be used by Pono-RT: ind | bmc | ic3ia | ic3bits (default: ind for non-vacuity, and bmc for rtc)"
    echo "--time-domain T       Time domain in the timed automata semantics: real | integer | unit (default: $TIMEDOMAIN)"
    echo "--delay-domain        Strictly positive or null delays (0); positive delays (1); delays >=1 (2) (default: $STRICT_DELAYS)"
    echo "--delay-first         Timed automata semantics where a single atomic transition is a delay + discrete transition; when false, an atomic transition is a discrete transition + delay (default: $DELAY_FIRST)"
@@ -161,15 +162,66 @@ function generate_vmt {
 
   SUP_FILE_VMT=${OUTPUT_DIR}/${BASENAME_NO_EXT}".vmt"
   if [ "$ANALYSIS" = "vacuity" ]; then
-    ./exec --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $TIMEDOMAIN --bool-only-predicates true --check-rt-consistency false --check-non-vacuity "$REQIDS" > ${SUP_FILE_VMT}
+    ./exec --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency false --check-non-vacuity "$REQIDS" > ${SUP_FILE_VMT}
   elif [ "$ANALYSIS" = "rtc" ]; then
-    ./exec --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $TIMEDOMAIN --bool-only-predicates true --check-rt-consistency true > ${SUP_FILE_VMT}
+    ./exec --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency true > ${SUP_FILE_VMT}
   fi
   if [ $? = 0 ]; then
     DisplayInfo "Generated ${SUP_FILE_VMT}"
   else
     DisplayError "Error generating VMT file"
   fi
+}
+
+function generate_smv {
+	echo "Processing file ${FILE}"
+    BASENAME_NO_EXT=$(basename -- "${FILE}")
+    BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}"
+    BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}" 
+
+	#generation of the python sup
+  SUP_FILE_PY=${OUTPUT_DIR}/${BASENAME_NO_EXT}".py"
+  ./exec --input ${FILE} --bool-only-predicates true > ${SUP_FILE_PY}
+
+  # calling req_verification
+  cd ${OUTPUT_DIR}
+  cp ../scripts/sup2smv/supreq2.py ../scripts/sup2smv/template.smv .
+  python3 supreq2.py ${BASENAME_NO_EXT}.py > tmp.smv
+
+  #take only first half of the result file
+  cat test.smv > ${BASENAME_NO_EXT}".smv"
+  LINE=`grep -n "\n"  tmp.smv | grep MODULE | cut  -d: -f1  | tail -n1`
+  LINE_NB=$(($LINE - 1))
+  head -n $LINE_NB tmp.smv >> ${BASENAME_NO_EXT}".smv"
+  
+  #do some cleaning if not verbose
+  if [ ${VERBOSE} == 0 ]; then
+    rm ${BASENAME_NO_EXT}".py"
+    rm tmp.smv
+  fi
+
+  cd ..
+  VC_SMV_FILE=${OUTPUT_DIR}/${BASENAME_NO_EXT}".smv"
+}
+
+function check_rtc_smv {
+  generate_smv $1
+  if ! command -v NuSMV &> /dev/null
+  then
+      echo "NuSMV could not be found"
+      exit 1
+  fi
+  set +e
+  RES=`timeout 600 NuSMV ${VC_SMV_FILE}`
+  echo -e "$RES"
+  if [[ $RES =~ "specification AG (some_err | EX !some_err)  is true" ]]; then
+    echo -e "${GREEN}rt-consistency proved$ENDCOLOR"
+  elif [[ $RES =~ "Counterexample" ]]; then
+    echo -e "${RED}${BOLD}rt-inconsistency found$ENDCOLOR"
+  else
+    echo -e "${CYAN}Timeout or unknown result$ENDCOLOR"
+  fi
+  set -e
 }
 
 function check_vacuity {
@@ -184,7 +236,7 @@ function check_vacuity {
       external_interpolator="--external-interpolator opensmt"
     fi
     set +e # This is to avoid the script to exit if pono returns 1
-    pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS   $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${SUP_FILE_VMT} > ${TMP_OUTPUT_FILE}
+    pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${SUP_FILE_VMT} > ${TMP_OUTPUT_FILE}
     ret_value=$?
     python3 scripts/parse_pono.py < ${TMP_OUTPUT_FILE}
     if [ $ret_value = 0 ]; then
@@ -207,9 +259,14 @@ function check_rtc {
     external_interpolator=
     if [ "$ALGORITHM" = "ic3ia" ]; then
       external_interpolator="--external-interpolator opensmt"
+      RTC_MODE=0
     fi
     set +e # This is to avoid the script to exit if pono returns 1
-    pono --smt-solver cvc5 --rt-consistency $RTC_MODE --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta --witness ${SUP_FILE_VMT} > ${TMP_OUTPUT_FILE}
+    ta=-ta
+    if [ "${TIMEDOMAIN}" = "unit" ]; then
+      ta=-ta-unit
+    fi
+    pono --smt-solver cvc5 --rt-consistency $RTC_MODE --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND $ta --witness ${SUP_FILE_VMT} > ${TMP_OUTPUT_FILE}
     ret_value=$?
     python3 scripts/parse_pono.py < ${TMP_OUTPUT_FILE}
     if [ $ret_value = 1 ]; then
@@ -220,6 +277,7 @@ function check_rtc {
       echo -e "${RED}${BOLD}rt-inconsistency found$ENDCOLOR"
     fi
 }
+
 if [ "${ANALYSIS}" = "vacuity" ]; then
   if [ -z ${REQIDS} ]; then
     DisplayError "Vacuity analysis needs a list of requirement ids given with option -r"
@@ -228,12 +286,23 @@ if [ "${ANALYSIS}" = "vacuity" ]; then
   if [ -z ${ALGORITHM} ]; then
     ALGORITHM=ind
   fi
+  if [ "${ENGINE}" != "pono-rt"]; then
+    DisplayError "Vacuity analysis can only be done with the pono-rt engine"
+    exit 1
+  fi
   check_vacuity
 elif [ "${ANALYSIS}" = "rtc" ]; then
   if [ -z ${ALGORITHM} ]; then
     ALGORITHM=bmc
   fi
-  check_rtc
+  if [ "${ENGINE}" = "pono-rt" ]; then
+    check_rtc
+  elif [ "${ENGINE}" = "nusmv" ]; then
+    check_rtc_smv
+  else
+    DisplayError "Unknown engine"
+    exit 1
+  fi
 else 
   DisplayError "Unknown analysis"
   exit 1
@@ -241,3 +310,5 @@ fi
 if [ ${VERBOSE} == 1 ]; then
   echo -e "Temporary file:  ${TMP_OUTPUT_FILE}"
 fi
+
+

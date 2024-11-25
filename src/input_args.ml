@@ -21,7 +21,7 @@ type t = {
 let mk output_format state_encoding clock_type clock_mult only_bool_predicates input_file input_dir keep_simple req_vacuity check_rt_consistency =
   {
     output_fmt = (match output_format with 
-    |"nusmv" -> if (((input_file <> None) || (input_dir <> None))&& (not only_bool_predicates)) then raise(Invalid_argument ("The NuSMV format only accept boolean predicates.")); NuSMV
+    |"nusmv" -> if (((input_file <> None) || (input_dir <> None))&& (not only_bool_predicates)) then raise(Invalid_argument ("The SMV format requires boolean predicates only.")); NuSMV
     |"vmtlib"-> VMT
     |_ -> raise(Invalid_argument ("The supported formats are nusmv and vmtlib.")));
     state_enc = (match state_encoding with
@@ -54,7 +54,7 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
     let which_clock = ref "integer" in
     let state_encode = ref "boolean" in
     let clock_mult = ref 10 in
-    let bool_only_predicates = ref false in
+    let bool_only_predicates = ref true in
     let check_rt_consistency = ref false in
     let vacuity = ref "" in
     let fill s =

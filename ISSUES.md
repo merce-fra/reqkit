@@ -2,8 +2,13 @@
 - in `input_args.ml`
 
     ```(fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");```
-
+# Python installation
+- Python 3.10
+- Requirements:
+  - timeout-decorators, z3-solver
 # Examples
+
+## Using the Pono-RT engine
 - Consider `sample1.req`
 
       ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds after at most 25 time units
@@ -106,3 +111,7 @@
       ./reqkit.sh -a vacuity -r "ID000" -f reqs/sample6.req --algorithm ic3ia
       ./reqkit.sh -a vacuity -r "ID001" -f reqs/sample6.req --algorithm ic3ia
       ./reqkit.sh -a vacuity -r "ID002" -f reqs/sample6.req --algorithm ic3ia
+
+## Using the NuSMV engine
+
+        ./reqkit.sh -a rtc -f reqs/sample1.req -e nusmv
