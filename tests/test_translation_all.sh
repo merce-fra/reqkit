@@ -9,7 +9,7 @@ INPUT_FILES=${INPUT_FILES_DIR}/*.req
 for f in ${INPUT_FILES}
 do
 	echo "Processing file ${f}"
-	./exec --input ${f} --bool-only-predicates true --output-fmt ${OUTPUT_FMT}
+	./lib/translator/exec --input ${f} --bool-only-predicates true --output-fmt ${OUTPUT_FMT}
 	echo " "	
 done
 

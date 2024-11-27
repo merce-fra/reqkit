@@ -1,103 +1,152 @@
-# req2something
+# ReqKit: Requirement Analysis and Repair Tool Kit
 
-Utility to convert RE2019 "Scalable Analysis of Real-Time
-Requirements" paper benchmark real-time requirements to some other
-format :
-  - nusmv 
-  - vmtlib
+Consistency and vacuity verification, model checking, and repair tool for automata-based requirements.
+The tool accepts as input patterns given as simplified universal patterns (SUP), or structured English.
 
-## Prerequisites
-
-In order to validate the generated smv code using the script NuSMV.sh, the environment variable REQ_VERIFICATION_INSTALL_DIR shall point to the installation directory of the tool req_verification.
-
-The tool NuSMV 2.6.0 shall also be installed (https://nusmv.fbk.eu/downloads.html)
+Verification conditions in SMV or VMTLIB formats are generated and discharged by model checkers.
 
 
 ## Installation
+This program is written partly in OCaml and in Python.
+Pip3 and Opam are assumed to be installed on the system.
 
-Opam shall be installed using the command (depending on your linux distribution): 
-sudo apt install opam
+Python (>=3.10) requirements are as follows:
+- timeout-decorators
+- z3-solver
 
-The project has the folowing dependancies:
+Ocaml (>=5.1) requirements as follows:
 - dune
 - merlin
 - alcotest
 - ppx_inline_test
 - bisect_ppx
 
-To install them, run the script "./scripts/install.sh" in the project directory
+All these requirements can be installed by running `./scripts/install.sh` (assuming opam and pip3 are available).
 
-## How to compile
+The following verification engines must also be installed
 
-Run the command "dune build" in the project directory
+- NuSMV 2.6.0 (https://nusmv.fbk.eu/downloads.html). The executable `NuSMV` must be on the path.
+- Pono-RT (https://github.com/osankur/pono-rt/). The executable `pono` must be on the path.
+
+### Compilation
+
+    cd lib/translator
+    dune build
+
+TODO: Automatize these steps, as well as the installation and compilation of NuSMV and Pono executables
 
 ## Usage and Examples
-- `simple_consistent.req` is rt-consistent (real and integer) since both triggers are "independent".
+## RT-Consistency and Vacuity Checking Using the Pono-RT engine
+- Consider `sample1.req`
 
-      ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent.req --time-domain integer
+      ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds after at most 25 time units
+      ID001: Globally, it is always the case that if "x0000" holds, then "!x0001" holds for at least 20 time units
 
-  While the previous check applies BMC, we can actually prove rt-consistency with ic3ia:
+  This is inconsistent with the real >=1 semantics:
 
-      ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent.req --time-domain integer --algorithm ic3ia
+      ./reqkit -a rtc -f reqs/sample1.req --time-domain real --delay-domain 2
 
-- `simple_consistent2.req` looks rt-inconsistent at first however whenever x0000 holds, one of the SUP automaton immediately goes to error; so no inconsistency here
+  In fact, if x0000/\~x0001 occurs until time 25-epsilon, then there is a no delay >= 1 for ID0000 to complete its action phase and observe x0001.
 
-      ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent2.req --time-domain integer --algorithm ic3ia
+  The set is consistent if we allow shorter delays, and for integers (with positive or null delays):
 
-- [fixme] `simple_consistent3.req` should be rt-inconsistent in my opinion (check this)
+      ./reqkit -a rtc -f reqs/sample1.req --time-domain real --delay-domain 0
+      ./reqkit -a rtc -f reqs/sample1.req --time-domain real --delay-domain 1
+      ./reqkit -a rtc -f reqs/sample1.req --time-domain integer --delay-domain 0
 
-- [todo] `simple_inconsistent.req` used to be rt-inconsistent in the integer semantics:
+  It becomes rt-inconsistent again for strict integer delays (>=1)
 
-      ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent.req --time-domain integer
+      ./reqkit -a rtc -f reqs/sample1.req --time-domain integer --delay-domain 1
 
-  but now it is consistent. Is this normal?
-  
-  In the real semantics it is consistent with >0, >=0
+  Non-vacuity:
 
-      ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent.req --time-domain real --delay-domain 0
-      ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent.req --time-domain real --delay-domain 1
+      ./reqkit -a vacuity -r ID000 -f reqs/sample1.req --time-domain integer
+      ./reqkit -a vacuity -r ID001 -f reqs/sample1.req --time-domain integer
 
-  but not when delays are >= 1:
+- Consider `sample2.req`:
 
-      ./scripts/reqkit.sh -a rtc -f reqs/simple_consistent.req --time-domain real --delay-domain 2
+      ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 2 time units
+      ID001: Globally, it is always the case that if "x0001" holds, then "!x0000" holds after at most 2 time units
 
-  [todo] check this example
+  The same phenomenon occurs as for `sample1.req`; an inconsistency appears if we restrict arbitrary delays to >= 1 since there is no possible delay in this domain to complete an action phase:
 
-- The following is an obviously vacuous requirement set. BMC can only fail to found a non-vacuity witness:
+      ./reqkit -a rtc -f reqs/sample2.req --time-domain real --delay-domain 2
 
-      ./scripts/reqkit.sh -a vacuity -r "ID000" -f reqs/simple_vacuous.req
+  But the set is consistent for other semantics. 
+
+  Non-vacuity:
+
+      ./reqkit -a vacuity -r ID000 -f reqs/sample2.req --time-domain integer
+      ./reqkit -a vacuity -r ID001 -f reqs/sample2.req --time-domain integer
+
+- Consider `sample3.req`:
+
+      ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds after at most 24 time units
+      ID001: Globally, it is always the case that if "x0000" holds, then "!x0001" holds for at least 24 time units
+
+  Again, the >=1 semantics is flawed so it gives inconsistencies due to the semantics being stucked whenever there is an upper bound like here.
+
+  More interestingly, the inconsistency does not appear here in the integer semantics with 0 delays allowed since after reading x000/\x001 for 24 time units, the automata can just cycle with 0 delays:
+
+      ./reqkit -a rtc -f reqs/sample3.req --time-domain integer --delay-domain 0
+      ./reqkit -a rtc -f reqs/sample3.req --time-domain real --delay-domain 0
+
+  But restricting to strict delays reveals the inconsistency:
+
+      ./reqkit -a rtc -f reqs/sample3.req --time-domain integer --delay-domain 1
+
+  With real durations, time can be blocked even if all delays are strictly positive so there is no inconsistency here:
+
+      ./reqkit -a rtc -f reqs/sample3.req --time-domain real --delay-domain 1
+
+  In all semantics however both requirements are vacuous because they cannot complete the action phase without going into an error state:
+
+      ./reqkit -a vacuity -r ID000 -f reqs/sample3.req --time-domain real --algorithm ic3ia  
+      ./reqkit -a vacuity -r ID001 -f reqs/sample3.req --time-domain real --algorithm ic3ia  
+
+- Consider `sample4.req`: 
+
+      ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 25 time units
+      ID001: Globally, it is always the case that if "x0000" holds, then "!x0001" holds for at least 20 time units
+
+  This might look rt-inconsistent at first however whenever x0000 holds, one of the SUP automaton immediately goes to error; so no inconsistency here:
+
+      ./reqkit -a rtc -f reqs/sample4.req --time-domain integer --algorithm ic3ia
+
+- Consider `sample5.req`. This obviously a vacuous requirement set. BMC can only fail to found a non-vacuity witness:
+
+      ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 25 time units
+      ID001: Globally, it is always the case that "!x0000" holds
+
+      ./reqkit -a vacuity -r "ID000" -f reqs/sample5.req
 
   We can prove vacuity with ic3ia (this uses opensmt as an interpolator):
 
-      ./scripts/reqkit.sh -a vacuity -r "ID000" -f reqs/simple_vacuous.req --algorithm ic3ia
+      ./reqkit -a vacuity -r "ID000" -f reqs/sample5.req --algorithm ic3ia
 
-- An example of a non-vacuous requirement:
+- Consider `sample6.req`.
 
-      ./scripts/reqkit.sh -a vacuity -r "ID000" -f reqs/simple_consistent.req
+      ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 25 time units
+      ID001: Globally, it is always the case that if "x0000" holds, then "!x0001" holds for at least 20 time units
+      ID002: Globally, it is always the case that if "x0002"  holds for at least 50 time units, then "x0000"  holds afterwards 
 
+  We already established that {ID000, ID001} alone is not inconsistent. Adding ID002 here means that we add a prefix with no error where x002 holds for 50 time units. However, because "holds afterwards" puts no time bound on the realization of the action phase, this is still consistent:
 
-## How to run on all requirements file
+      ./reqkit -a rtc -f reqs/sample6.req --algorithm ic3ia
 
-Run the script ./scripts/VMTlib.sh from project directory to generate in the output directory all the .vmt files on all requirements files
-Run the script ./scripts/NuSMV.sh from project directory to generate in the output directory all the .smv files on all requirements files
+  But vacuous since none of the requirements can be realized:
 
-## How to run unit tests
+      ./reqkit -a vacuity -r "ID000" -f reqs/sample6.req --algorithm ic3ia
+      ./reqkit -a vacuity -r "ID001" -f reqs/sample6.req --algorithm ic3ia
+      ./reqkit -a vacuity -r "ID002" -f reqs/sample6.req --algorithm ic3ia
 
-Run the command "dune runtest" in the project directory
+## Using the NuSMV engine
+The NuSMV engine always assumes delay-first and unit-time semantics:
 
-## How to get coverage info when processing all requirements files
+        ./reqkit -a rtc -f reqs/sample1.req -e nusmv
 
-Run the script ./scripts/coverage.sh
+## Repair
+The repair analysis can attempt to automatically repair inconsistent or vacuous requirement sets:
 
-## How to use the tool
-
-Run the command "./exec --help" in the project directory
-
-## Directories content
-
-* README.md: basic instructions
-* reqs/: requirements from RE2019 "Scalable Analysis of Real-Time
-  Requirements" paper benchmark (https://zenodo.org/records/3341453)
-* scripts/: all scripts used to install and launch the tool
-* src/: all source files
-  
+    ./reqkit -a repair -f reqs/sup/cruise_add.py
+    ./reqkit -a repair -f reqs/sup/carriage_add.py

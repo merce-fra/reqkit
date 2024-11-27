@@ -1,3 +1,4 @@
+#!/usr/bin/bash
 BOLD="\e[1m"
 BLUE="\e[34m"
 GREEN="\e[32m"
