@@ -8,7 +8,8 @@ CYAN="\e[36m"
 ENDCOLOR="\e[0m"
 
 OUTPUT_DIR=output
-REPAIR_DIR=scripts/repair/
+REPAIR_DIR=lib/repair/
+TRANSLATOR_EXEC=lib/translator/req2something.exe
 TMP_OUTPUT_FILE=`mktemp`
 
 VERBOSE=0
@@ -164,9 +165,9 @@ function generate_vmt {
 
   SUP_FILE_VMT=${OUTPUT_DIR}/${BASENAME_NO_EXT}".vmt"
   if [ "$ANALYSIS" = "vacuity" ]; then
-    ./exec --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency false --check-non-vacuity "$REQIDS" > ${SUP_FILE_VMT}
+    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency false --check-non-vacuity "$REQIDS" > ${SUP_FILE_VMT}
   elif [ "$ANALYSIS" = "rtc" ]; then
-    ./exec --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency true > ${SUP_FILE_VMT}
+    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency true > ${SUP_FILE_VMT}
   fi
   if [ $? = 0 ]; then
     DisplayInfo "Generated ${SUP_FILE_VMT}"
@@ -183,7 +184,7 @@ function generate_smv {
 
 	#generation of the python sup
   SUP_FILE_PY=${OUTPUT_DIR}/${BASENAME_NO_EXT}".py"
-  ./exec --input ${FILE} --bool-only-predicates true > ${SUP_FILE_PY}
+  ${TRANSLATOR_EXEC} --input ${FILE} --bool-only-predicates true > ${SUP_FILE_PY}
 
   # calling req_verification
   cd ${OUTPUT_DIR}
@@ -206,8 +207,24 @@ function generate_smv {
 }
 
 function generate_sup {
-  # TODO Generate SUP, and copy it as a .py module in output
-  VC_SUP_FILE=output/cruise_add.py
+  basename=$(basename -- "$FILE")
+  extension="${basename##*.}"
+  basename_noext="${basename%.*}"
+
+  echo $basename
+  echo $extension
+
+  if [ "${extension}" = "py" ]; then
+    VC_SUP_FILE=$FILE
+  elif [ "${extension}" = "sup" ]; then
+    VC_SUP_FILE=${OUTPUT_DIR}/$basename_noext".py"
+    cp $FILE $VC_SUP_FILE
+  else
+    VC_SUP_FILE=${OUTPUT_DIR}/$basename_noext".py"
+    ${TRANSLATOR_EXEC} --output-fmt sup --input ${FILE} --bool-only-predicates true > ${VC_SUP_FILE}    
+  fi  
+
+  echo $VC_SUP_FILE
 }
 
 function repair_sup {
@@ -300,6 +317,12 @@ function check_rtc {
       echo -e "${RED}${BOLD}rt-inconsistency found$ENDCOLOR"
     fi
 }
+
+if [ ! -f ${TRANSLATOR_EXEC} ]; then
+  DisplayError "Cannot find the translator executable"
+  exit 1
+fi
+
 
 if [ "${ANALYSIS}" = "vacuity" ]; then
   if [ -z ${REQIDS} ]; then

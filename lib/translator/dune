@@ -2,4 +2,5 @@
   (names req2something )
   (libraries src)
   (modes byte exe)
-)
+  (promote (until-clean))
+ )
