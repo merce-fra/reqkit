@@ -30,7 +30,7 @@ ALPHA=30
 BETA=10
 RTC_MODE=1 # Pono-rt's rtc algorithm: 0 or 1
 REPAIRALGORITHM=min-instant
-
+LTL_FORMULA=true
 
 DisplayError()
 {
@@ -47,7 +47,7 @@ Help()
    echo
    echo "Usage: reqkit.sh [options] -a ANALYSIS -f FILE"
    echo "Options:"
-   echo "-a ANALYSIS           Analysis: vacuity | rtc | repair"
+   echo "-a ANALYSIS           Analysis: vacuity | rtc | repair | ltl | ctl"
    echo "-f FILE               Input requirements file."
    echo "-r REQ_IDS            A sequence of requirement IDs to be analyzed from the given input file (required for vacuity and repair analyses)."
    echo "-e ENGINE             Analysis engine: pono-rt | nusmv (default: pono-rt)"
@@ -59,6 +59,7 @@ Help()
    echo "--repair-algorithm    Algorithm to be used for repair: min-instant | instant | generate | modify | instant (default: $REPAIRALGORITHM)"
    echo "--alpha ALPHA         Replace all constants above ALPHA by infinity (default: $ALPHA); only for the nusmv engine."
    echo "--beta BETA           The other constant beta from Reiya's script (default: $BETA); only for the nusmv engine."
+   echo "--formula FORMULA     LTL formula to be checked with the ltl analysis."
    echo "-v                    Verbose mode: show executed instructions."
    echo "-h                    Print help."
    echo
@@ -125,6 +126,10 @@ while getopts ${OPTSTRING} opt; do
                 val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                 RTC_MODE=$val
                 ;;
+            formula)
+                val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                LTL_FORMULA=$val
+                ;;
             *)
                 if [ "$OPTERR" = 1 ] && [ "${optspec:0:1}" != ":" ]; then
                     echo "Unknown option --${OPTARG}" >&2
@@ -157,28 +162,30 @@ fi
 set -e
 mkdir -p $OUTPUT_DIR
 
-SUP_FILE_VMT=
+VC_VMT_FILE=
 function generate_vmt {
-  DisplayInfo "Processing file ${FILE}"
+# Writes file $VC_VMT_FILE
+  # DisplayInfo "Processing file ${FILE}"
   BASENAME_NO_EXT=$(basename -- "${FILE}")
   BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}"
   BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}" 
 
-  SUP_FILE_VMT=${OUTPUT_DIR}/${BASENAME_NO_EXT}".vmt"
+  VC_VMT_FILE=${OUTPUT_DIR}/${BASENAME_NO_EXT}".vmt"
   if [ "$ANALYSIS" = "vacuity" ]; then
-    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency false --check-non-vacuity "$REQIDS" > ${SUP_FILE_VMT}
+    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency false --check-non-vacuity "$REQIDS" > ${VC_VMT_FILE}
   elif [ "$ANALYSIS" = "rtc" ]; then
-    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency true > ${SUP_FILE_VMT}
+    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency true > ${VC_VMT_FILE}
   fi
   if [ $? = 0 ]; then
-    DisplayInfo "Generated ${SUP_FILE_VMT}"
+    DisplayInfo "Generated ${VC_VMT_FILE}"
   else
     DisplayError "Error generating VMT file"
   fi
 }
 
 function generate_smv {
-	echo "Processing file ${FILE}"
+# Writes file $VC_SMV_FILE
+	# DisplayInfo "Processing file ${FILE}"
     BASENAME_NO_EXT=$(basename -- "${FILE}")
     BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}"
     BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}" 
@@ -208,6 +215,7 @@ function generate_smv {
 }
 
 function generate_sup {
+# Writes file $VC_SUP_FILE
   basename=$(basename -- "$FILE")
   extension="${basename##*.}"
   basename_noext="${basename%.*}"
@@ -224,12 +232,10 @@ function generate_sup {
     VC_SUP_FILE=${OUTPUT_DIR}/$basename_noext".py"
     ${TRANSLATOR_EXEC} --output-fmt sup --input ${FILE} --bool-only-predicates true > ${VC_SUP_FILE}    
   fi  
-
-  echo $VC_SUP_FILE
 }
 
 function repair_sup {
-
+  DisplayInfo "Running repair algorithm with unit delays semantics"
   if [ "${REPAIRALGORITHM}" = "min-instant" ]; then
     exec=reqgen_instant_maxsmt.py
   elif [ "${REPAIRALGORITHM}" = "instant" ]; then
@@ -246,6 +252,7 @@ function repair_sup {
 }
 
 function check_rtc_smv {
+  DisplayInfo "Running rt-consistency analysis with unit delays semantics and the NuSMV engine"
   generate_smv $1
   if ! command -v NuSMV &> /dev/null
   then
@@ -266,6 +273,7 @@ function check_rtc_smv {
 }
 
 function check_vacuity {
+    DisplayInfo "Running vacuity analysis with the Pono-RT engine"
     generate_vmt
     if ! command -v pono &> /dev/null
     then
@@ -277,7 +285,7 @@ function check_vacuity {
       external_interpolator="--external-interpolator opensmt"
     fi
     set +e # This is to avoid the script to exit if pono returns 1
-    pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${SUP_FILE_VMT} > ${TMP_OUTPUT_FILE}
+    pono --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND -ta -p 1 --witness ${VC_VMT_FILE} > ${TMP_OUTPUT_FILE}
     ret_value=$?
     python3 scripts/parse_pono.py < ${TMP_OUTPUT_FILE}
     if [ $ret_value = 0 ]; then
@@ -290,6 +298,7 @@ function check_vacuity {
 }
 
 function check_rtc {
+    DisplayInfo "Running rt-consistency analysis with the Pono-RT engine"
     REQIDS=
     generate_vmt
     if ! command -v pono &> /dev/null
@@ -307,7 +316,7 @@ function check_rtc {
     if [ "${TIMEDOMAIN}" = "unit" ]; then
       ta=-ta-unit
     fi
-    pono --smt-solver cvc5 --rt-consistency $RTC_MODE --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND $ta --witness ${SUP_FILE_VMT} > ${TMP_OUTPUT_FILE}
+    pono --smt-solver cvc5 --rt-consistency $RTC_MODE --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND $ta --witness ${VC_VMT_FILE} > ${TMP_OUTPUT_FILE}
     ret_value=$?
     python3 scripts/parse_pono.py < ${TMP_OUTPUT_FILE}
     if [ $ret_value = 1 ]; then
@@ -317,6 +326,39 @@ function check_rtc {
     else
       echo -e "${RED}${BOLD}rt-inconsistency found$ENDCOLOR"
     fi
+}
+
+function check_ltl {
+
+  if [ "${ENGINE}" = "pono-rt" ]; then
+    generate_vmt
+    DisplayError "LTL/CTL verification with Pono is not supported"
+  elif [ "${ENGINE}" = "nusmv" ]; then
+    DisplayInfo "Running LTL analysis with the NuSMV engine"
+    generate_smv
+    echo "INVAR	!some_err;" >> $VC_SMV_FILE
+    echo "LTLSPEC $LTL_FORMULA" >> $VC_SMV_FILE
+    NuSMV -n 1 $VC_SMV_FILE
+  else
+    DisplayError "Unknown engine"
+    exit 1
+  fi
+}
+
+function check_ctl {
+  if [ "${ENGINE}" = "pono-rt" ]; then
+    generate_vmt
+    DisplayError "LTL/CTL verification with Pono is not supported"
+  elif [ "${ENGINE}" = "nusmv" ]; then
+    DisplayInfo "Running CTL analysis with the NuSMV engine"
+    generate_smv
+    echo "INVAR	!some_err;" >> $VC_SMV_FILE
+    echo "CTLSPEC $LTL_FORMULA" >> $VC_SMV_FILE
+    NuSMV -n 1 $VC_SMV_FILE
+  else
+    DisplayError "Unknown engine"
+    exit 1
+  fi
 }
 
 if [ ! -f ${TRANSLATOR_EXEC} ]; then
@@ -351,9 +393,12 @@ elif [ "${ANALYSIS}" = "rtc" ]; then
     exit 1
   fi
 elif [ "${ANALYSIS}" = "repair" ]; then
-  # TODO Generate .sup
   generate_sup
   repair_sup
+elif [ "${ANALYSIS}" = "ltl" ]; then
+  check_ltl
+elif [ "${ANALYSIS}" = "ctl" ]; then
+  check_ctl
 else 
   DisplayError "Unknown analysis"
   exit 1
