@@ -504,30 +504,17 @@ DEFINE
 
 MODULE main
 VAR
-	forward : boolean;
-	brakePedal : boolean;
-	cruiseControlActivated : boolean;
-	backward : boolean;
-	up5 : boolean;
-	targetSpeedIncrement : boolean;
+	x0000 : boolean;
+	x0001 : boolean;
 	some_err: boolean;
 
-	r0 : sup_loc_act((forward & !brakePedal), TRUE, TRUE, 0, 0, 1, 1, cruiseControlActivated, cruiseControlActivated, (backward | brakePedal), 0, -1);
-	r1 : sup_inv_loc(backward, TRUE, TRUE, 0, 0, 1, 1, TRUE, TRUE, !cruiseControlActivated, 0, 0);
-	r2 : sup_inv_loc(brakePedal, TRUE, TRUE, 0, 0, 1, 1, TRUE, TRUE, !cruiseControlActivated, 0, 0);
-	r3 : sup_inv_loc((up5 & cruiseControlActivated), TRUE, TRUE, 0, 0, 1, 1, targetSpeedIncrement, TRUE, TRUE, 0, 0);
-	r4 : sup_trg_act((up5 & cruiseControlActivated), up5, TRUE, 2, 2, 0, 0, targetSpeedIncrement, targetSpeedIncrement, !up5, 0, -1);
-	r5 : sup_inv(targetSpeedIncrement, TRUE, TRUE, 0, 0, 0, 0, cruiseControlActivated, TRUE, TRUE, 0, 0);
-	r6 : sup_inv(TRUE, TRUE, TRUE, 0, 0, 0, 0, (!forward | !backward), TRUE, TRUE, 0, 0);
-	r7 : sup_inv((backward | brakePedal), TRUE, TRUE, 0, 0, 0, 0, TRUE, TRUE, !up5, 0, 0);
+	r0 : sup_act(x0000, x0000, x0000, 0, 0, 0, 0, TRUE, TRUE, x0001, 0, 25);
+	r1 : sup_act(x0000, x0000, x0000, 0, 0, 0, 0, !x0001, !x0001, !x0001, 20, 20);
+	r2 : sup_inv(TRUE, TRUE, TRUE, 0, 0, 0, 0, TRUE, TRUE, !x0000, 0, 0);
 
 ASSIGN
-	init(cruiseControlActivated) := FALSE;
-	init(forward) := FALSE;
-	init(backward) := FALSE;
-	init(brakePedal) := FALSE;
-	init(some_err) := r0.ei | r1.ei | r2.ei | r3.ei | r4.ei | r5.ei | r6.ei | r7.ei;
-	next(some_err) := some_err | r0.e | r1.e | r2.e | r3.e | r4.e | r5.e | r6.e | r7.e;
+	init(some_err) := r0.ei | r1.ei | r2.ei;
+	next(some_err) := some_err | r0.e | r1.e | r2.e;
 
 CTLSPEC AG (some_err | EX !some_err)
 

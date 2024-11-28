@@ -1,0 +1,19 @@
+from z3 import *
+
+# Specify a first upper bound of bounded partial consistency
+ALPHA = 30
+
+# Specify a second upper bound of bounded partial consistency
+BETA = 10
+
+# Specify a max length of positive traces for requirement improvement
+MAX_PTRACE = 10
+
+x0000 = Bool('x0000')
+x0001 = Bool('x0001')
+REQ_SET = [
+   [ x0001 , x0001 , x0001 , 0, 0, 0, 0, True, Not(Not(x0000 )), Not(x0000 ), 0, 2 ],
+   [ x0000 , x0000 , x0000 , 0, 0, 0, 0, x0001 , x0001 , x0001 , 2, 2 ]
+]
+
+COND_INIT = []

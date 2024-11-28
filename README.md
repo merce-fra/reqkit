@@ -146,7 +146,19 @@ The NuSMV engine always assumes delay-first and unit-time semantics:
         ./reqkit -a rtc -f reqs/sample1.req -e nusmv
 
 ## Repair
-The repair analysis can attempt to automatically repair inconsistent or vacuous requirement sets:
+The repair analysis attempts to automatically repair rt-inconsistent requirement sets.
+There are four algorithms that can be specified with the option `--repair-algorithm`.
+The first three consist in fixing rt-consistency by adding a freshly generated requirement to the set:
+  - `instant`: generate an instantaneous SUP (where all time bounds are 0 - safety properties) - this is the default algorithm
+  - `min-instant`: as above but also minimize the total size of the generated expressions 
+  - `generate`: generate an arbitrary SUP requirement
+The last one consists in minimally modifying a requirement:
+  - `modify`: attempt to modify the first requirement in the list
+
+Give here simple and easy to understand examples.
+
+Note that if the original set is vacuous, the repair algorithm cannot fix vacuity by adding a fresh requirement.
 
     ./reqkit -a repair -f reqs/sup/cruise_add.py
     ./reqkit -a repair -f reqs/sup/carriage_add.py
+

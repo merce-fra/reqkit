@@ -706,6 +706,7 @@ def main():
 					)
 	
 	# remove modifiable requirement from original set
+	print(f"Will attempt to modify requirement 0")
 	if flg_modify:
 		req_set = sup.REQ_SET
 		req_set.pop(mod.REQ_MODIFY[0])
@@ -721,12 +722,15 @@ def main():
 			req_gen, s, idx, gen_label = \
 			refine_vacuity(sup, s, idx, r, req_gen, param_time, param_cond, gen_label, max_cl, cost_exp)
 	
-	print("\nGenration/modification result:")
-	for r in sup.REQ_SET:
-		print("    Req." + str(r.id) + ":", end=' ')
-		print_req(sup, r.req)
-	print("    NewReq." + str(gen_label) + ":", end=' ')
-	print_req(sup, req_gen.req)
+	if req_gen:
+		print("\nGeneration/modification result:")
+		print("    NewReq." + str(gen_label) + ":", end=' ')
+		print_req(sup, req_gen.req)
+		for r in sup.REQ_SET[1:]:
+			print("    Req." + str(r.id) + ":", end=' ')
+			print_req(sup, r.req)
+	else:
+		print("\nGeneration/modification fail")
 
 if __name__ == "__main__":
 	try:

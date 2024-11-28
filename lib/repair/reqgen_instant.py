@@ -709,12 +709,15 @@ def main():
 			req_gen, s, idx, gen_label = \
 			refine_vacuity(sup, s, idx, r, req_gen, param_time, param_cond, gen_label, max_cl, cost_exp)
 	
-	print("\nGenration/modification result:")
-	for r in sup.REQ_SET:
-		print("    Req." + str(r.id) + ":", end=' ')
-		print_req(sup, r.req)
-	print("    NewReq." + str(gen_label) + ":", end=' ')
-	print_req(sup, req_gen.req)
+	if req_gen:
+		print("\nGeneration/modification result:")
+		for r in sup.REQ_SET:
+			print("    Req." + str(r.id) + ":", end=' ')
+			print_req(sup, r.req)
+		print("    NewReq." + str(gen_label) + ":", end=' ')
+		print_req(sup, req_gen.req)
+	else:
+		print("\nGeneration/modification fail")
 
 if __name__ == "__main__":
 	try:
