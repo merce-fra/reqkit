@@ -20,8 +20,3 @@ cd ../lib/translator
 dune build
 
 pip3 install timeout-decorators z3-solver
-# Install the following into contrib
-# Install NuSMV: https://nusmv.fbk.eu/distrib/NuSMV-2.6.0-linux64.tar.gz
-# Install Pono: 
-# Install Spot: http://www.lrde.epita.fr/dload/spot/spot-2.12.1.tar.gz
-

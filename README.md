@@ -25,10 +25,12 @@ Ocaml (=5.1) requirements as follows:
 - ppx_inline_test
 - bisect_ppx
 
-It also uses the following external tools for model checking and LTL formula manipulation:
-- Spot 2.12.1 (http://www.lrde.epita.fr)
-- NuSMV 2.6.0 (https://nusmv.fbk.eu/downloads.html)
-- Pono-RT (https://github.com/osankur/pono-rt/)
+The tool also needs the following external tools for model checking and LTL formula manipulation:
+- Spot 2.12.1 (http://www.lrde.epita.fr) (executables `ltlfilt`, `ltl2tgba`)
+- NuSMV 2.6.0 (https://nusmv.fbk.eu/downloads.html) (executable `NuSMV`)
+- Pono-RT (https://github.com/osankur/pono-rt/) (executable `pono-rt`)
+
+These can be installed for Linux x86_64 by running the scripts `scripts/setup_*.sh`.
 
 ## Usage and Examples
 ### RT-Consistency and Vacuity Checking Using the Pono-RT engine
