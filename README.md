@@ -44,24 +44,24 @@ TODO: Automatize these steps, as well as the installation and compilation of NuS
 
   This is inconsistent with the real >=1 semantics:
 
-      ./reqkit -a rtc -f reqs/sample1.req --time-domain real --delay-domain 2
+      ./reqkit -a rtc -f examples/sample1.req --time-domain real --delay-domain 2
 
   In fact, if x0000/\~x0001 occurs until time 25-epsilon, then there is a no delay >= 1 for ID0000 to complete its action phase and observe x0001.
 
   The set is consistent if we allow shorter delays, and for integers (with positive or null delays):
 
-      ./reqkit -a rtc -f reqs/sample1.req --time-domain real --delay-domain 0
-      ./reqkit -a rtc -f reqs/sample1.req --time-domain real --delay-domain 1
-      ./reqkit -a rtc -f reqs/sample1.req --time-domain integer --delay-domain 0
+      ./reqkit -a rtc -f examples/sample1.req --time-domain real --delay-domain 0
+      ./reqkit -a rtc -f examples/sample1.req --time-domain real --delay-domain 1
+      ./reqkit -a rtc -f examples/sample1.req --time-domain integer --delay-domain 0
 
   It becomes rt-inconsistent again for strict integer delays (>=1)
 
-      ./reqkit -a rtc -f reqs/sample1.req --time-domain integer --delay-domain 1
+      ./reqkit -a rtc -f examples/sample1.req --time-domain integer --delay-domain 1
 
   Non-vacuity:
 
-      ./reqkit -a vacuity -r ID000 -f reqs/sample1.req --time-domain integer
-      ./reqkit -a vacuity -r ID001 -f reqs/sample1.req --time-domain integer
+      ./reqkit -a vacuity -r ID000 -f examples/sample1.req --time-domain integer
+      ./reqkit -a vacuity -r ID001 -f examples/sample1.req --time-domain integer
 
 - Consider `sample2.req`:
 
@@ -70,14 +70,14 @@ TODO: Automatize these steps, as well as the installation and compilation of NuS
 
   The same phenomenon occurs as for `sample1.req`; an inconsistency appears if we restrict arbitrary delays to >= 1 since there is no possible delay in this domain to complete an action phase:
 
-      ./reqkit -a rtc -f reqs/sample2.req --time-domain real --delay-domain 2
+      ./reqkit -a rtc -f examples/sample2.req --time-domain real --delay-domain 2
 
   But the set is consistent for other semantics. 
 
   Non-vacuity:
 
-      ./reqkit -a vacuity -r ID000 -f reqs/sample2.req --time-domain integer
-      ./reqkit -a vacuity -r ID001 -f reqs/sample2.req --time-domain integer
+      ./reqkit -a vacuity -r ID000 -f examples/sample2.req --time-domain integer
+      ./reqkit -a vacuity -r ID001 -f examples/sample2.req --time-domain integer
 
 - Consider `sample3.req`:
 
@@ -88,21 +88,21 @@ TODO: Automatize these steps, as well as the installation and compilation of NuS
 
   More interestingly, the inconsistency does not appear here in the integer semantics with 0 delays allowed since after reading x000/\x001 for 24 time units, the automata can just cycle with 0 delays:
 
-      ./reqkit -a rtc -f reqs/sample3.req --time-domain integer --delay-domain 0
-      ./reqkit -a rtc -f reqs/sample3.req --time-domain real --delay-domain 0
+      ./reqkit -a rtc -f examples/sample3.req --time-domain integer --delay-domain 0
+      ./reqkit -a rtc -f examples/sample3.req --time-domain real --delay-domain 0
 
   But restricting to strict delays reveals the inconsistency:
 
-      ./reqkit -a rtc -f reqs/sample3.req --time-domain integer --delay-domain 1
+      ./reqkit -a rtc -f examples/sample3.req --time-domain integer --delay-domain 1
 
   With real durations, time can be blocked even if all delays are strictly positive so there is no inconsistency here:
 
-      ./reqkit -a rtc -f reqs/sample3.req --time-domain real --delay-domain 1
+      ./reqkit -a rtc -f examples/sample3.req --time-domain real --delay-domain 1
 
   In all semantics however both requirements are vacuous because they cannot complete the action phase without going into an error state:
 
-      ./reqkit -a vacuity -r ID000 -f reqs/sample3.req --time-domain real --algorithm ic3ia  
-      ./reqkit -a vacuity -r ID001 -f reqs/sample3.req --time-domain real --algorithm ic3ia  
+      ./reqkit -a vacuity -r ID000 -f examples/sample3.req --time-domain real --algorithm ic3ia  
+      ./reqkit -a vacuity -r ID001 -f examples/sample3.req --time-domain real --algorithm ic3ia  
 
 - Consider `sample4.req`: 
 
@@ -111,18 +111,18 @@ TODO: Automatize these steps, as well as the installation and compilation of NuS
 
   This might look rt-inconsistent at first however whenever x0000 holds, one of the SUP automaton immediately goes to error; so no inconsistency here:
 
-      ./reqkit -a rtc -f reqs/sample4.req --time-domain integer --algorithm ic3ia
+      ./reqkit -a rtc -f examples/sample4.req --time-domain integer --algorithm ic3ia
 
 - Consider `sample5.req`. This obviously a vacuous requirement set. BMC can only fail to found a non-vacuity witness:
 
       ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 25 time units
       ID001: Globally, it is always the case that "!x0000" holds
 
-      ./reqkit -a vacuity -r "ID000" -f reqs/sample5.req
+      ./reqkit -a vacuity -r "ID000" -f examples/sample5.req
 
   We can prove vacuity with ic3ia (this uses opensmt as an interpolator):
 
-      ./reqkit -a vacuity -r "ID000" -f reqs/sample5.req --algorithm ic3ia
+      ./reqkit -a vacuity -r "ID000" -f examples/sample5.req --algorithm ic3ia
 
 - Consider `sample6.req`.
 
@@ -132,18 +132,18 @@ TODO: Automatize these steps, as well as the installation and compilation of NuS
 
   We already established that {ID000, ID001} alone is not inconsistent. Adding ID002 here means that we add a prefix with no error where x002 holds for 50 time units. However, because "holds afterwards" puts no time bound on the realization of the action phase, this is still consistent:
 
-      ./reqkit -a rtc -f reqs/sample6.req --algorithm ic3ia
+      ./reqkit -a rtc -f examples/sample6.req --algorithm ic3ia
 
   But vacuous since none of the requirements can be realized:
 
-      ./reqkit -a vacuity -r "ID000" -f reqs/sample6.req --algorithm ic3ia
-      ./reqkit -a vacuity -r "ID001" -f reqs/sample6.req --algorithm ic3ia
-      ./reqkit -a vacuity -r "ID002" -f reqs/sample6.req --algorithm ic3ia
+      ./reqkit -a vacuity -r "ID000" -f examples/sample6.req --algorithm ic3ia
+      ./reqkit -a vacuity -r "ID001" -f examples/sample6.req --algorithm ic3ia
+      ./reqkit -a vacuity -r "ID002" -f examples/sample6.req --algorithm ic3ia
 
 ## Using the NuSMV engine
 The NuSMV engine always assumes delay-first and unit-time semantics:
 
-        ./reqkit -a rtc -f reqs/sample1.req -e nusmv
+        ./reqkit -a rtc -f examples/sample1.req -e nusmv
 
 ## Repair
 The repair analysis attempts to automatically repair rt-inconsistent requirement sets.
@@ -159,6 +159,6 @@ Give here simple and easy to understand examples.
 
 Note that if the original set is vacuous, the repair algorithm cannot fix vacuity by adding a fresh requirement.
 
-    ./reqkit -a repair -f reqs/sup/cruise_add.py
-    ./reqkit -a repair -f reqs/sup/carriage_add.py
+    ./reqkit -a repair -f examples/sup/cruise_add.py
+    ./reqkit -a repair -f examples/sup/carriage_add.py
 
