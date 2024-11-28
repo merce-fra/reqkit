@@ -5,38 +5,33 @@ The tool accepts as input patterns given as simplified universal patterns (SUP),
 
 Verification conditions in SMV or VMTLIB formats are generated and discharged by model checkers.
 
-
 ## Installation
-This program is written partly in OCaml and in Python.
-Pip3 and Opam are assumed to be installed on the system.
+This program is written partly in OCaml and in Python, and works on Linux.
+
+All requirements can be installed and compiled by running 
+
+        ./scripts/install.sh
+        
+assuming opam and pip3 installed.
 
 Python (>=3.10) requirements are as follows:
 - timeout-decorators
 - z3-solver
 
-Ocaml (>=5.1) requirements as follows:
+Ocaml (=5.1) requirements as follows:
 - dune
 - merlin
 - alcotest
 - ppx_inline_test
 - bisect_ppx
 
-All these requirements can be installed by running `./scripts/install.sh` (assuming opam and pip3 are available).
-
-The following verification engines must also be installed
-
-- NuSMV 2.6.0 (https://nusmv.fbk.eu/downloads.html). The executable `NuSMV` must be on the path.
-- Pono-RT (https://github.com/osankur/pono-rt/). The executable `pono` must be on the path.
-
-### Compilation
-
-    cd lib/translator
-    dune build
-
-TODO: Automatize these steps, as well as the installation and compilation of NuSMV and Pono executables
+It also uses the following external tools for model checking and LTL formula manipulation:
+- Spot 2.12.1 (http://www.lrde.epita.fr)
+- NuSMV 2.6.0 (https://nusmv.fbk.eu/downloads.html)
+- Pono-RT (https://github.com/osankur/pono-rt/)
 
 ## Usage and Examples
-## RT-Consistency and Vacuity Checking Using the Pono-RT engine
+### RT-Consistency and Vacuity Checking Using the Pono-RT engine
 - Consider `sample1.req`
 
       ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds after at most 25 time units
@@ -113,10 +108,12 @@ TODO: Automatize these steps, as well as the installation and compilation of NuS
 
       ./reqkit -a rtc -f examples/sample4.req --time-domain integer --algorithm ic3ia
 
-- Consider `sample5.req`. This obviously a vacuous requirement set. BMC can only fail to found a non-vacuity witness:
+- Consider `sample5.req`. This is an obviously vacuous requirement set. 
 
       ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 25 time units
       ID001: Globally, it is always the case that "!x0000" holds
+
+    BMC can only fail to found a non-vacuity witness:
 
       ./reqkit -a vacuity -r "ID000" -f examples/sample5.req
 
@@ -140,12 +137,36 @@ TODO: Automatize these steps, as well as the installation and compilation of NuS
       ./reqkit -a vacuity -r "ID001" -f examples/sample6.req --algorithm ic3ia
       ./reqkit -a vacuity -r "ID002" -f examples/sample6.req --algorithm ic3ia
 
-## Using the NuSMV engine
+### Using the NuSMV engine
 The NuSMV engine always assumes delay-first and unit-time semantics:
 
         ./reqkit -a rtc -f examples/sample1.req -e nusmv
 
-## Repair
+### LTL and CTL Model Checking
+Using ReqKit one can check whether all traces that do no violate a given requirement set satisfy a given LTL formula.
+
+Consider `sample4.req` above which was proved to be rt-consistent. It looks like `x0000` should imply `~x0001`. Let us check this.
+
+        ./reqkit -a ltl -f examples/sample4.req --formula 'G(x0000 -> ~x0001)'
+        ./reqkit -a ltl -f examples/sample4.req --algorithm ic3ia --formula 'G(x0000 -> ~x0001)'
+
+The first check returns unknown due to k-induction not being conclusive, but the second check succeeds.
+
+At this point we suspect that `x0000 & ~x0001` is always true. Is this the case?
+
+        ./reqkit -a ltl -f examples/sample4.req --formula 'G(x0000 & ~x0001)'
+
+The tool generates a counterexample: in fact, both can be false, which does not violate any requirement.
+
+The LTL fragment to be used with the Pono-RT engine is restricted to the safety case. The tool will reject formulas that are outside of this fragment.
+
+However, the NuSMV engine works with all LTL and CTL formulas:
+
+        ./reqkit -a ltl -e nusmv -f examples/sample4.req --formula 'F G(x0000)'
+        ./reqkit -a ctl -e nusmv -f examples/sample4.req --formula 'EF(x0000 & EX x0001)'
+        ./reqkit -a ctl -e nusmv -f examples/sample4.req --formula 'EF(x0000 & AX !x0001)'
+
+### Repair
 The repair analysis attempts to automatically repair rt-inconsistent requirement sets.
 There are four algorithms that can be specified with the option `--repair-algorithm`.
 The first three consist in fixing rt-consistency by adding a freshly generated requirement to the set:

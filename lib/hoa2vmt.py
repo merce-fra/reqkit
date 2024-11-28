@@ -68,35 +68,72 @@ class Hoa2VMT:
 
   def _dump_header(self):
     """ Dump Boolean encoding for state variables, and functions for states """
+    # for ap in self.ap:
+    #   print(f"(declare-fun {ap} () Bool)")
     for i in range(self.nb_bits):
-      print(f"(declare-fun {self.bit_name_prefix}{i} () Bool)")
-    pass
+      print(f"(declare-fun {self._bitname(i)} () Bool)")
+      print(f"(declare-fun {self._bitname(i)}_next () Bool)")
+      print(f"(define-fun ltl_next_state_{i} () Bool (! {self._bitname(i)} :next {self._bitname(i)}_next))")
+    for state in range(self.nb_states):
+      print(f"; State {state}: {self._encode_state(state)}")
+      print(f"(define-fun is_ltl_state_{state} () Bool {self._encode_state(state)})")
+      print(f"(define-fun set_ltl_state_{state} () Bool {self._encode_state(state, next=True)})")
+    
+    print(f"; Init state {self.init_state}: {self._encode_state(self.init_state)}")
+    print(f"(define-fun ltl_init () Bool (! {self._encode_state(self.init_state)} :init true))")
 
-  def _encode_state(self, state : int):
+  def _bitname(self, no : int, next=False):
+    if next:
+      return f"{self.bit_name_prefix}{no}_next"
+    else:
+      return f"{self.bit_name_prefix}{no}"
+  
+  def _encode_state(self, state : int, next=False):
     """ Return VMT encoding of given state id """
-    pass
-
+    enc = []
+    for b in range(self.nb_bits):
+      if (state >> b) % 2 == 1:
+        enc.append(self._bitname(b, next))
+      else:
+        enc.append(f"(not {self._bitname(b, next)})")
+    if next:
+      enc = list(map(lambda x: f"{x}", enc))
+    if len(enc) == 1:
+      return enc[0]
+    else:
+      return "(and " + " ".join(enc) + ")"
+    
   def _encode_guard(self, guard : str):
     """ Parse guard of the form !0 && 1 && !2 into VMT """
-    if "|" in guard:
-      raise Exception("Disjunctive guard")
-    if guard == "t":
-      return "true"
     def map_conjunct(c):
       c = c.strip()
       if c[0] == "!":
         return f"(not {self.ap[int(c[1:])]})"
       else:
         return self.ap[int(c)]
-    conjuncts = list(map(map_conjunct, guard.split("&")))
-    return " ".join(conjuncts)      
+    if guard == "t":
+      return "true"
+    elif guard == "f":
+      return "false"
+    elif "|" in guard:
+      disjuncts = guard.split("|")
+      return f"(or {' '.join([self._encode_guard(disj) for disj in disjuncts] )})"
+    else:
+      conjuncts = list(map(map_conjunct, guard.split("&")))
+      return " ".join(conjuncts)      
 
   def dump_vmt(self):
     self._dump_header()
     print(f"(define-fun .ltl_trans () Bool (!  (or")
     for t in self.transitions:
-      print(f"\t(is_ltl_state_{t[0]} {self._encode_guard(t[1])} set_ltl_state_{t[2]})")
+      print(f"\t(and is_ltl_state_{t[0]} {self._encode_guard(t[1])} set_ltl_state_{t[2]})")
     print("        ) :trans true))")
+    if len(self.accepting_states) > 1:
+      ltl_acc_states = "(or " + " ".join(map(lambda s: f"{self._encode_state(s)}", self.accepting_states)) + ")"
+    else:
+      ltl_acc_states = self._encode_state(self.accepting_states[0])
+    # print(f"(define-fun .all_sup_status () Bool true)")
+    print(f"(define-fun .ltl-prop () Bool (! (and .all_sup_status {ltl_acc_states}) :invar-property 0))")
 
   def parse(self):
     for line in self.input_str:
@@ -106,12 +143,12 @@ class Hoa2VMT:
       if m:
         self.nb_states = int(m.group(1))
         self.nb_bits = int(math.ceil(math.log(self.nb_states, 2)))
-        print(f"-> nb states: {self.nb_states}")
+        logger.debug(f"-> nb states: {self.nb_states}")
         continue
       m = re.match("\W*Start\W*:\W*([0-9]+).*", line)
       if m:
         self.init_state = int(m.group(1))
-        print(f"-> init state: {self.init_state}")
+        logger.debug(f"-> init state: {self.init_state}")
         continue
 
       m = re.match("\W*AP\W*:\W*([0-9]+)(.*)", line)
@@ -119,13 +156,13 @@ class Hoa2VMT:
         self.ap = m.group(2).strip().split(' ')
         # remove ""
         self.ap = list(map(lambda x: x[1:-1], self.ap))
-        print(f"-> AP: {self.ap}")
+        logger.debug(f"-> AP: {self.ap}")
         continue
 
       m = re.match("\W*Acceptance\W*:\W*1\W*Inf\(([0-9]*)\)", line)
       if m:
         self.acceptance_label = m.group(1)
-        print(f"-> Acceptance: {self.acceptance_label}")
+        logger.debug(f"-> Acceptance: {self.acceptance_label}")
         continue
 
       mAcc = re.match("\W*State\W*:\W*([0-9]*) {[0-9]*}", line)
@@ -133,20 +170,21 @@ class Hoa2VMT:
       if mAcc:
         self.current_state = int(mAcc.group(1))
         self.accepting_states.append(self.current_state)
-        print(f"-> Current state: {self.current_state} (accepting)")
+        logger.debug(f"-> Current state: {self.current_state} (accepting)")
         continue
       elif mNonAcc:
         self.current_state = int(mNonAcc.group(1))
-        print(f"-> Current state: {self.current_state}")
+        logger.debug(f"-> Current state: {self.current_state}")
         continue
 
       m = re.match("\W*\[(.*)\]\W*([0-9]*).*", line)
       if m:
         target_state = m.group(2)
         guard = m.group(1)
-        print(f"-> Transition {self.current_state} to {target_state} if {guard}")
+        logger.debug(f"-> Transition {self.current_state} to {target_state} if {guard}")
         self.transitions.append((self.current_state, guard, target_state))
         continue
-      print(f"Ignored: {line}")
+      logger.debug(f"Ignored: {line}")
 
+logger.setLevel(logging.DEBUG)
 translator = Hoa2VMT(sys.stdin.read().split('\n'))

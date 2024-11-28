@@ -20,7 +20,7 @@ FILE=
 ANALYSIS=
 REQIDS=
 ENGINE=pono-rt
-ALGORITHM=
+ALGORITHM=ind
 TIMEDOMAIN=real
 CLOCKENCODING=real
 STRICT_DELAYS=1
@@ -182,7 +182,7 @@ function generate_vmt {
   VC_VMT_FILE=${OUTPUT_DIR}/${BASENAME_NO_EXT}".vmt"
   if [ "$ANALYSIS" = "vacuity" ]; then
     ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency false --check-non-vacuity "$REQIDS" > ${VC_VMT_FILE}
-  elif [ "$ANALYSIS" = "rtc" ]; then
+  elif [ "$ANALYSIS" = "rtc" ] || [ "$ANALYSIS" = "ltl" ]; then
     ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency true > ${VC_VMT_FILE}
   fi
   if [ $? = 0 ]; then
@@ -340,14 +340,41 @@ function check_ltl {
 
   if [ "${ENGINE}" = "pono-rt" ]; then
     generate_vmt
-    # "(a U b) & Fc"
-    # AUT=`ltlfilt --from-ltlf -f "${LTL_FORMULA}" |   ltl2tgba -B -C |   autfilt --to-finite`
-    ltlfilt --from-ltlf -f "${LTL_FORMULA}" |   ltl2tgba -B -C |   autfilt --to-finite | python lib/hoa2vmt.py
-    DisplayError "LTL/CTL verification with Pono is not supported"
+    fragment=`ltlfilt -f "${LTL_FORMULA}" --format=%h`
+    if [ $fragment != "S" ]; then
+      DisplayError "Pono-RT engine can only be used with the safety fragment of LTL"
+      exit 1
+    fi
+    ltl2tgba -B -C -f "${LTL_FORMULA}" | python lib/hoa2vmt.py >> $VC_VMT_FILE
+    # echo $VC_VMT_FILE
+    # pono-rt --witness /tmp/a.vmt
+    # ltl2tgba -B -C -f "${LTL_FORMULA}" -d > /tmp/a.dot 
+    # xdg-open /tmp/a.dot
+    # DisplayError "LTL/CTL verification with Pono is not supported"
+    ta=-ta
+    if [ "${TIMEDOMAIN}" = "unit" ]; then
+      ta=-ta-unit
+    fi
+    external_interpolator=
+    if [ "$ALGORITHM" = "ic3ia" ]; then
+      external_interpolator="--external-interpolator opensmt"
+    fi
+    set +e
+    pono-rt --smt-solver cvc5 --delay-first $DELAY_FIRST --strict-delays $STRICT_DELAYS $external_interpolator -e $ALGORITHM -k $BMC_BOUND $ta -p 1 --witness ${VC_VMT_FILE} > ${TMP_OUTPUT_FILE}
+    ret_value=$?
+    set -e
+    python3 lib/parse_pono.py < ${TMP_OUTPUT_FILE}
+    if [ $ret_value = 1 ]; then
+      echo -e "${GREEN}LTL property proved$ENDCOLOR"
+    elif [ $ret_value = 255 ]; then
+      echo -e "${CYAN}LTL property unknown$ENDCOLOR"
+    else
+      echo -e "${RED}${BOLD}LTL property fails$ENDCOLOR"
+    fi
   elif [ "${ENGINE}" = "nusmv" ]; then
     DisplayInfo "Running LTL analysis with the NuSMV engine"
     generate_smv
-    echo "INVAR	!some_err;" >> $VC_SMV_FILE
+    echo "INVAR	some_err;" >> $VC_SMV_FILE
     echo "LTLSPEC $LTL_FORMULA" >> $VC_SMV_FILE
     NuSMV -n 1 $VC_SMV_FILE
   else
@@ -386,7 +413,7 @@ if [ "${ANALYSIS}" = "vacuity" ]; then
   if [ -z ${ALGORITHM} ]; then
     ALGORITHM=ind
   fi
-  if [ "${ENGINE}" != "pono-rt"]; then
+  if [ "${ENGINE}" != "pono-rt" ]; then
     DisplayError "Vacuity analysis can only be done with the pono-rt engine"
     exit 1
   fi
