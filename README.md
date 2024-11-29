@@ -162,11 +162,16 @@ The tool generates a counterexample: in fact, both can be false, which does not 
 
 The LTL fragment to be used with the Pono-RT engine is restricted to the safety case. The tool will reject formulas that are outside of this fragment.
 
-However, the NuSMV engine works with all LTL and CTL formulas:
+However, the NuSMV engine works with all LTL and CTL formulas. The following formulas hold on the flashing light example:
 
-        ./reqkit -a ltl -e nusmv -f examples/sample4.req --formula 'F G(x0000)'
-        ./reqkit -a ctl -e nusmv -f examples/sample4.req --formula 'EF(x0000 & EX x0001)'
-        ./reqkit -a ctl -e nusmv -f examples/sample4.req --formula 'EF(x0000 & AX !x0001)'
+        ./reqkit -a ltl --formula 'G(on -> F (!on))' -e nusmv -f examples/sup/flashing.py  
+        ./reqkit -a ltl --formula 'G((!on & (G blink)) -> F(on))' -e nusmv -f examples/sup/flashing.py  
+        ./reqkit -a ctl --formula 'AG(blink -> EX (!blink))' -e nusmv -f examples/sup/flashing.py  
+        ./reqkit -a ctl --formula 'AG(blink -> EX (blink))' -e nusmv -f examples/sup/flashing.py  
+
+And for example the following does not
+
+        ./reqkit -a ltl --formula 'G(on -> X on)' -e nusmv -f examples/sup/flashing.py
 
 ### Repair
 The repair analysis attempts to automatically repair rt-inconsistent requirement sets.
