@@ -26,7 +26,7 @@ NUSMV_TRACE = '-> State:'
 
 class SUPInput:
   def __init__(self, mod):
-    self.ALPHA = mod.ALPHA
+    self.ALPHA = mod.ALPHA if mod.ALPHA >= 0 else sys.maxsize
     self.BETA = mod.BETA
     self.MAX_PTRACE = mod.MAX_PTRACE
     self.var_dic = {}
@@ -217,11 +217,11 @@ class SUPInput:
           par.append(self.conv_exp_smv(req[j]))
         else:
           # if the interval is infinite, represent it with -1
-          #if req[j] >= self.ALPHA + self.BETA:
-          #	par.append('-1')
-          #else:
-          #	par.append(str(req[j]))
-          par.append(str(req[j]))
+          if req[j] >= self.ALPHA:
+            par.append('-1')
+          else:
+            par.append(str(req[j]))
+          # par.append(str(req[j]))
       line += ', '.join(par)
       req_decl += line + ');\n'
 

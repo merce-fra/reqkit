@@ -26,8 +26,7 @@ CLOCKENCODING=real
 STRICT_DELAYS=1
 DELAY_FIRST=1
 BMC_BOUND=10
-ALPHA=30
-BETA=10
+ALPHA=-1
 RTC_MODE=1 # Pono-rt's rtc algorithm: 0 or 1
 REPAIRALGORITHM=instant
 LTL_FORMULA=true
@@ -58,8 +57,8 @@ Help()
    echo "--bmc-bound           Bound up to which bounded model checking is to be performed (default: $BMC_BOUND)."
    echo "--repair-algorithm    Algorithm to be used for repair: min-instant | instant | generate | modify | instant (default: $REPAIRALGORITHM)"
    echo "--rtc-mode            Treatment of consistency formulas in Pono-RT: quantifier elimiation (0), or quantified formulas (1) (default: 0)."
-  #  echo "--alpha ALPHA         Replace all constants above ALPHA by infinity (default: $ALPHA); only for the nusmv engine."
-  #  echo "--beta BETA           The other constant beta from Reiya's script (default: $BETA); only for the nusmv engine."
+   echo "--alpha ALPHA         Replace all SUP time bounds above ALPHA by infinity (default: -1 which means infinity); only for the nusmv and repair engines."
+   echo "--beta BETA           The other constant beta from Reiya's script (default: $BETA); only for the nusmv and repair engines."
    echo "--formula FORMULA     Formula to be checked with the ltl or ctl analyses."
    echo "-v                    Verbose mode: show executed instructions."
    echo "-h                    Print help."
@@ -124,6 +123,10 @@ while getopts ${OPTSTRING} opt; do
                   exit 1
                 fi
                 REPAIRALGORITHM=$val
+                ;;
+            alpha)
+                val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                ALPHA=$val
                 ;;
             bmc-bound)
                 val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
@@ -201,6 +204,7 @@ function generate_sup {
   extension="${basename##*.}"
   basename_noext="${basename%.*}"
 
+
   if [ "${extension}" = "py" ]; then
     VC_SUP_FILE=$FILE
   elif [ "${extension}" = "sup" ]; then
@@ -208,10 +212,10 @@ function generate_sup {
     cp $FILE $VC_SUP_FILE
   else
     VC_SUP_FILE=${OUTPUT_DIR}/$basename_noext".py"
-    ${TRANSLATOR_EXEC} --input ${FILE} --bool-only-predicates true > ${VC_SUP_FILE}    
+    ${TRANSLATOR_EXEC} --input ${FILE} --alpha $ALPHA --bool-only-predicates true > ${VC_SUP_FILE}    
   fi
-  VC_SUP_FILE=`realpath $VC_SUP_FILE`
   DisplayInfo "Generated SUP file ${VC_SUP_FILE}"
+  VC_SUP_FILE=`realpath $VC_SUP_FILE`
 }
 
 
@@ -221,9 +225,6 @@ function generate_smv {
   BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}"
   BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}" 
 
-	#generation of the python sup
-  # SUP_FILE_PY=${OUTPUT_DIR}/${BASENAME_NO_EXT}".py"
-  # ${TRANSLATOR_EXEC} --input ${FILE} --bool-only-predicates true > ${SUP_FILE_PY}
   generate_sup
 
   # calling req_verification
@@ -238,7 +239,7 @@ function generate_smv {
 
   cd ..
   VC_SMV_FILE=${OUTPUT_DIR}/${BASENAME_NO_EXT}".smv"
-  DisplayInfo "Generated verification condition ${VC_SUP_FILE}"
+  DisplayInfo "Generated verification condition ${VC_SMV_FILE}"
 }
 
 function repair_sup {

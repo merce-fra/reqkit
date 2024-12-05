@@ -499,7 +499,7 @@ let generate_sup_file fmt (t:Parse.t)  (args: Input_args.t) =
   (* print variables*)
   let all_variables = generated_variables@intermediate_variables@list_initial_bool_variables in
   Format.fprintf fmt "from z3 import *@\n";
-  Format.fprintf fmt "ALPHA = 30@\n";
+  Format.fprintf fmt "ALPHA = %d@\n" args.alpha_bound;
   Format.fprintf fmt "BETA = 10@\n";
   Format.fprintf fmt "MAX_PTRACE=20@\n";
   List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) all_variables;

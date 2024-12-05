@@ -15,10 +15,11 @@ type t = {
   input_dir : string option;
   keep_simple : bool;
   check_non_vacuity : string list;
-  check_rt_consistency : bool
+  check_rt_consistency : bool;
+  alpha_bound : int
 }
 
-let mk output_format state_encoding clock_type clock_mult only_bool_predicates input_file input_dir keep_simple req_vacuity check_rt_consistency =
+let mk output_format state_encoding clock_type clock_mult only_bool_predicates input_file input_dir keep_simple req_vacuity check_rt_consistency alpha =
   {
     output_fmt = (match output_format with 
     |"nusmv" -> if (((input_file <> None) || (input_dir <> None))&& (not only_bool_predicates)) then raise(Invalid_argument ("The SMV format requires boolean predicates only.")); NuSMV
@@ -42,6 +43,7 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
           |"integer"-> clock_mult
           |"real" -> 1
           |_ -> raise(Invalid_argument ("The supported clock encodings are integer and real."))); 
+    alpha_bound = alpha
   }
 
 
@@ -53,10 +55,11 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
     let simple_exp = ref false in
     let which_clock = ref "integer" in
     let state_encode = ref "boolean" in
-    let clock_mult = ref 10 in
+    let clock_mult = ref 1 in
     let bool_only_predicates = ref true in
     let check_rt_consistency = ref false in
     let vacuity = ref "" in
+    let alpha = ref (-1) in
     let fill s =
       let l = (25-(String.length s)) in
       if l < 0 then ""
@@ -92,10 +95,13 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
         (fill "bool-only-predicates")^"If true, convert predicates that involve non boolean variables into boolean predicates (default is false).");   
       ("--check-non-vacuity",
         Arg.String (fun s -> vacuity := s),
-        (fill "check-non-vacuity")^"If a list of requirements ids separated by ; is given, the non vacuity will be checked only on those requirements. Otherwise it is tested on no requirements (default).");    
-      ("--check-rt-consistency",
-        Arg.Bool (fun b -> check_rt_consistency := b),
+        (fill "check-non-vacuity")^"If a list of requirements ids separated by ; is given, the non vacuity will be checked only on those requirements. Otherwise it is tested on no requirements (default).");
+      ("--alpha",
+        Arg.Int (fun b -> alpha := b),
         (fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");    
+      (* ("--check-rt-consistency",
+        Arg.Bool (fun b -> check_rt_consistency := b),
+        (fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");     *)
      ] in 
     Arg.parse speclist print_endline usage;
-    (mk !output_fmt !state_encode !which_clock !clock_mult !bool_only_predicates !file !dir !simple_exp (String.split_on_char ';' !vacuity) !check_rt_consistency, usage)
+    (mk !output_fmt !state_encode !which_clock !clock_mult !bool_only_predicates !file !dir !simple_exp (String.split_on_char ';' !vacuity) !check_rt_consistency !alpha, usage)

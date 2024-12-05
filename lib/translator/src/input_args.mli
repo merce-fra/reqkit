@@ -14,7 +14,8 @@ type t = {
   input_dir : string option;
   keep_simple : bool;
   check_non_vacuity : string list;
-  check_rt_consistency : bool
+  check_rt_consistency : bool;
+  alpha_bound : int
 }
 
 val get : unit -> (t * string)

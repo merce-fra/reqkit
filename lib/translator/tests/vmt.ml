@@ -10,7 +10,8 @@ let get_args file =
   input_dir= None;
   keep_simple = false;
   check_non_vacuity = [];
-  check_rt_consistency = false
+  check_rt_consistency = false;
+  alpha_bound = 30
   } 
 
 let convert_to_absolute_path f= 
