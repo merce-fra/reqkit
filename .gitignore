@@ -7,3 +7,7 @@ _build/
 # bisect_ppx (coverage)
 _coverage/
 *.coverage
+
+lib/translator/req2something.opam
+*__pycache__*
+output/*
