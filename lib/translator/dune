@@ -1,6 +1,13 @@
-(executables
-  (names req2something )
+(executable
+  (name req2something )
   (libraries src)
-  (modes byte exe)
-  (promote (until-clean))
+  (modes exe)
+  (package req2something)
+  (public_name req2something)
+  ; (promote (until-clean))
+ )
+(install
+ (files req2something.exe)
+ (section bin)
+ (package req2something)
  )

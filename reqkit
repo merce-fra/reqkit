@@ -10,7 +10,7 @@ ENDCOLOR="\e[0m"
 
 OUTPUT_DIR=output
 REPAIR_DIR=lib/repair/
-TRANSLATOR_EXEC=lib/translator/req2something.exe
+TRANSLATOR_EXEC=req2something
 TMP_OUTPUT_FILE=`mktemp`
 
 VERBOSE=0
@@ -100,28 +100,30 @@ while getopts ${OPTSTRING} opt; do
         case "${OPTARG}" in
             time-domain)
                 val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                TIMEDOMAIN=$val
-                if [ "$TIMEDOMAIN" != "real" ] && [ "$TIMEDOMAIN" != "integer" ] && [ "$TIMEDOMAIN" != "unit" ]; then
+                if [ "$val" != "real" ] && [ "$val" != "integer" ] && [ "$val" != "unit" ]; then
                   DisplayError "Time domain must be real, integer, or unit."
                   Help
+                  exit 1
                 fi
+                TIMEDOMAIN=$val
                 ;;
             algorithm)
                 val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                ALGORITHM=$val
-                if [ "$ALGORITHM" != "ind" ] && [ "$ALGORITHM" != "bmc" ] && [ "$ALGORITHM" != "ic3ia" ] && [ "$ALGORITHM" != "ic3bits" ]; then
+                if [ "$val" != "ind" ] && [ "$valLGORITHM" != "bmc" ] && [ "$val" != "ic3ia" ] && [ "$val" != "ic3bits" ]; then
                   DisplayError "Invalid algorithm."
                   Help
+                  exit 1
                 fi
                 ALGORITHM=$val
                 ;;
             repair-algorithm)
                 val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                REPAIRALGORITHM=$val
-                if [ "$ALGORITHM" != "generate" ] && [ "$ALGORITHM" != "modify" ] && [ "$ALGORITHM" != "instant" ] && [ "$ALGORITHM" != "min-instant" ]; then
+                if [ "$val" != "generate" ] && [ "$val" != "modify" ] && [ "$val" != "instant" ] && [ "$val" != "min-instant" ]; then
                   DisplayError "Invalid algorithm."
                   Help
+                  exit 1
                 fi
+                REPAIRALGORITHM=$val
                 ;;
             bmc-bound)
                 val="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
@@ -225,25 +227,20 @@ function generate_smv {
 
   # calling req_verification
   cd ${OUTPUT_DIR}
-  python3 ../$REPAIR_DIR/supreq.py ${VC_SUP_FILE} > tmp.smv
+  python3 ../$REPAIR_DIR/supreq.py ${VC_SUP_FILE} > $TMP_OUTPUT_FILE
 
   #take only first half of the result file
   cat test.smv > ${BASENAME_NO_EXT}".smv"
-  LINE=`grep -n "\n"  tmp.smv | grep MODULE | cut  -d: -f1  | tail -n1`
+  LINE=`grep -n "\n" $TMP_OUTPUT_FILE | grep MODULE | cut  -d: -f1  | tail -n1`
   LINE_NB=$(($LINE - 1))
-  head -n $LINE_NB tmp.smv >> ${BASENAME_NO_EXT}".smv"
-  
-  #do some cleaning if not verbose
-  if [ ${VERBOSE} == 0 ]; then
-    rm -f tmp.smv
-  fi
+  head -n $LINE_NB $TMP_OUTPUT_FILE >> ${BASENAME_NO_EXT}".smv"
 
   cd ..
   VC_SMV_FILE=${OUTPUT_DIR}/${BASENAME_NO_EXT}".smv"
 }
 
 function repair_sup {
-  DisplayInfo "Running repair algorithm with unit delays semantics"
+  DisplayInfo "Running repair algorithm '$REPAIRALGORITHM' with unit delays semantics"
   if [ "${REPAIRALGORITHM}" = "min-instant" ]; then
     exec=reqgen_instant_maxsmt.py
   elif [ "${REPAIRALGORITHM}" = "instant" ]; then

@@ -1,0 +1,4 @@
+Input x0001 is bool
+Input x0000 is bool
+
+ID000: Globally, it is always the case that if "x0000" holds for at least 2 time units, then "x0001" holds afterwards for at least 1 time units

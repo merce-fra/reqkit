@@ -5,4 +5,5 @@
   (inline_tests)
   (instrumentation (backend bisect_ppx))
 )
-
+(cram
+ (deps %{bin:req2something} (glob_files patterns/*.req)))
