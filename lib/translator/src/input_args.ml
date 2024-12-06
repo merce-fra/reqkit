@@ -103,5 +103,8 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
         Arg.Bool (fun b -> check_rt_consistency := b),
         (fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");     *)
      ] in 
+    let reqs_to_check_for_vacuity = if !vacuity = "" then [] else 
+        (String.split_on_char ';' !vacuity)
+    in
     Arg.parse speclist print_endline usage;
-    (mk !output_fmt !state_encode !which_clock !clock_mult !bool_only_predicates !file !dir !simple_exp (String.split_on_char ';' !vacuity) !check_rt_consistency !alpha, usage)
+    (mk !output_fmt !state_encode !which_clock !clock_mult !bool_only_predicates !file !dir !simple_exp reqs_to_check_for_vacuity !check_rt_consistency !alpha, usage)
