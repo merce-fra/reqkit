@@ -498,6 +498,13 @@ let generate_sup_file fmt (t:Parse.t)  (args: Input_args.t) =
   let (generated_variables, intermediate_variables, sup_reqs) = of_req t args in
   (* print variables*)
   let all_variables = generated_variables@intermediate_variables@list_initial_bool_variables in
+  let l = ( SMap.to_list sup_reqs) in
+  let l_names = List.map fst l in
+  List.iter 
+    (fun req_id -> 
+      if not (List.mem req_id l_names) then
+        raise (Invalid_argument (Printf.sprintf "%s is undefined" req_id) )
+    ) args.check_non_vacuity;
   Format.fprintf fmt "from z3 import *@\n";
   Format.fprintf fmt "ALPHA = %d@\n" args.alpha_bound;
   Format.fprintf fmt "BETA = 10@\n";
@@ -505,7 +512,6 @@ let generate_sup_file fmt (t:Parse.t)  (args: Input_args.t) =
   List.iter (fun v -> Format.fprintf fmt "%s = Bool('%s')@\n" v v) all_variables;
   (* print requirements *)
   Format.fprintf fmt "REQ_SET=[";
-  let l = ( SMap.to_list sup_reqs) in
   List.iteri (fun i  (_ ,(_,sup_list ) ) -> print fmt sup_list (i=0) (i=((List.length l)-1)) args) l ;
   Format.fprintf fmt "]@\n"; 
   Format.fprintf fmt "COND_INIT = ["; 

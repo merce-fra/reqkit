@@ -35,11 +35,11 @@ let () =
         | NuSMV  -> Src.Sup.generate_sup_file fmt t args
         | VMT  -> Src.Vmt.generate_vmt_file fmt t args);
       with Src.Parse.ParseException msg -> 
-        Format.printf "%s@." msg;
+        Printf.fprintf stderr "%s\n" msg;
         exit_value := -1
       end
     | _,_ -> 
-      Format.printf "%s@." usage;
+      Printf.fprintf stderr "%s\n" usage;
       exit_value := -1
   );
   exit !exit_value

@@ -185,16 +185,20 @@ function generate_vmt {
   BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}" 
 
   VC_VMT_FILE=${OUTPUT_DIR}/${BASENAME_NO_EXT}".vmt"
+  set +e 
   if [ "$ANALYSIS" = "vacuity" ]; then
-    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency false --check-non-vacuity "$REQIDS" > ${VC_VMT_FILE}
+    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-non-vacuity "$REQIDS" > ${VC_VMT_FILE}
   elif [ "$ANALYSIS" = "rtc" ] || [ "$ANALYSIS" = "ltl" ]; then
-    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-rt-consistency true > ${VC_VMT_FILE}
+    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmtlib --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true  > ${VC_VMT_FILE}
   fi
-  if [ $? = 0 ]; then
+  retval=$?
+  if [ "$retval" = 0 ]; then
     DisplayInfo "Generated verification condition ${VC_VMT_FILE}"
   else
     DisplayError "Error generating VMT file"
+    exit -1
   fi
+  set -e
 }
 
 
@@ -300,9 +304,12 @@ function check_vacuity {
     if [ $ret_value = 0 ]; then
       echo -e "${GREEN}Non-vacuity established$ENDCOLOR"
     elif [ $ret_value = 255 ]; then
-      echo -e "${RED}Non-vacuity witness could not be found; this might indicate vacuity$ENDCOLOR"
-    else
+      echo -e "${RED}Non-vacuity witness could not be found; this might indicate vacuity."
+      echo -e "Try increasing the BMC bound with --bmc-bound or proving vacuity with --algorithm ic3ia$ENDCOLOR"
+    elif [ $ret_value = 1 ]; then 
       echo -e "${RED}${BOLD}Requirement is vacuous$ENDCOLOR"
+    else 
+      DisplayError "Pono-RT returned an error."
     fi
 }
 

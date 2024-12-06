@@ -11,7 +11,7 @@ This program is written partly in OCaml and in Python, and works on Linux.
 All requirements can be installed and compiled by running 
 
         ./scripts/install.sh
-        
+
 assuming opam and pip3 installed.
 
 Python (>=3.10) requirements are as follows:

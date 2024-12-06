@@ -569,8 +569,17 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
   let vars = t.vars in
   let vars_decl = List.of_seq ( Hashtbl.to_seq_values vars ) in
   List.iter (fun decl -> generate_var_decl fmt decl) vars_decl;
-  let ( generated_variables,(intermediate_variables:string list), sup_map) =  Sup.of_req t args in 
+  let ( generated_variables,(intermediate_variables:string list), sup_map) = Sup.of_req t args in
 
+  let l = ( Sup.SMap.to_list sup_map) in
+  let l_names = List.map fst l in
+  List.iter 
+    (fun req_id -> 
+      if not (List.mem req_id l_names) then
+        raise (Invalid_argument (Printf.sprintf "%s is undefined" req_id) )
+    ) args.check_non_vacuity;
+    
+    
   (*print generated variables used to convert non boolean expressions into boolean*)
   if (List.length generated_variables) > 0 then(    
     Format.fprintf fmt "@\n;these are generated variables to replace non boolean expressions @\n";
