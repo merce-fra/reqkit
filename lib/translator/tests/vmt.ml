@@ -597,10 +597,12 @@ let%expect_test "1.req" =
     (define-fun trig_to_idle_state_ID004_4 () Bool ( and ( or ( and (not tee_ID004_4) (not tc_ID004_4)) (and (not tc_ID004_4) (< c_ID004_4 0 ) ) (and (not tee_ID004_4) (>= c_ID004_4 0 )) (> c_ID004_4 0 )) c_ID004_4_reset))
     (define-fun stay_trig_state_ID004_4 () Bool  ( and (  and tc_ID004_4 (< c_ID004_4 0 ) ( or ( not tee_ID004_4)  (< c_ID004_4 0 ))) c_ID004_4_unchanged ))
     (define-fun trig_to_delay_state_ID004_4 () Bool ( and (and tee_ID004_4 (>= c_ID004_4 0 ) (<= c_ID004_4 0 )) c_ID004_4_reset ))
+    (define-fun trig_to_delay_no_clock_state_ID004_4 () Bool ( and tee_ID004_4 c_ID004_4_reset ))
     (define-fun stay_delay_state_ID004_4 () Bool (  and (and (< c_ID004_4 0 ) ( or (not ase_ID004_4) (< c_ID004_4 0 ))) c_ID004_4_unchanged ))
     (define-fun delay_to_err_state_ID004_4 () Bool ( and (and (not ase_ID004_4) (>= c_ID004_4 0 )) c_ID004_4_unchanged ))
     (define-fun stay_act_state_ID004_4 () Bool ( and (and ac_ID004_4  (< c_ID004_4 0 ) (or (not aee_ID004_4) (< c_ID004_4 0 ))) c_ID004_4_unchanged ))
     (define-fun act_to_err_state_ID004_4 () Bool ( and (or (and (not ac_ID004_4) (not aee_ID004_4)) (and (not ac_ID004_4) (< c_ID004_4 0 )) (and (not aee_ID004_4) (>= c_ID004_4 0 )) (> c_ID004_4 0 )) c_ID004_4_unchanged ))
+    (define-fun act_to_err_no_clock_state_ID004_4 () Bool ( and ( not aee_ID004_4 ) c_ID004_4_unchanged ))
     (define-fun act_to_idle_state_ID004_4 () Bool ( and (and aee_ID004_4 (>= c_ID004_4 0 ) (<= c_ID004_4 0 ))  c_ID004_4_reset ))
     (define-fun delay_to_act_state_ID004_4 () Bool ( and ( and ase_ID004_4 (>= c_ID004_4 0 ) (<= c_ID004_4 0 )) c_ID004_4_reset ))
     ; guards of the SUP transitions without clock delay
