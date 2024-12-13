@@ -11,9 +11,11 @@ MAX_PTRACE = 10
 
 on = Bool('on')
 blink = Bool('blink')
+low = Bool('low')
 REQ_SET = [
-    [ on , True , True , 0, 0, 0, 0, True, on, Not(on), 3, 3],
-    [ And(blink, Not(on)), Not(on), True, 3, 3, 0, 0, True, True, on, 0, 0],
+    [ on , True , True , 0, 0, 0, 0, True, on, Not(on), 10, 10],
+    [ And(blink, Not(on)), Not(on), True, 10, 10, 0, 0, True, True, on, 0, 0],
+    [ low, True, True, 0, 0, 0, 0, True, Not(on), True, 20, 20]
 ]
 
 COND_INIT = []

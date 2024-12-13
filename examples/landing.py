@@ -1,24 +1,14 @@
 from z3 import *
 
-# Specify a first upper bound of bounded partial consistency
 ALPHA = 30
-
-# Specify a second upper bound of bounded partial consistency
 BETA = 10
-
-# Specify a max length of positive traces for requirement improvement
 MAX_PTRACE = 10
 
 handle_down = Bool('handle_down')
-#handle_up = Bool('handle_up')
 gear_extended = Bool('gear_extended')
 gear_retracted = Bool('gear_retracted')
 door_closed = Bool('door_closed')
 door_open = Bool('door_open')
-#open_EV = Bool('open_EV')
-#close_EV = Bool('close_EV')
-#extend_EV = Bool('extend_EV')
-#retract_EV = Bool('retract_EV')
 
 REQ_SET = [
     # If the command handle is pushed down and kept down then, 

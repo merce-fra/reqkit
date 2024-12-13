@@ -4,9 +4,11 @@ from z3 import *
 ALPHA = 30
 
 # Specify a second upper bound of bounded partial consistency
+# (ignore)
 BETA = 15
 
 # Specify a max length of positive traces for requirement improvement
+# (ignore)
 MAX_PTRACE = 15
 
 # a work is present on the carriage

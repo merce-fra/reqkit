@@ -24,11 +24,8 @@ State variables:
 downward5 = Bool('downward5')
 downward7 = Bool('downward7')
 neutral = Bool('neutral')
-# hazard = Bool('hazard')
 light_on = Bool('light_on')
 flashing = Bool('flashing')
-# tip_blinking = Bool('tip_blinking')
-# tip_blink_request = Bool('tip_blink_request')
 
 REQ_SET = [
 	# If the indicator light is on, it must keep on for 3 time units and then must turn off.
