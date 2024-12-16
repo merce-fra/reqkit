@@ -1,3 +1,8 @@
+type var_type = | Boolean 
+
+exception Syntax_error of string
+
+type declaration  = | Decl of string  * var_type * string
 
 type event=  | Var of string (* xNNNNN *)
                 | Not of event (* "!" exp *)
@@ -22,7 +27,17 @@ type time = | Time of int (*used for tmin, tmax, lmin, lmax, amin and amax*)
             | LesserThan of int (*used for real clock encoding*)
 
 type trigger = { tse: event ; tc : event ; tee : event;  tmin : time;  tmax : time } (* trigger of a SUP *)
+
 type action = { ase: event ; ac : event ; aee : event;  amin : time;  amax : time }  (* action of a SUP *)
+
 type delay =  { lmin : time; lmax : time }                                           (* delay between end of the trigger and beginning of the action*)
-type sup_req = {t : trigger; d : delay;  a : action;  vacuity : bool}                                 (* SUP requirement *)
-type sup_req_list = sup_req list                                                     (* list of SUP requirements *)
+
+type sup_req = {t : trigger; d : delay;  a : action;  vacuity : bool}                (* SUP requirement *)
+
+type sup_req_list = sup_req list 
+
+type var_init = | VarInit of string * bool
+
+type cond_init = var_init list
+
+type prog = { decls: declaration list;  reqs: sup_req list; inits: cond_init}                                

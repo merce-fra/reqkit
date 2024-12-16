@@ -1,0 +1,16 @@
+
+(ocamllex
+  (modules lexer)
+)
+
+(menhir
+  (modules parser)
+  (flags --table --explain --dump --inspection)
+)
+
+
+(library
+  (libraries menhirLib)
+  (name sups)
+)
+

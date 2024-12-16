@@ -14,8 +14,8 @@ exception Unknown_variable of string
    If [bool] is true, keep the typical requirements with the most 
    simple expressions, otherwise keep the most complex expressions
    *)
-val typical_reqs: Parse.t list -> bool -> Parse.t list
+val typical_reqs: Reqs.Parse.t list -> bool -> Reqs.Parse.t list
 
 
 (** converts a hold to integer *)
-val hold_to_int : Ast_types.hold -> int
+val hold_to_int : Reqs.Ast_types.hold -> int

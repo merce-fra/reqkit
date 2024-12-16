@@ -33,7 +33,7 @@ REQ_SET = [
     # If a work is present and the carriage is at the backward limit then, 
     # the carriage must move forward to the forward limit.
     [
-        And( X1, X3 ), True, True, 0, 0, 1, 1, Y71, Y71, And( Y71, X2 ), 0, -1
+        And ( X1 , X3 ), True , True , 0, 0, 1, 1, Y71, Y71, And ( Y71, X2 ), 0, -1
     ],
     # If a work is not present or the carriage is not at the backward limit, 
     # and the carriage is not moving forward then,

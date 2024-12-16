@@ -1,5 +1,6 @@
-open Ast_types
-open Parse
+open Reqs.Ast_types
+
+
 
 (** module to compare list of int*)
 module Key = struct
@@ -115,7 +116,7 @@ let extract_vars_from_req req list_vars=
 (** [split_reqs_from_parse_t input_parse] for a Parse.t [input_parse], split all requirements in a tuple 
     (name of the requirements, requirement, variables involved in the requirement, 
     nb of nodes, list of integer representing the requirements/holds) *)
-let split_reqs_from_parse_t (input_parse : Parse.t) = 
+let split_reqs_from_parse_t (input_parse : Reqs.Parse.t) = 
   let req_as_list = List.of_seq (Hashtbl.to_seq (input_parse.reqs)) in
   List.fold_left ( fun acc (name,req) -> begin
                                         let (vars, nb_expr, list_op) = extract_vars_from_req req input_parse.vars in
@@ -149,6 +150,7 @@ let typical_reqs_ input_parse_list keep_simple =
 
 (** [convert_to_parse_t name vars req] convert a requirement [name], a map of used variables [vars] and a requirement [req] to a Parse.t*)                                                                   
 let convert_to_parse_t name vars req  =
+  let open Reqs.Parse in                                                          
   let h1 = Hashtbl.create 1 in 
   SMap.iter ( fun k v -> Hashtbl.add h1 k v ) vars;
   let h2 = Hashtbl.create 1 in 
@@ -157,7 +159,7 @@ let convert_to_parse_t name vars req  =
 
 (** [typical_reqs input_parse_list simple_exp] extract all unique requirements constructions. 
     The requirements are distinguished using their ast considering only req/hold nodes (not the expressions) *)
-let typical_reqs (input_parse_list: Parse.t list) simple_exp : Parse.t list =
+let typical_reqs (input_parse_list: Reqs.Parse.t list) simple_exp : Reqs.Parse.t list =
   let reqs_ = typical_reqs_ input_parse_list simple_exp in 
   (* convert the map into a list of Parse.t *)
   let filted_reqs_list_ = List.of_seq (ILMap.to_seq reqs_) in

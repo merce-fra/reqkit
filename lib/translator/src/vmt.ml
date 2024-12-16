@@ -1,3 +1,4 @@
+open Sups
 
 (** [generate_state fmt] defines the states list in the formatter [fmt]. Depending
     on [args] it can be encoded either with integers or booleans *)
@@ -449,6 +450,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
 
 (** [generate_var_decl fmt decl] generates the declaration of variable [decl] used in the requirements in the formatter [fmt] *)
 let generate_var_decl fmt decl =  
+  let open Reqs in 
   match decl with 
   (* for constant force the value using assert*)
   |Ast_types.Constant (_, Const_bool(_)) (*-> Format.fprintf fmt "(declare-fun %s () Bool)@\n(assert(= %s %b))@\n"  name name value*)
@@ -561,16 +563,9 @@ let generate_sup_list fmt req_name (_, req_sups_list) (args : Input_args.t) gene
   
 
 
-(** [generate_requirements fmt t] generates the conversion of the parsed requirements [t] in SUP format into VMT lib format
-    in the formatter [fmt] *)
-let generate_requirements fmt (t:Parse.t) (args : Input_args.t) = 
-  (*print original variables*)
-  Format.fprintf fmt "@\n;these are the variables used in triggers and actions@\n";
-  let vars = t.vars in
-  let vars_decl = List.of_seq ( Hashtbl.to_seq_values vars ) in
-  List.iter (fun decl -> generate_var_decl fmt decl) vars_decl;
-  let ( generated_variables,(intermediate_variables:string list), sup_map) = Sup.of_req t args in
 
+let generate_requirements_ fmt args sup_map generated_variables intermediate_variables= 
+  let open Input_args in
   let l = ( Sup.SMap.to_list sup_map) in
   let l_names = List.map fst l in
   List.iter 
@@ -605,6 +600,21 @@ let generate_requirements fmt (t:Parse.t) (args : Input_args.t) =
   (*print the SUPs*)
   Format.fprintf fmt "@\n;these are generated SUPs @\n";
   ignore(Sup.SMap.fold (fun key value acc -> (generate_sup_list fmt key value args true)@acc) sup_map [])
+
+
+
+
+(** [generate_requirements fmt t] generates the conversion of the parsed requirements [t] in SUP format into VMT lib format
+    in the formatter [fmt] *)
+let generate_requirements fmt (t:Reqs.Parse.t) (args : Input_args.t) = 
+  (*print original variables*)
+  Format.fprintf fmt "@\n;these are the variables used in triggers and actions@\n";
+  let vars = t.vars in
+  let vars_decl = List.of_seq ( Hashtbl.to_seq_values vars ) in
+  List.iter (fun decl -> generate_var_decl fmt decl) vars_decl;
+  let ( generated_variables,(intermediate_variables:string list), sup_map) = Sup.of_req t args in
+  generate_requirements_ fmt args sup_map generated_variables intermediate_variables
+
   
 
 (** [generate_vmt_file fmt t] generates a file in the vmt-lib format containing the parsed requirements [t] in the formatter [fmt]*)
@@ -614,4 +624,15 @@ let generate_vmt_file fmt t (args : Input_args.t)=
   Format.fprintf fmt "@\n";
   Format.fprintf fmt "(assert true)@\n"
 
- 
+let generate_requirements_from_sup fmt t args = 
+  let open Sup_types in
+  (* convert the sup requirement list into a map with arbitrary names for each sup*)
+  let sup_map = List.fold_left ( fun acc s -> let id= ("ID_"^(string_of_int (Sup.SMap.cardinal acc))) in Sup.SMap.add id  (id,[s]) acc) Sup.SMap.empty t.reqs in
+  generate_requirements_ fmt args sup_map [] []
+
+
+let generate_vmt_file_from_sup fmt t (args : Input_args.t)=
+  generate_state fmt args;
+  generate_requirements_from_sup fmt t args;
+  Format.fprintf fmt "@\n";
+  Format.fprintf fmt "(assert true)@\n"

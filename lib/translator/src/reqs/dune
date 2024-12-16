@@ -1,0 +1,20 @@
+(ocamllex
+  (modules lexer)
+)
+
+(menhir
+  (modules parser)
+  (flags --table --explain --dump --inspection)
+)
+
+
+(library
+  (name reqs)
+  (libraries menhirLib)
+  (inline_tests)
+  (modules_without_implementation ast_types)
+  (preprocess
+    (pps ppx_inline_test bisect_ppx --conditional))
+  (instrumentation (backend bisect_ppx))
+)
+

@@ -13,3 +13,11 @@ do
 	echo " "	
 done
 
+INPUT_FILES_DIR=sups
+INPUT_FILES=${INPUT_FILES_DIR}/*.py
+for f in ${INPUT_FILES}
+do
+	echo "Processing file ${f}"
+	./lib/translator/exec --input ${f} --bool-only-predicates true --output-fmt ${OUTPUT_FMT}
+	echo " "	
+done

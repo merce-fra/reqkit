@@ -26,12 +26,12 @@ let convert_to_absolute_path f=
 
 let exec args =
   try 
-  let t =  (Src.Parse.of_file (Option.get args.input_file)) in 
+  let t =  (Reqs.Parse.of_file (Option.get args.input_file)) in 
   let fmt = Format.get_std_formatter() in
   (match args.output_fmt with
     | NuSMV  -> Src.Sup.generate_sup_file fmt t args
     | VMT  -> Src.Vmt.generate_vmt_file fmt t args);
-  with Src.Parse.ParseException msg -> Format.printf "%s@." msg 
+  with Reqs.Parse.ParseException msg -> Format.printf "%s@." msg 
 
 
 let%expect_test "1.req" =
