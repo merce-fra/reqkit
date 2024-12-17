@@ -12,7 +12,7 @@ let integer           = ('-'?) positive_integer
 let real              = integer ('.') positive_integer
 let any_char = ['0'-'9' 'a'-'z' 'A'-'Z' '"' '!' '=' ' ' '_' '&' ',' ':']
 (* input idents are like x0001 *)
-let input_ident           = ('x') (digit+)
+let input_ident           = (['a'-'z' 'A'-'Z']) (digit+)
 (* rule idents are like ID001 *)
 let prop_ident           = ('I') ('D') ('_'*) (digit+)
 let whitespace = [' ' '\t']+

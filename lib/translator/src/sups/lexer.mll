@@ -23,6 +23,11 @@ rule singleline_comment = parse
   | eof    { () }
   | _      { singleline_comment lexbuf }
 
+and multiline_comment = parse
+  | '\n'   { Lexing.new_line lexbuf ; multiline_comment lexbuf}
+  | eof    { () }
+  | "\"\"\""   { () }
+  | _      { multiline_comment lexbuf }
 
 and ignore_line = parse
   | '\n'   { Lexing.new_line lexbuf }
@@ -56,6 +61,8 @@ and token = parse
     { Lexing.new_line lexbuf;  token lexbuf }
 | "#"
     { singleline_comment lexbuf; token lexbuf } 
+| "\"\"\""
+    { multiline_comment lexbuf; token lexbuf } 
 | "from"
 | "ALPHA"
 | "BETA"
