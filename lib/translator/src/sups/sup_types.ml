@@ -36,8 +36,8 @@ type sup_req = {t : trigger; d : delay;  a : action;  vacuity : bool}           
 
 type sup_req_list = sup_req list 
 
-type var_init = | VarInit of string * bool
+type var_init = | VarInit of string * bool  (* Var = True/False*)             
 
-type cond_init = var_init list
+type cond_init = var_init list(* initializations in COND_INIT *) 
 
 type prog = { decls: declaration list;  reqs: sup_req list; inits: cond_init}                                

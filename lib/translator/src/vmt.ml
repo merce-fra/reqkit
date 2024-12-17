@@ -563,7 +563,9 @@ let generate_sup_list fmt req_name (_, req_sups_list) (args : Input_args.t) gene
   
 
 
-
+(** [generate_requirements_ fmt args sup_map generated_variables intermediate_variables] generates the requirements of [sup_map] 
+    in sup format into VMT lib in the formatter [fmt]. [generated_variables] and [intermediate_variables] are variables that were 
+    generated to model the requirement format into sup format. When reading sup file, thoses list are empties *)
 let generate_requirements_ fmt args sup_map generated_variables intermediate_variables= 
   let open Input_args in
   let l = ( Sup.SMap.to_list sup_map) in
@@ -616,7 +618,6 @@ let generate_requirements fmt (t:Reqs.Parse.t) (args : Input_args.t) =
   generate_requirements_ fmt args sup_map generated_variables intermediate_variables
 
   
-
 (** [generate_vmt_file fmt t] generates a file in the vmt-lib format containing the parsed requirements [t] in the formatter [fmt]*)
 let generate_vmt_file fmt t (args : Input_args.t)=
   generate_state fmt args;
@@ -624,13 +625,14 @@ let generate_vmt_file fmt t (args : Input_args.t)=
   Format.fprintf fmt "@\n";
   Format.fprintf fmt "(assert true)@\n"
 
+(** [generate_requirements_from_sup fmt t args] generates a file in the vmt-lib format containing the parsed sups [t] in the formatter [fmt]*)
 let generate_requirements_from_sup fmt t args = 
   let open Sup_types in
   (* convert the sup requirement list into a map with arbitrary names for each sup*)
   let sup_map = List.fold_left ( fun acc s -> let id= ("ID_"^(string_of_int (Sup.SMap.cardinal acc))) in Sup.SMap.add id  (id,[s]) acc) Sup.SMap.empty t.reqs in
   generate_requirements_ fmt args sup_map [] []
 
-
+(** [generate_vmt_file_from_sup fmt t] generates a file in the vmt-lib format containing the parsed SUP requirements [t] in the formatter [fmt] *)
 let generate_vmt_file_from_sup fmt t (args : Input_args.t)=
   generate_state fmt args;
   generate_requirements_from_sup fmt t args;

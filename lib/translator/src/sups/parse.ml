@@ -81,7 +81,7 @@ let ast_from_file filename =
   ast
 
 
-  (** [of_file filename] gets the content of [filename] as two hashmaps : one for declaration, other one for requirements *)
+  (** [of_file filename] gets the content of [filename] as an ast *)
 let of_file filename =
   match ast_from_file filename with 
   | Ok ast -> ast
