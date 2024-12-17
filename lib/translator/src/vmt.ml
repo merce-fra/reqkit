@@ -625,9 +625,35 @@ let generate_vmt_file fmt t (args : Input_args.t)=
   Format.fprintf fmt "@\n";
   Format.fprintf fmt "(assert true)@\n"
 
+(** [generate_sup_var_decl fmt decl] generates the declaration [decl] in the VMT lib format in the formatter [fmt]*)
+let generate_sup_var_decl fmt decl =
+  let open Sup_types in
+  match decl with | Decl(name,_,_)-> Format.fprintf fmt "(declare-fun %s () Bool)@\n" name
+
+(** [var_init_to_bool var_init] generates as a string the initialisation of the variable described in [var_init]*)
+let var_init_to_string var_init=
+  let open Sup_types in 
+  match var_init with
+  | VarInit(n, true)-> n
+  | VarInit(n, false) -> "(not "^n^")"
+
+(** [var_init_to_bool var_init] generates the function that initializes the inputs [var_init] from the COND_INIT section of the SUP
+in the VMT lib format in the formatter [fmt]*)
+let generate_sup_var_init fmt init = 
+  Format.fprintf fmt "(define-fun .init () Bool (! (= (%s) true) :init true)"
+  (match init with 
+  | [] -> "true"
+  | hd::[] ->  var_init_to_string hd
+  | hd::tail -> List.fold_left (fun acc v -> "and ("^ acc ^" "^(var_init_to_string v)^")") (var_init_to_string hd) tail
+  )
+
 (** [generate_requirements_from_sup fmt t args] generates a file in the vmt-lib format containing the parsed sups [t] in the formatter [fmt]*)
 let generate_requirements_from_sup fmt t args = 
   let open Sup_types in
+  (* generate variable declaration *)
+  List.iter( fun decl -> generate_sup_var_decl fmt decl) t.decls;
+  (* generate variable initialization *)
+  generate_sup_var_init fmt t.inits;
   (* convert the sup requirement list into a map with arbitrary names for each sup*)
   let sup_map = List.fold_left ( fun acc s -> let id= ("ID_"^(string_of_int (Sup.SMap.cardinal acc))) in Sup.SMap.add id  (id,[s]) acc) Sup.SMap.empty t.reqs in
   generate_requirements_ fmt args sup_map [] []
