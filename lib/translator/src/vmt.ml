@@ -179,7 +179,7 @@ let generate_counter_lt_max counter_name tmax args (*to_leave_state*) _ =
     let t = time_to_string tmax args.clock_t in
     "(< " ^counter_name ^ " "^ t ^" )"
   with Failure _ -> (*if to_leave_state then " false " else " true "*) " true "
-  
+
 (** [is_t_nul t] returns true if [t] is equal to 0*)
 let is_t_nul t =
   (match t with
@@ -259,26 +259,9 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
                           generate_invariant fmt invar_prop "))" ;
                           Format.fprintf fmt "@\n"
     end;
-  
-
-  (* if not (is_t_infinite tmax) then   
-    begin
-    let t = time_to_string tmax args.clock_t in
-    generate_invariant fmt ("(define-fun ."^state_name^"_locinvar1 () Bool (! (=> is_"^state_name^"_TRIG (<= "^counter_name^" "^t^")) ") "))"; Format.fprintf fmt "@\n"
-    end;
-
-  if not (is_t_infinite lmax) then
-    begin  
-    let t = time_to_string lmax args.clock_t in
-    generate_invariant fmt ("(define-fun ."^state_name^"_locinvar2 () Bool (! (=> is_"^state_name^"_DELAY (<= "^counter_name^" "^t^")) ") "))"; Format.fprintf fmt "@\n"
-    end;
-
-  if not (is_t_infinite amax) then  
-    begin
-    let t = time_to_string amax args.clock_t in
-    generate_invariant fmt ("(define-fun ."^state_name^"_locinvar0 () Bool (! (=> is_"^state_name^"_ACTION (<= "^counter_name^" "^t^")) ") "))"; Format.fprintf fmt "@\n"
-    end; *)
-
+  Format.fprintf fmt "\n; Clock invariant at trigger\n";
+  Format.fprintf fmt "(define-fun .clock_invar_%s () Bool (! (=> is_%s_TRIG %s) :locinvar true))\n"
+    req_name state_name (generate_counter_le_max counter_name tmax args false);
   let vacuity_constraint = (if (String.length vacuity_name) = 0 then "" else  "(not "^vacuity_name^ "_n )") in
   let vacuity_unchanged = (if (String.length vacuity_name) = 0 then "" else  " "^vacuity_name^ "_unchanged ") in
   
@@ -314,7 +297,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   if lmax_is_nul then 
     Format.fprintf fmt "(define-fun delay_to_err_no_clock_%s () Bool %s )@\n" state_name ("(not "^ase_name^") ")
   else
-    Format.fprintf fmt "(define-fun delay_to_err_no_clock_%s () Bool false)@\n" counter_name;  
+    Format.fprintf fmt "(define-fun delay_to_err_no_clock_%s () Bool false)@\n" state_name;  
 
   Format.fprintf fmt "(define-fun idle_to_trig_no_clock_%s () Bool %s)@\n" state_name tse_name;
 
@@ -405,6 +388,8 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
         "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   act_to_idle_no_clock_" ^state_name^" " ^ check_stop_after_idle ^ " set_"^state_name^"_IDLE" ^ vacuity_constraint ^ ") " ^
         "\n; TRIG -> DELAY -> ACT \n"^
         "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"   " ^ check_stop_after_action ^ " set_"^state_name^"_ACTION" ^vacuity_unchanged^")" ^
+        "\n; TRIG -> DELAY -> ACT -> ERR\n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_act_no_clock_" ^state_name^"  act_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^
         "\n; TRIG -> DELAY -> ERR \n"^
         "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^
         "\n; TRIG -> DELAY \n"^
@@ -529,8 +514,6 @@ let generate_event_declaration fmt sup_index prefix (event: Sup_types.event) use
 (** [generate_sup fmt req_name sup_index sup] generates the conversion in the formatter [fmt] of a SUP with name [req_name] and index 
     [sup_index] into VMT lib format *)
 let generate_sup fmt req_name sup_index (sup : Sup_types.sup_req) (args: Input_args.t) generate_content=
-
-
   let candidate_to_vacuity = sup.vacuity in
   if not generate_content then
     begin
@@ -560,7 +543,6 @@ let generate_sup_list fmt req_name (_, req_sups_list) (args : Input_args.t) gene
   (*generate sups*)
   Format.fprintf fmt "@\n\n\n;generation of the SUP state machine for requirement %s @\n" req_name;
   List.fold_left (fun acc sup -> (generate_sup fmt req_name (List.length acc) sup args generate_content)::acc) [] req_sups_list
-  
 
 
 (** [generate_requirements_ fmt args sup_map generated_variables intermediate_variables] generates the requirements of [sup_map] 
@@ -640,7 +622,7 @@ let var_init_to_string var_init=
 (** [var_init_to_bool var_init] generates the function that initializes the inputs [var_init] from the COND_INIT section of the SUP
 in the VMT lib format in the formatter [fmt]*)
 let generate_sup_var_init fmt init = 
-  Format.fprintf fmt "(define-fun .init () Bool (! (= %s true) :init true))"
+  Format.fprintf fmt "; (define-fun .init () Bool (! (= %s true) :init true))"
   (match init with 
   | [] -> "true"
   | hd::[] ->  var_init_to_string hd

@@ -86,7 +86,7 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
         (fill "clock-encoding")^"Specify the kind of clock to use : integer (default) or real.");  
       ("--clock-multiplier",
         Arg.Int (fun i -> clock_mult := i),
-        (fill "clock-multiplier")^"Specify the multiplier to use for integer clocks (default 10).");  
+        (fill "clock-multiplier")^"Specify the multiplier to use for integer clocks (default 1).");  
       ("--state-encoding",
         Arg.String (fun s -> state_encode := s),
         (fill "state-encoding")^"Specify the variable type to encode the SUP state : boolean (default) or integer.");  

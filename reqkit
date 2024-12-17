@@ -184,11 +184,17 @@ function generate_vmt {
   BASENAME_NO_EXT="${BASENAME_NO_EXT%.*}" 
 
   VC_VMT_FILE=${OUTPUT_DIR}/${BASENAME_NO_EXT}".vmt"
+  if [ "$TIMEDOMAIN" = "unit" ]; then
+    CLOCKENCODING=integer
+  else
+    CLOCKENCODING=$TIMEDOMAIN
+  fi
+
   set +e 
   if [ "$ANALYSIS" = "vacuity" ]; then
-    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmt --state-encoding boolean --clock-encoding $TIMEDOMAIN --bool-only-predicates true --check-non-vacuity "$REQIDS" > ${VC_VMT_FILE}
+    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmt --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true --check-non-vacuity "$REQIDS" > ${VC_VMT_FILE}
   elif [ "$ANALYSIS" = "rtc" ] || [ "$ANALYSIS" = "ltl" ]; then
-    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmt --state-encoding boolean --clock-encoding $TIMEDOMAIN --bool-only-predicates true  > ${VC_VMT_FILE}
+    ${TRANSLATOR_EXEC} --input ${FILE} --output-fmt vmt --clock-multiplier 1 --state-encoding boolean --clock-encoding $CLOCKENCODING --bool-only-predicates true  > ${VC_VMT_FILE}
   fi
   retval=$?
   if [ "$retval" = 0 ]; then
@@ -353,6 +359,8 @@ function check_ltl {
       exit 1
     fi
     ltl2tgba -B -C -f "${LTL_FORMULA}" | python lib/hoa2vmt.py >> $VC_VMT_FILE
+    ltl2tgba -B -C -d -f "${LTL_FORMULA}" > /tmp/a.dot
+    xdg-open /tmp/a.dot
     ta=-ta
     if [ "${TIMEDOMAIN}" = "unit" ]; then
       ta=-ta-unit

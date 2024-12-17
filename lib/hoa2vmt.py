@@ -132,8 +132,8 @@ class Hoa2VMT:
       ltl_acc_states = "(or " + " ".join(map(lambda s: f"{self._encode_state(s)}", self.accepting_states)) + ")"
     else:
       ltl_acc_states = self._encode_state(self.accepting_states[0])
-    # print(f"(define-fun .all_sup_status () Bool true)")
-    print(f"(define-fun .ltl-prop () Bool (! (and .all_sup_status {ltl_acc_states}) :invar-property 0))")
+    print(f"; non-error states must imply ltl accepting states")
+    print(f"(define-fun .ltl-prop () Bool (! (or (not .all_sup_status) {ltl_acc_states}) :invar-property 0))")
 
   def parse(self):
     for line in self.input_str:
