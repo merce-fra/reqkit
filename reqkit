@@ -332,6 +332,10 @@ function check_rtc {
       external_interpolator="--external-interpolator opensmt"
       RTC_MODE=0
     fi
+    # If we keep the quantifiers, we only use bmc (ind is too slow).
+    if [ "$RTC_MODE" = 1 ]; then
+      ALGORITHM=bmc
+    fi
     set +e # This is to avoid the script to exit if pono-rt returns 1
     ta=-ta
     if [ "${TIMEDOMAIN}" = "unit" ]; then

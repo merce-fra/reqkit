@@ -279,6 +279,7 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
   Format.fprintf fmt "(define-fun stay_idle_%s () Bool ( and (not %s) %s_unchanged ))@\n"  state_name tse_name counter_name  ;
   Format.fprintf fmt "(define-fun idle_to_trig_%s () Bool ( and %s %s_reset  ))@\n" state_name tse_name  counter_name  ;
   Format.fprintf fmt "(define-fun trig_to_idle_%s () Bool ( and (%s) %s_reset))@\n" state_name (" or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") "^(generate_counter_lt_min counter_name tmin args true)^" ) (and (not "^tee_name^") "^ (generate_counter_ge_max counter_name tmax args true) ^") "^ (generate_counter_gt_max counter_name tmax args true)) counter_name  ;
+  Format.fprintf fmt "(define-fun trig_to_idle_no_clock_%s () Bool (%s))@\n" state_name (" or ( and (not "^tee_name^") (not "^tc_name^")) (and (not "^tc_name^") "^(generate_counter_lt_min counter_name tmin args true)^" ) (and (not "^tee_name^") "^ (generate_counter_ge_max counter_name tmax args true) ^") "^ (generate_counter_gt_max counter_name tmax args true));
   Format.fprintf fmt "(define-fun stay_trig_%s () Bool  ( and ( %s) %s_unchanged )) @\n" state_name (" and "^tc_name^" "^(generate_counter_lt_max counter_name tmax args false)^" ( or ( not "^tee_name^")  "^(generate_counter_lt_min counter_name tmin args false)^")") counter_name ;
   Format.fprintf fmt "(define-fun trig_to_delay_%s () Bool ( and (%s) %s_reset ))@\n" state_name ("and "^tee_name^" "^(generate_counter_ge_min counter_name tmin args true)^" "^ (generate_counter_le_max counter_name tmax args true))  counter_name  ;
   Format.fprintf fmt "(define-fun stay_delay_%s () Bool (  and (%s) %s_unchanged ))@\n" state_name ("and "^(generate_counter_lt_max counter_name lmax args false)^ " ( or (not "^ ase_name^") " ^ (generate_counter_lt_min counter_name lmin args false) ^")" ) counter_name;
@@ -394,6 +395,8 @@ let generate_SUP_content fmt sup_index req_name tmin tmax lmin lmax amin amax (a
         "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  delay_to_err_no_clock_" ^state_name^"  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^
         "\n; TRIG -> DELAY \n"^
         "(and is_" ^ state_name ^ "_TRIG  trig_to_delay_" ^state_name^"  " ^ check_stop_after_delay ^ "  set_"^state_name^"_ERR" ^vacuity_unchanged^")" ^
+        "\n; TRIG -> IDLE -> TRIG \n"^
+        "(and is_" ^ state_name ^ "_TRIG  trig_to_idle_no_clock_" ^state_name^" idle_to_trig_"^state_name^" " ^ check_stop_after_trig ^ " set_"^state_name^"_TRIG" ^vacuity_unchanged^")" ^
 
         "\n; DELAY -> ACT -> IDLE -> TRIG -> DELAY \n"^
         "(and is_" ^ state_name ^ "_DELAY  delay_to_act_" ^state_name^"   act_to_idle_no_clock_" ^state_name^"   idle_to_trig_" ^state_name^"  trig_to_delay_no_clock_" ^state_name^"   set_"^state_name^"_DELAY " ^ vacuity_constraint ^ ")"^
