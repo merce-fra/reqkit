@@ -640,11 +640,11 @@ let var_init_to_string var_init=
 (** [var_init_to_bool var_init] generates the function that initializes the inputs [var_init] from the COND_INIT section of the SUP
 in the VMT lib format in the formatter [fmt]*)
 let generate_sup_var_init fmt init = 
-  Format.fprintf fmt "(define-fun .init () Bool (! (= (%s) true) :init true)"
+  Format.fprintf fmt "(define-fun .init () Bool (! (= %s true) :init true))"
   (match init with 
   | [] -> "true"
   | hd::[] ->  var_init_to_string hd
-  | hd::tail -> List.fold_left (fun acc v -> "and ("^ acc ^" "^(var_init_to_string v)^")") (var_init_to_string hd) tail
+  | hd::tail -> "("^ (List.fold_left (fun acc v -> "and ("^ acc ^" "^(var_init_to_string v)^")") (var_init_to_string hd) tail)^")"
   )
 
 (** [generate_requirements_from_sup fmt t args] generates a file in the vmt-lib format containing the parsed sups [t] in the formatter [fmt]*)
