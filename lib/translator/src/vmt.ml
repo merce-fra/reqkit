@@ -644,7 +644,7 @@ let generate_sup_var_init fmt init =
   (match init with 
   | [] -> "true"
   | hd::[] ->  var_init_to_string hd
-  | hd::tail -> "("^ (List.fold_left (fun acc v -> "and ("^ acc ^" "^(var_init_to_string v)^")") (var_init_to_string hd) tail)^")"
+  | hd::tail ->  (List.fold_left (fun acc v -> " (and "^ acc ^" "^(var_init_to_string v)^")") (var_init_to_string hd) tail)
   )
 
 (** [generate_requirements_from_sup fmt t args] generates a file in the vmt-lib format containing the parsed sups [t] in the formatter [fmt]*)
