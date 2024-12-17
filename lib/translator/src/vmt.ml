@@ -556,7 +556,7 @@ let generate_requirements_ fmt args sup_map generated_variables intermediate_var
   let l = ( Sup.SMap.to_list sup_map) in
   let l_names = List.map fst l in
   List.iter 
-    (fun req_id -> 
+    (fun req_id ->       
       if not (List.mem req_id l_names) then
         raise (Invalid_argument (Printf.sprintf "%s is undefined" req_id) )
     ) args.check_non_vacuity;
@@ -640,7 +640,7 @@ let generate_requirements_from_sup fmt t args =
   (* generate variable initialization *)
   generate_sup_var_init fmt t.inits;
   (* convert the sup requirement list into a map with arbitrary names for each sup*)
-  let sup_map = List.fold_left ( fun acc s -> let id= ("ID_"^(string_of_int (Sup.SMap.cardinal acc))) in Sup.SMap.add id  (id,[s]) acc) Sup.SMap.empty t.reqs in
+  let sup_map = List.fold_left ( fun acc s -> let id= ((string_of_int (Sup.SMap.cardinal acc))) in Sup.SMap.add id  (id,[s]) acc) Sup.SMap.empty t.reqs in
   generate_requirements_ fmt args sup_map [] []
 
 (** [generate_vmt_file_from_sup fmt t] generates a file in the vmt-lib format containing the parsed SUP requirements [t] in the formatter [fmt] *)

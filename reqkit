@@ -363,8 +363,8 @@ function check_ltl {
       exit 1
     fi
     ltl2tgba -B -C -f "${LTL_FORMULA}" | python lib/hoa2vmt.py >> $VC_VMT_FILE
-    ltl2tgba -B -C -d -f "${LTL_FORMULA}" > /tmp/a.dot
-    xdg-open /tmp/a.dot
+    # ltl2tgba -B -C -d -f "${LTL_FORMULA}" > /tmp/a.dot
+    # xdg-open /tmp/a.dot
     ta=-ta
     if [ "${TIMEDOMAIN}" = "unit" ]; then
       ta=-ta-unit

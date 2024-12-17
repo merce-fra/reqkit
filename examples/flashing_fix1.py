@@ -10,7 +10,7 @@ on = Bool('on')
 blink = Bool('blink')
 low = Bool('low')
 REQ_SET = [
-    # [ on , True , True , 0, 0, 0, 0, True, on, Not(on), 10, 10],
+    [ on , True , True , 0, 0, 0, 0, True, on, Not(on), 10, 10],
     [ Not(on), Not(on), blink, 1, 1, 0, 0, True, True, on, 0, 0],
     [ low, True, True, 0, 0, 0, 0, Not(blink), And(Not(on),Not(blink)), True, 2, 2]
 ]

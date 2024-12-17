@@ -100,8 +100,8 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
         Arg.Int (fun b -> alpha := b),
         (fill "alpha")^"Time bound for partial rt-consistency checking (all time constants above alpha are transformed to infinirt).");
      ] in 
+    Arg.parse speclist print_endline usage;
     let reqs_to_check_for_vacuity = if !vacuity = "" then [] else 
         (String.split_on_char ';' !vacuity)
-    in
-    Arg.parse speclist print_endline usage;
+    in 
     (mk !output_fmt !state_encode !which_clock !clock_mult !bool_only_predicates !file !dir !simple_exp reqs_to_check_for_vacuity !check_rt_consistency !alpha, usage)

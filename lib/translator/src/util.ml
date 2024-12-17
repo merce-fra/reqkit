@@ -36,7 +36,7 @@ let hold_to_int h =
   | Holds -> 21
   | Holds_afterward -> 22
   | Previously_held -> 23
-  | Holds_for_at_least (_) -> 24   
+  | Holds_for_at_least (_) -> 24
   | Holds_after_at_most (_) -> 25
   | Holds_afterward_for_at_least (_) -> 26
   | Holds_for_less_than (_) -> 27
