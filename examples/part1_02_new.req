@@ -11,7 +11,7 @@ Input x0004 is bool
 Input x0000 is bool
 Input x0011 is bool
 
-ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 25 time units
+gfskfjhsfiuID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds for at least 25 time units
 ID001: Globally, it is always the case that if "x0000" holds, then "!x0001" holds after at most 30 time units
 ID002: Globally, it is always the case that if "x0002 && x0003 && x0004" holds, then "!x0000" holds for at least "30" time units
 ID003: Globally, it is always the case that if "x0002 && x0005 && x0006" holds, then "!x0000" holds for at least "30" time units

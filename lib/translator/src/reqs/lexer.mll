@@ -12,9 +12,7 @@ let integer           = ('-'?) positive_integer
 let real              = integer ('.') positive_integer
 let any_char = ['0'-'9' 'a'-'z' 'A'-'Z' '"' '!' '=' ' ' '_' '&' ',' ':']
 (* input idents are like x0001 *)
-let input_ident           = (['a'-'z' 'A'-'Z']) (digit+)
-(* rule idents are like ID001 *)
-let prop_ident           = ('I') ('D') ('_'*) (digit+)
+let input_ident           = (['a'-'z' 'A'-'Z' '_']) (['a'-'z' 'A'-'Z' '_' '0'-'9'])*
 let whitespace = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 
@@ -71,10 +69,6 @@ and token = parse
     { OUTPUT }
 | ("Internal" | "internal")
     { INTERNAL }    
-| input_ident as s
-    { INPUT_IDENT (s) }
-| prop_ident as s 
-    { PROP_IDENT (s)}
 | ':'
     { COLON }
 | integer as i 
@@ -163,7 +157,8 @@ and token = parse
     { LT }
 | "=="
     { EQUAL }
-
+| input_ident as s
+    { INPUT_IDENT (s) }
 | eof
     { EOF }
 | _

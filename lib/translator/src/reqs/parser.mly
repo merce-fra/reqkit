@@ -1,6 +1,6 @@
 %token <int> INT
 %token <float> REAL
-%token <string> INPUT_IDENT PROP_IDENT 
+%token <string> INPUT_IDENT  
 %token EOF COLON COMMA LPAREN RPAREN
 %token NOT
 %token IMPLIES
@@ -116,7 +116,7 @@ req :
 ;
 
 req_with_id :
-| id_ = PROP_IDENT; COLON; req_ = req; { Req (id_, req_) }
+| id_ = INPUT_IDENT; COLON; req_ = req; { Req (id_, req_) }
 ;
 
 let located(x) ==
