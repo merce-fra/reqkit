@@ -33,7 +33,68 @@ The tool also needs the following external tools for model checking and LTL form
 These can be installed for Linux x86_64 by running the scripts `scripts/setup_*.sh`.
 
 ## Usage and Examples
-### RT-Consistency and Vacuity Checking Using the Pono-RT engine
+### Examples from the paper
+The rt-consistency of R1, R2 can be checked using integer clocks as follows.
+
+        ./reqkit -a rtc --time-domain integer -f examples/flashing1.sup
+
+which runs bounded model checking (BMC) with Pono-RT by default. The size of the unrolling can be specified with `--bmc-bound k`. All delays are positive by default, i.e. greater than or equal to 1.
+
+One can also prove rt-consistency using quantifier elimination and ic3ia as follows:
+
+        ./reqkit -a rtc --time-domain integer --algorithm ic3ia -f examples/flashing1.sup
+
+or using the NuSMV engine with the option `-e nusmv`.
+
+        ./reqkit -a rtc -e nusmv -f examples/flashing1.sup
+
+We can check the rt-inconsistency of R1, R2, R4, and check the rt-consistency of R1, R2', R4
+
+        ./reqkit -a rtc --time-domain integer -f examples/flashing2.sup
+        ./reqkit -a rtc --time-domain integer --algorithm ic3ia -f examples/flashing_fix1.sup
+
+The rt-consistency disappears when the time domain is reals:
+
+        ./reqkit -a rtc --time-domain real --algorithm ic3ia -f examples/flashing2.sup
+
+This is due to the fact that even with strict delays, it is possible to pick smaller and smaller delays
+and never actually reach the deadline of the action phases of R1 and R2.
+The rt-inconstency appears again if we restrict the time domain to be $\geq 1$
+(possible choices are positive or zero (0), positive (1), and $\geq 1$ (2)):
+
+        ./reqkit -a rtc --time-domain real --delay-domain 2 -f examples/flashing2.sup 
+
+We can check that all three requirements in the set R1, R2', R4 are non-vacuous. The tool generates witness traces satisfying each requirement:
+
+        ./reqkit -a vacuity -r 0 -f examples/flashing_fix1.sup
+        ./reqkit -a vacuity -r 1 -f examples/flashing_fix1.sup
+        ./reqkit -a vacuity -r 2 -f examples/flashing_fix1.sup
+
+Note that an integer-valued trace can be computer with the option `--time-domain integer`.
+
+We already saw that R2 is vacuous in the set R1, R2, R3:
+
+        ./reqkit -a vacuity -r 1 -f examples/flashing_vacuous.sup
+        ./reqkit -a vacuity -r 1 --algorithm ic3ia -f examples/flashing_vacuous.sup
+
+We can also query properties using LTL model checking, e.g.
+
+        ./reqkit -a ltl --time-domain integer --algorithm ic3ia --formula 'G( !on & X(blink) -> X(on) )' -f examples/flashing_fix1.py  
+
+This is only possible for the safety fragment of LTL using Pono. However the NuSMV engine can check full LTL and CTL:
+
+        ./reqkit -a ltl -e nusmv --formula 'G( on -> F(!on))' -f examples/flashing_fix1.sup
+        ./reqkit -a ctl -e nusmv --formula 'AG(blink -> EX (!blink))' -f examples/flashing_fix1.sup
+
+The repair feature can be used as follows:
+
+        ./reqkit -a repair -f examples/carriage_inconsistent.py
+
+Note that this is an experimental feature and there is no termination guarantee.
+
+        ./reqkit -a ltl --algorithm ic3ia --formula 'G( !on & (X on) -> X (X on))' -f examples/flashing_fix1.py
+
+### Examples with the structued English format
 - Consider `sample1.req`
 
       ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds after at most 25 time units
@@ -129,49 +190,42 @@ These can be installed for Linux x86_64 by running the scripts `scripts/setup_*.
       ID001: Globally, it is always the case that if "x0000" holds, then "!x0001" holds for at least 20 time units
       ID002: Globally, it is always the case that if "x0002"  holds for at least 50 time units, then "x0000"  holds afterwards 
 
-  We already established that {ID000, ID001} alone is not inconsistent. Adding ID002 here means that we add a prefix with no error where x002 holds for 50 time units. However, because "holds afterwards" puts no time bound on the realization of the action phase, this is still consistent:
+    We already established that {ID000, ID001} alone is not inconsistent. Adding ID002 here means that we add a prefix with no error where x002 holds for 50 time units. However, because "holds afterwards" puts no time bound on the realization of the action phase, this is still consistent:
 
       ./reqkit -a rtc -f examples/sample6.req --algorithm ic3ia
 
-  But vacuous since none of the requirements can be realized:
+    But vacuous since none of the requirements can be realized:
 
       ./reqkit -a vacuity -r "ID000" -f examples/sample6.req --algorithm ic3ia
       ./reqkit -a vacuity -r "ID001" -f examples/sample6.req --algorithm ic3ia
       ./reqkit -a vacuity -r "ID002" -f examples/sample6.req --algorithm ic3ia
 
-### Using the NuSMV engine
-The NuSMV engine always assumes delay-first and unit-time semantics:
+- We now illustrate LTL and CTL model checking.
+    Consider `sample4.req` above which was proved to be rt-consistent. It looks like `x0000` should imply `~x0001`. Let us check this.
 
-        ./reqkit -a rtc -f examples/sample1.req -e nusmv
+            ./reqkit -a ltl -f examples/sample4.req --formula 'G(x0000 -> ~x0001)'
+            ./reqkit -a ltl -f examples/sample4.req --algorithm ic3ia --formula 'G(x0000 -> ~x0001)'
 
-### LTL and CTL Model Checking
-Using ReqKit one can check whether all traces that do no violate a given requirement set satisfy a given LTL formula.
+    The first check returns unknown due to k-induction not being conclusive, but the second check succeeds.
 
-Consider `sample4.req` above which was proved to be rt-consistent. It looks like `x0000` should imply `~x0001`. Let us check this.
+    At this point we suspect that `x0000 & ~x0001` is always true. Is this the case?
 
-        ./reqkit -a ltl -f examples/sample4.req --formula 'G(x0000 -> ~x0001)'
-        ./reqkit -a ltl -f examples/sample4.req --algorithm ic3ia --formula 'G(x0000 -> ~x0001)'
+            ./reqkit -a ltl -f examples/sample4.req --formula 'G(x0000 & ~x0001)'
 
-The first check returns unknown due to k-induction not being conclusive, but the second check succeeds.
+    The tool generates a counterexample: in fact, both can be false, which does not violate any requirement.
 
-At this point we suspect that `x0000 & ~x0001` is always true. Is this the case?
+    The LTL fragment to be used with the Pono-RT engine is restricted to the safety case. The tool will reject formulas that are outside of this fragment.
 
-        ./reqkit -a ltl -f examples/sample4.req --formula 'G(x0000 & ~x0001)'
+    However, the NuSMV engine works with all LTL and CTL formulas. The following formulas hold on the flashing light example:
 
-The tool generates a counterexample: in fact, both can be false, which does not violate any requirement.
+            ./reqkit -a ltl --formula 'G(on -> F (!on))' -e nusmv -f examples/flashing1.py  
+            ./reqkit -a ltl --formula 'G((!on & (G blink)) -> F(on))' -e nusmv -f examples/flashing1.py  
+            ./reqkit -a ctl --formula 'AG(blink -> EX (!blink))' -e nusmv -f examples/flashing1.py  
+            ./reqkit -a ctl --formula 'AG(blink -> EX (blink))' -e nusmv -f examples/flashing1.py  
 
-The LTL fragment to be used with the Pono-RT engine is restricted to the safety case. The tool will reject formulas that are outside of this fragment.
+    And for example the following does not
 
-However, the NuSMV engine works with all LTL and CTL formulas. The following formulas hold on the flashing light example:
-
-        ./reqkit -a ltl --formula 'G(on -> F (!on))' -e nusmv -f examples/sup/flashing.py  
-        ./reqkit -a ltl --formula 'G((!on & (G blink)) -> F(on))' -e nusmv -f examples/sup/flashing.py  
-        ./reqkit -a ctl --formula 'AG(blink -> EX (!blink))' -e nusmv -f examples/sup/flashing.py  
-        ./reqkit -a ctl --formula 'AG(blink -> EX (blink))' -e nusmv -f examples/sup/flashing.py  
-
-And for example the following does not
-
-        ./reqkit -a ltl --formula 'G(on -> X on)' -e nusmv -f examples/sup/flashing.py
+            ./reqkit -a ltl --formula 'G(on -> X on)' -e nusmv -f examples/flashing1.py
 
 ### Repair
 The repair analysis attempts to automatically repair rt-inconsistent requirement sets.
