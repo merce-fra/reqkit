@@ -13,7 +13,7 @@ on = Bool('on')
 blink = Bool('blink')
 REQ_SET = [
     [ on , True , True , 0, 0, 0, 0, True, on, Not(on), 10, 10],
-    [ And(blink, Not(on)), Not(on), True, 10, 10, 0, 0, True, True, on, 0, 0],
+    [ And(blink, Not(on)), Not(on), True, 10, 10, 0, 0, True, True, on, 0, 0]
 ]
 
 COND_INIT = []

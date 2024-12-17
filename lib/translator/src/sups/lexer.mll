@@ -12,7 +12,7 @@ let integer           = ('-'?) positive_integer
 let real              = integer ('.') positive_integer
 let any_char = ['0'-'9' 'a'-'z' 'A'-'Z' '"' '!' '=' ' ' '_' '&' ',' ':']
 let start_var_decl = ['a'-'z' 'A'-'Z']
-let input_ident =  ['a'-'z' 'A'-'Z'] ['0'-'9' 'a'-'z' 'A'-'Z']*
+let input_ident =  ['a'-'z' 'A'-'Z' '_'] ['0'-'9' 'a'-'z' 'A'-'Z' '_']*
 let smt_ident = ['''] input_ident  [''']
 
 let whitespace = [' ' '\t']+
@@ -66,6 +66,7 @@ and token = parse
 | "from"
 | "ALPHA"
 | "BETA"
+| "REQ_MODIFY"
 | "MAX_PTRACE"
     { ignore_line lexbuf; token lexbuf } 
 | "Bool"
