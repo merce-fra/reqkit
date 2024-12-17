@@ -39,14 +39,14 @@ let () =
         Printf.fprintf stderr "%s\n" msg;
         exit_value := -1
       end
-    |Some f, None when String.ends_with ~suffix:".py" f -> 
+    |Some f, None when (String.ends_with ~suffix:".py" f) || (String.ends_with ~suffix:".sup" f) -> 
       begin
         try
           let t = (Sups.Parse.of_file f) in
           let fmt = Format.get_std_formatter() in
           (match args.output_fmt with
           | VMT -> Src.Vmt.generate_vmt_file_from_sup fmt t args
-          | NuSMV -> Printf.fprintf stderr "Error, only VMT output format supported.");
+          | NuSMV -> Printf.fprintf stderr "Error. Only VMT output format supported for SUP input files.\n");
         with Sups.Parse.ParseException msg ->
           Printf.fprintf stderr "%s\n" msg;
           exit_value := -1

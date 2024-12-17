@@ -4,7 +4,7 @@
   (modes exe)
   (package req2something)
   (public_name req2something)
-  ; (promote (until-clean))
+  (promote (until-clean))
  )
 (install
  (files req2something.exe)

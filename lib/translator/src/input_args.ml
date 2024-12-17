@@ -22,16 +22,16 @@ type t = {
 let mk output_format state_encoding clock_type clock_mult only_bool_predicates input_file input_dir keep_simple req_vacuity check_rt_consistency alpha =
   {
     output_fmt = (match output_format with 
-    |"nusmv" -> if (((input_file <> None) || (input_dir <> None))&& (not only_bool_predicates)) then raise(Invalid_argument ("The SMV format requires boolean predicates only.")); NuSMV
-    |"vmtlib"-> VMT
-    |_ -> raise(Invalid_argument ("The supported formats are nusmv and vmtlib.")));
+    |"sup" -> if (((input_file <> None) || (input_dir <> None))&& (not only_bool_predicates)) then raise(Invalid_argument ("The SUP format requires boolean predicates only.")); NuSMV
+    |"vmt"-> VMT
+    |_ -> raise(Invalid_argument ("The supported formats are sup and vmt.")));
     state_enc = (match state_encoding with
     |"integer"-> IntegerEncoding
     |"boolean"-> BooleanEncoding
     |_ -> raise(Invalid_argument ("The supported state encodings are integer and boolean.")));
     clock_t=(match clock_type with 
     |"integer"-> IntegerClock
-    |"real"-> (if output_format = "nusmv" then raise(Invalid_argument ("Nusmv checking only supports integer clocks.")) else  RealClock)
+    |"real"-> (if output_format = "sup" then raise(Invalid_argument ("SUP only supports integer clocks.")) else  RealClock)
     |_ -> raise(Invalid_argument ("The supported clock encodings are integer and real.")));
     only_bool_predicates = only_bool_predicates;
     input_file = input_file;
@@ -51,7 +51,7 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
   let get () = 
     let file = ref None in
     let dir = ref None in 
-    let output_fmt = ref "nusmv" in
+    let output_fmt = ref "sup" in
     let simple_exp = ref false in
     let which_clock = ref "integer" in
     let state_encode = ref "boolean" in
@@ -80,7 +80,7 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
         (fill "simple_exp")^"When used with --input-dir keep the most simple (true) or complex (false, default) expressions for the requirements.");  
       ("--output-fmt",
         Arg.String (fun s -> output_fmt := s),
-        (fill "output-fmt")^"Specify the generated file format : nusmv (default) or vmtlib.");  
+        (fill "output-fmt")^"Specify the generated file format : sup (default) or vmt.");  
       ("--clock-encoding",
         Arg.String (fun s -> which_clock := s),
         (fill "clock-encoding")^"Specify the kind of clock to use : integer (default) or real.");  
@@ -98,10 +98,7 @@ let mk output_format state_encoding clock_type clock_mult only_bool_predicates i
         (fill "check-non-vacuity")^"If a list of requirements ids separated by ; is given, the non vacuity will be checked only on those requirements. Otherwise it is tested on no requirements (default).");
       ("--alpha",
         Arg.Int (fun b -> alpha := b),
-        (fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");    
-      (* ("--check-rt-consistency",
-        Arg.Bool (fun b -> check_rt_consistency := b),
-        (fill "check_rt_consistency")^"If true check real time consistency and therefore, replace the nextclock keyword with next in vmt file (default is false).");     *)
+        (fill "alpha")^"Time bound for partial rt-consistency checking (all time constants above alpha are transformed to infinirt).");
      ] in 
     let reqs_to_check_for_vacuity = if !vacuity = "" then [] else 
         (String.split_on_char ';' !vacuity)
