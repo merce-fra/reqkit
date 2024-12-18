@@ -66,57 +66,69 @@ These can be installed for Linux x86_64 by running the scripts `scripts/setup_*.
 
 ## Usage and Examples
 ### Examples from the paper
-The rt-consistency of R1, R2 can be checked using integer clocks as follows.
+The rt-consistency of R1, R2 can be checked as follows.
 
-        ./reqkit -a rtc --time-domain integer -f examples/flashing1.sup
+        ./reqkit -a rtc -f examples/flashing1.py
 
-which runs bounded model checking (BMC) with Pono-RT by default. The size of the unrolling can be specified with `--bmc-bound k`. All delays are positive by default, i.e. greater than or equal to 1.
+which runs the NuSMV engine by default in discrete unit time.
 
-One can also prove rt-consistency using quantifier elimination and ic3ia as follows:
+The Pono-RT engine can also be used:
 
-        ./reqkit -a rtc --time-domain integer --algorithm ic3ia -f examples/flashing1.sup
+        ./reqkit -a rtc -e pono-rt -f examples/flashing1.py
 
-or using the NuSMV engine with the option `-e nusmv`.
+This runs bounded model checking by default. The size of the unrolling can be specified with `--bmc-bound k`. 
+All delays are reals and positive by default, i.e. greater than or equal to 1. So both commands check different semantics.
 
-        ./reqkit -a rtc -e nusmv -f examples/flashing1.sup
+One can also prove rt-consistency using quantifier elimination and ic3ia as follows (first for real clock values, then restricted to integer values).
+
+        ./reqkit -a rtc -e pono-rt --algorithm ic3ia -f examples/flashing1.py
+        ./reqkit -a rtc -e pono-rt --time-domain integer --algorithm ic3ia -f examples/flashing1.py
 
 We can check the rt-inconsistency of R1, R2, R4, and check the rt-consistency of R1, R2', R4
 
-        ./reqkit -a rtc --time-domain integer -f examples/flashing2.sup
-        ./reqkit -a rtc --time-domain integer --algorithm ic3ia -f examples/flashing_fix1.sup
+        ./reqkit -a rtc -e pono-rt --time-domain integer -f examples/flashing2.py
+        ./reqkit -a rtc -e pono-rt --time-domain integer --algorithm ic3ia -f examples/flashing_fix1.py
+
+and in discrete unit time with NuSMV:
+
+        ./reqkit -a rtc -f examples/flashing2.py
+        ./reqkit -a rtc -f examples/flashing_fix1.py
 
 The rt-consistency disappears when the time domain is reals:
 
-        ./reqkit -a rtc --time-domain real --algorithm ic3ia -f examples/flashing2.sup
+        ./reqkit -a rtc -e pono-rt --time-domain real --algorithm ic3ia -f examples/flashing2.py
 
 This is due to the fact that even with strict delays, it is possible to pick smaller and smaller delays
 and never actually reach the deadline of the action phases of R1 and R2.
 The rt-inconstency appears again if we restrict the time domain to be $\geq 1$
 (possible choices are positive or zero (0), positive (1), and $\geq 1$ (2)):
 
-        ./reqkit -a rtc --time-domain real --delay-domain 2 -f examples/flashing2.sup 
+        ./reqkit -a rtc -e pono-rt --time-domain real --delay-domain 2 -f examples/flashing2.py 
 
 We can check that all three requirements in the set R1, R2', R4 are non-vacuous. The tool generates witness traces satisfying each requirement:
 
-        ./reqkit -a vacuity -r 0 -f examples/flashing_fix1.sup
-        ./reqkit -a vacuity -r 1 -f examples/flashing_fix1.sup
-        ./reqkit -a vacuity -r 2 -f examples/flashing_fix1.sup
+        ./reqkit -a vacuity -r 0 -f examples/flashing_fix1.py
+        ./reqkit -a vacuity -r 1 -f examples/flashing_fix1.py
+        ./reqkit -a vacuity -r 2 -f examples/flashing_fix1.py
 
+The default and only engine available for vacuity checking is Pono-RT.
 Note that an integer-valued trace can be computer with the option `--time-domain integer`.
 
 We already saw that R2 is vacuous in the set R1, R2, R3:
 
-        ./reqkit -a vacuity -r 1 -f examples/flashing_vacuous.sup
-        ./reqkit -a vacuity -r 1 --algorithm ic3ia -f examples/flashing_vacuous.sup
+        ./reqkit -a vacuity -r 1 -f examples/flashing_vacuous.py
+        ./reqkit -a vacuity -r 1 --algorithm ic3ia -f examples/flashing_vacuous.py
 
-We can also query properties using LTL model checking, e.g.
+We can also query properties using LTL and CTL model checking, e.g.
 
-        ./reqkit -a ltl --time-domain integer --algorithm ic3ia --formula 'G( !on & X(blink) -> X(on) )' -f examples/flashing_fix1.py  
+        ./reqkit -a ltl --formula 'G( on -> F(!on))' -f examples/flashing_fix1.py
+        ./reqkit -a ctl --formula 'AG(blink -> EX (!blink))' -f examples/flashing_fix1.py
 
-This is only possible for the safety fragment of LTL using Pono. However the NuSMV engine can check full LTL and CTL:
+which uses the NuSMV engine.
 
-        ./reqkit -a ltl -e nusmv --formula 'G( on -> F(!on))' -f examples/flashing_fix1.sup
-        ./reqkit -a ctl -e nusmv --formula 'AG(blink -> EX (!blink))' -f examples/flashing_fix1.sup
+One can also use Pono-RT for the safety fragment of LTL:
+
+        ./reqkit -a ltl -e pono-rt --time-domain integer --algorithm ic3ia --formula 'G( !on & X(blink) -> X(on) )' -f examples/flashing_fix1.py  
 
 The repair feature can be used as follows:
 
@@ -134,15 +146,15 @@ Note that this is an experimental feature and there is no termination guarantee.
 
   This is inconsistent with the real >=1 semantics:
 
-      ./reqkit -a rtc -f examples/sample1.req --time-domain real --delay-domain 2
+      ./reqkit -a rtc -e pono-rt -f examples/sample1.req --time-domain real --delay-domain 2
 
   In fact, if x0000/\~x0001 occurs until time 25-epsilon, then there is a no delay >= 1 for ID0000 to complete its action phase and observe x0001.
 
   The set is consistent if we allow shorter delays, and for integers (with positive or null delays):
 
-      ./reqkit -a rtc -f examples/sample1.req --time-domain real --delay-domain 0
-      ./reqkit -a rtc -f examples/sample1.req --time-domain real --delay-domain 1
-      ./reqkit -a rtc -f examples/sample1.req --time-domain integer --delay-domain 0
+      ./reqkit -a rtc -e pono-rt -f examples/sample1.req --time-domain real --delay-domain 0
+      ./reqkit -a rtc -e pono-rt -f examples/sample1.req --time-domain real --delay-domain 1
+      ./reqkit -a rtc -e pono-rt -f examples/sample1.req --time-domain integer --delay-domain 0
 
   It becomes rt-inconsistent again for strict integer delays (>=1)
 
@@ -160,7 +172,7 @@ Note that this is an experimental feature and there is no termination guarantee.
 
   The same phenomenon occurs as for `sample1.req`; an inconsistency appears if we restrict arbitrary delays to >= 1 since there is no possible delay in this domain to complete an action phase:
 
-      ./reqkit -a rtc -f examples/sample2.req --time-domain real --delay-domain 2
+      ./reqkit -a rtc -e pono-rt -f examples/sample2.req --time-domain real --delay-domain 2
 
   But the set is consistent for other semantics. 
 
@@ -178,16 +190,16 @@ Note that this is an experimental feature and there is no termination guarantee.
 
   More interestingly, the inconsistency does not appear here in the integer semantics with 0 delays allowed since after reading x000/\x001 for 24 time units, the automata can just cycle with 0 delays:
 
-      ./reqkit -a rtc -f examples/sample3.req --time-domain integer --delay-domain 0
-      ./reqkit -a rtc -f examples/sample3.req --time-domain real --delay-domain 0
+      ./reqkit -a rtc -e pono-rt -f examples/sample3.req --time-domain integer --delay-domain 0
+      ./reqkit -a rtc -e pono-rt -f examples/sample3.req --time-domain real --delay-domain 0
 
   But restricting to strict delays reveals the inconsistency:
 
-      ./reqkit -a rtc -f examples/sample3.req --time-domain integer --delay-domain 1
+      ./reqkit -a rtc -e pono-rt -f examples/sample3.req --time-domain integer --delay-domain 1
 
   With real durations, time can be blocked even if all delays are strictly positive so there is no inconsistency here:
 
-      ./reqkit -a rtc -f examples/sample3.req --time-domain real --delay-domain 1
+      ./reqkit -a rtc -e pono-rt -f examples/sample3.req --time-domain real --delay-domain 1
 
   In all semantics however both requirements are vacuous because they cannot complete the action phase without going into an error state:
 
@@ -201,7 +213,7 @@ Note that this is an experimental feature and there is no termination guarantee.
 
   This might look rt-inconsistent at first however whenever x0000 holds, one of the SUP automaton immediately goes to error; so no inconsistency here:
 
-      ./reqkit -a rtc -f examples/sample4.req --time-domain integer --algorithm ic3ia
+      ./reqkit -a rtc -e pono-rt -f examples/sample4.req --time-domain integer --algorithm ic3ia
 
 - Consider `sample5.req`. This is an obviously vacuous requirement set. 
 
@@ -224,7 +236,7 @@ Note that this is an experimental feature and there is no termination guarantee.
 
     We already established that {ID000, ID001} alone is not inconsistent. Adding ID002 here means that we add a prefix with no error where x002 holds for 50 time units. However, because "holds afterwards" puts no time bound on the realization of the action phase, this is still consistent:
 
-      ./reqkit -a rtc -f examples/sample6.req --algorithm ic3ia
+      ./reqkit -a rtc -e pono-rt -f examples/sample6.req --algorithm ic3ia
 
     But vacuous since none of the requirements can be realized:
 
@@ -235,14 +247,14 @@ Note that this is an experimental feature and there is no termination guarantee.
 - We now illustrate LTL and CTL model checking.
     Consider `sample4.req` above which was proved to be rt-consistent. It looks like `x0000` should imply `~x0001`. Let us check this.
 
-            ./reqkit -a ltl -f examples/sample4.req --formula 'G(x0000 -> ~x0001)'
-            ./reqkit -a ltl -f examples/sample4.req --algorithm ic3ia --formula 'G(x0000 -> ~x0001)'
+            ./reqkit -a ltl -e pono-rt -f examples/sample4.req --formula 'G(x0000 -> ~x0001)'
+            ./reqkit -a ltl -e pono-rt -f examples/sample4.req --algorithm ic3ia --formula 'G(x0000 -> ~x0001)'
 
     The first check returns unknown due to k-induction not being conclusive, but the second check succeeds.
 
     At this point we suspect that `x0000 & ~x0001` is always true. Is this the case?
 
-            ./reqkit -a ltl -f examples/sample4.req --formula 'G(x0000 & ~x0001)'
+            ./reqkit -a ltl -e pono-rt -f examples/sample4.req --formula 'G(x0000 & ~x0001)'
 
     The tool generates a counterexample: in fact, both can be false, which does not violate any requirement.
 
@@ -271,7 +283,32 @@ The last one consists in minimally modifying a requirement:
 
 Note that if the original set is vacuous, the repair algorithm cannot fix vacuity by adding a fresh requirement.
 
-Some examples:
-    ./reqkit -a repair -f examples/sup/cruise_add.py
-    ./reqkit -a repair -f examples/sup/carriage_add.py
+Examples:
 
+    ./reqkit -a repair -f examples/cruise_add.py
+    ./reqkit -a repair -f examples/carriage_add.py
+
+### Larger Examples
+- Factory Carriage
+
+    ./reqkit -a rtc -f examples/carriage_inconsistent.py
+    ./reqkit -a rtc -f examples/carriage.py
+    ./reqkit -a vacuity -r 0 -f examples/carriage.py
+    ./reqkit -a vacuity -r 1 -f examples/carriage.py
+    ./reqkit -a vacuity -r 2 -f examples/carriage.py
+
+- Cruise Control
+
+    ./reqkit -a rtc -f examples/cruise_inconsistent.py
+    ./reqkit -a rtc -f examples/cruise.py
+    ./reqkit -a vacuity -r 0 -f examples/cruise.py
+
+- Landing Gear
+    ./reqkit -a rtc -f examples/landing_inconsistent.py
+    ./reqkit -a rtc -f examples/landing.py
+    ./reqkit -a vacuity -r 0 -f examples/landing.py
+
+- Turn Signal 
+    ./reqkit -a rtc -f examples/light_inconsistent.py
+    ./reqkit -a rtc -f examples/light.py
+    ./reqkit -a vacuity -r 0 -f examples/light.py

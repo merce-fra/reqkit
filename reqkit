@@ -19,7 +19,7 @@ VERSION=0.1
 FILE=
 ANALYSIS=
 REQIDS=
-ENGINE=pono-rt
+ENGINE=nusmv
 ALGORITHM=ind
 TIMEDOMAIN=real
 STRICT_DELAYS=1
@@ -29,6 +29,7 @@ ALPHA=-1
 RTC_MODE=1 # Pono-rt's rtc algorithm: 0 or 1
 REPAIRALGORITHM=instant
 LTL_FORMULA=true
+flag_ENGINE=0 # did the user specify engine
 
 DisplayError()
 {
@@ -48,7 +49,7 @@ Help()
    echo "-a ANALYSIS           Analysis: vacuity | rtc | repair | ltl | ctl"
    echo "-f FILE               Input requirements file."
    echo "-r REQ_IDS            A sequence of requirement IDs to be analyzed from the given input file (required for vacuity and repair analyses)."
-   echo "-e ENGINE             Analysis engine: pono-rt | nusmv (default: pono-rt)"
+   echo "-e ENGINE             Analysis engine: pono-rt | nusmv (default: pono-rt for vacuity, ltl, ctl; and nusmv for rtc)"
    echo "--algorithm ALG       Algorithm to be used by Pono-RT: ind | bmc | ic3ia | ic3bits (default: ind for non-vacuity, and bmc for rtc)"
    echo "--time-domain T       Time domain in the timed automata semantics: real | integer | unit (default: $TIMEDOMAIN)"
    echo "--delay-domain        Strictly positive or null delays (0); positive delays (1); delays >=1 (2) (default: $STRICT_DELAYS)"
@@ -78,6 +79,7 @@ while getopts ${OPTSTRING} opt; do
       ;;
     e)
       ENGINE=${OPTARG}
+      flag_ENGINE=1
       ;;
     x)
       ALGORITHM=${OPTARG}
@@ -425,6 +427,7 @@ fi
 
 
 if [ "${ANALYSIS}" = "vacuity" ]; then
+
   if [ -z ${REQIDS} ]; then
     DisplayError "Vacuity analysis needs a list of requirement ids given with option -r"
     exit 1
@@ -432,14 +435,19 @@ if [ "${ANALYSIS}" = "vacuity" ]; then
   if [ -z ${ALGORITHM} ]; then
     ALGORITHM=ind
   fi
-  if [ "${ENGINE}" != "pono-rt" ]; then
+  if [ "$flag_ENGINE" = 1 ] && [ "${ENGINE}" != "pono-rt" ]; then
     DisplayError "Vacuity analysis can only be done with the pono-rt engine"
     exit 1
   fi
+  ENGINE=pono-rt # default and only engine for vacuity
   check_vacuity
 elif [ "${ANALYSIS}" = "rtc" ]; then
   if [ -z ${ALGORITHM} ]; then
     ALGORITHM=bmc
+  fi
+  # default engine is nusmv, unless user provides another one
+  if [ "$flag_ENGINE" = 0 ]; then
+    ENGINE=nusmv
   fi
   if [ "${ENGINE}" = "pono-rt" ]; then
     check_rtc

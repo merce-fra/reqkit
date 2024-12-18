@@ -33,9 +33,6 @@ flashing = Bool('flashing')
 # Set of variables that should not appear in action phase of the generated requirements
 #RESTRICT_SET = [downward5, downward7, neutral]
 
-# Requirements that can be modified to solve an inconsistency
-REQ_MODIFY = [6]
-
 REQ_SET = [
 	# If the indicator light is on, it must keep on for 3 time units and then must turn off.
 	[ 
@@ -70,7 +67,7 @@ REQ_SET = [
 			And( Not(downward5), Not(downward5), neutral ) 
 		), 
 		True, True, 0, 0 
-	],
+	]
 	# To be generated for resolving an inconsistency
 	# If the lever is moved downward 5 degrees less than 3 time units then,
 	# after 5 time units, the lever position must be neutral.
@@ -78,10 +75,6 @@ REQ_SET = [
 	#	downward5, downward5, Not(downward5), 0, 3, 5, 5, 
 	#	And( Not(downward5), Not(downward7) ), True, True, 0, 0 
 	#]
-	[ 
-		downward5, downward5, Not(downward5), 0, 3, 5, 5, 
-		Not(downward5), True, True, 0, 0 
-	]
 ]
 
 COND_INIT = [ 

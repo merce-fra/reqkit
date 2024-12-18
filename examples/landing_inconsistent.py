@@ -1,24 +1,14 @@
 from z3 import *
 
-# Specify a first upper bound of bounded partial consistency
 ALPHA = 30
-
-# Specify a second upper bound of bounded partial consistency
 BETA = 10
-
-# Specify a max length of positive traces for requirement improvement
 MAX_PTRACE = 10
 
 handle_down = Bool('handle_down')
-#handle_up = Bool('handle_up')
 gear_extended = Bool('gear_extended')
 gear_retracted = Bool('gear_retracted')
 door_closed = Bool('door_closed')
 door_open = Bool('door_open')
-#open_EV = Bool('open_EV')
-#close_EV = Bool('close_EV')
-#extend_EV = Bool('extend_EV')
-#retract_EV = Bool('retract_EV')
 
 REQ_SET = [
     # If the command handle is pushed down and kept down then, 
@@ -85,17 +75,17 @@ REQ_SET = [
 	# must remain extended until the doors of the landing gear boxes are closed.
 	# The door must be closed within 5 seconds of the landing gear extending.
 	# If the command handle leaves the position, the above conditions need not be satisfied.
-	[
-		And( handle_down, Not( And(gear_extended, door_closed) ) ), True, True, 0, 0, 0, 4, 
-		Or( gear_extended, Not(handle_down) ), Or( gear_extended, Not(handle_down) ), 
-		Or( door_closed, Not(handle_down) ), 0, 5
-	]
 	# [
-	# 	Or( And(handle_down, Not(gear_extended)), And(handle_down, Not(door_closed)) ), 
-	# 	True, True, 0, 0, 0, 4, 
-	# 	#gear_extended, gear_extended, door_closed, 0, 1
-	# 	gear_extended, True, door_closed, 1, 1
+	# 	And( handle_down, Not( And(gear_extended, door_closed) ) ), True, True, 0, 0, 0, 4, 
+	# 	Or( gear_extended, Not(handle_down) ), Or( gear_extended, Not(handle_down) ), 
+	# 	Or( door_closed, Not(handle_down) ), 0, 5
 	# ]
+	[
+		Or( And(handle_down, Not(gear_extended)), And(handle_down, Not(door_closed)) ), 
+		True, True, 0, 0, 0, 4, 
+		#gear_extended, gear_extended, door_closed, 0, 1
+		gear_extended, True, door_closed, 1, 1
+	]
 ]
 
 COND_INIT = [ 
