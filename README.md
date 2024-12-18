@@ -30,7 +30,7 @@ The tool also needs the following external tools for model checking and LTL form
 - NuSMV 2.6.0 (https://nusmv.fbk.eu/downloads.html) (executable `NuSMV`)
 - Pono-RT (https://github.com/osankur/pono-rt/) (executable `pono-rt`)
 
-These can be installed for Linux x86_64 by running the scripts `scripts/setup_*.sh`.
+These can be installed for Linux x86_64 by running the scripts `scripts/setup_*.sh`. 
 
 ## Input Formats
 1. Simplified Universal Patterns (SUP)
@@ -247,14 +247,14 @@ Note that this is an experimental feature and there is no termination guarantee.
 - We now illustrate LTL and CTL model checking.
     Consider `sample4.req` above which was proved to be rt-consistent. It looks like `x0000` should imply `~x0001`. Let us check this.
 
-            ./reqkit -a ltl -e pono-rt -f examples/sample4.req --formula 'G(x0000 -> ~x0001)'
-            ./reqkit -a ltl -e pono-rt -f examples/sample4.req --algorithm ic3ia --formula 'G(x0000 -> ~x0001)'
+        ./reqkit -a ltl -e pono-rt -f examples/sample4.req --formula 'G(x0000 -> ~x0001)'
+        ./reqkit -a ltl -e pono-rt -f examples/sample4.req --algorithm ic3ia --formula 'G(x0000 -> ~x0001)'
 
     The first check returns unknown due to k-induction not being conclusive, but the second check succeeds.
 
     At this point we suspect that `x0000 & ~x0001` is always true. Is this the case?
 
-            ./reqkit -a ltl -e pono-rt -f examples/sample4.req --formula 'G(x0000 & ~x0001)'
+        ./reqkit -a ltl -e pono-rt -f examples/sample4.req --formula 'G(x0000 & ~x0001)'
 
     The tool generates a counterexample: in fact, both can be false, which does not violate any requirement.
 
@@ -262,14 +262,14 @@ Note that this is an experimental feature and there is no termination guarantee.
 
     However, the NuSMV engine works with all LTL and CTL formulas. The following formulas hold on the flashing light example:
 
-            ./reqkit -a ltl --formula 'G(on -> F (!on))' -e nusmv -f examples/flashing1.py  
-            ./reqkit -a ltl --formula 'G((!on & (G blink)) -> F(on))' -e nusmv -f examples/flashing1.py  
-            ./reqkit -a ctl --formula 'AG(blink -> EX (!blink))' -e nusmv -f examples/flashing1.py  
-            ./reqkit -a ctl --formula 'AG(blink -> EX (blink))' -e nusmv -f examples/flashing1.py  
+        ./reqkit -a ltl --formula 'G(on -> F (!on))' -e nusmv -f examples/flashing1.py  
+        ./reqkit -a ltl --formula 'G((!on & (G blink)) -> F(on))' -e nusmv -f examples/flashing1.py  
+        ./reqkit -a ctl --formula 'AG(blink -> EX (!blink))' -e nusmv -f examples/flashing1.py  
+        ./reqkit -a ctl --formula 'AG(blink -> EX (blink))' -e nusmv -f examples/flashing1.py  
 
     And for example the following does not
 
-            ./reqkit -a ltl --formula 'G(on -> X on)' -e nusmv -f examples/flashing1.py
+        ./reqkit -a ltl --formula 'G(on -> X on)' -e nusmv -f examples/flashing1.py
 
 ### Repair
 The repair analysis attempts to automatically repair rt-inconsistent requirement sets.
@@ -291,24 +291,24 @@ Examples:
 ### Larger Examples
 - Factory Carriage
 
-    ./reqkit -a rtc -f examples/carriage_inconsistent.py
-    ./reqkit -a rtc -f examples/carriage.py
-    ./reqkit -a vacuity -r 0 -f examples/carriage.py
-    ./reqkit -a vacuity -r 1 -f examples/carriage.py
-    ./reqkit -a vacuity -r 2 -f examples/carriage.py
+        ./reqkit -a rtc -f examples/carriage_inconsistent.py
+        ./reqkit -a rtc -f examples/carriage.py
+        ./reqkit -a vacuity -r 0 -f examples/carriage.py
+        ./reqkit -a vacuity -r 1 -f examples/carriage.py
+        ./reqkit -a vacuity -r 2 -f examples/carriage.py
 
 - Cruise Control
 
-    ./reqkit -a rtc -f examples/cruise_inconsistent.py
-    ./reqkit -a rtc -f examples/cruise.py
-    ./reqkit -a vacuity -r 0 -f examples/cruise.py
+        ./reqkit -a rtc -f examples/cruise_inconsistent.py
+        ./reqkit -a rtc -f examples/cruise.py
+        ./reqkit -a vacuity -r 0 -f examples/cruise.py
 
 - Landing Gear
-    ./reqkit -a rtc -f examples/landing_inconsistent.py
-    ./reqkit -a rtc -f examples/landing.py
-    ./reqkit -a vacuity -r 0 -f examples/landing.py
+        ./reqkit -a rtc -f examples/landing_inconsistent.py
+        ./reqkit -a rtc -f examples/landing.py
+        ./reqkit -a vacuity -r 0 -f examples/landing.py
 
 - Turn Signal 
-    ./reqkit -a rtc -f examples/light_inconsistent.py
-    ./reqkit -a rtc -f examples/light.py
-    ./reqkit -a vacuity -r 0 -f examples/light.py
+        ./reqkit -a rtc -f examples/light_inconsistent.py
+        ./reqkit -a rtc -f examples/light.py
+        ./reqkit -a vacuity -r 0 -f examples/light.py

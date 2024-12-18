@@ -7,11 +7,12 @@ cd spot-2.12.1
 make
 make install
 export PATH=$PATH:~/local/bin/
-echo "export PATH=$PATH:~/local/bin/" >> ~/.bashrc
+echo 'export PATH='$PATH:~/local/bin/ >> ~/.bashrc
 source ~/.bashrc
-# sudo su
-# wget -q -O - https://www.lrde.epita.fr/repo/debian.gpg | apt-key add -
-# echo 'deb http://www.lrde.epita.fr/repo/debian/ stable/' >> /etc/apt/sources.list
-# exit
+
+# The Debian package can be installed instead of compiling from source on Ubuntu 24.04
+#
+# wget -q -O - https://www.lrde.epita.fr/repo/debian.gpg | sudo tee /etc/apt/trusted.gpg.d/lrde-debian.gpg
+# echo 'deb http://www.lrde.epita.fr/repo/debian/ stable/' | sudo tee /etc/apt/sources.list
 # sudo apt-get update
 # sudo apt-get install spot libspot-dev spot-doc python3-spot
