@@ -15,7 +15,7 @@ All requirements can be installed and compiled by running
 assuming opam and pip3 installed.
 
 Python (>=3.10) requirements are as follows:
-- timeout-decorators
+- timeout-decorator
 - z3-solver
 
 Ocaml (=5.1) requirements as follows:
