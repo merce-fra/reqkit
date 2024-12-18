@@ -1,6 +1,6 @@
 # ReqKit: Requirement Analysis and Repair Tool Kit
 
-Consistency and vacuity verification, model checking, and repair tool for automata-based requirements.
+Consistency and vacuity verification, model checking, and repair tool for real-time temporal requirements.
 The tool accepts as input patterns given as simplified universal patterns (SUP), or structured English.
 
 Verification conditions in SMV or VMTLIB formats are generated and discharged by model checkers.
@@ -31,6 +31,38 @@ The tool also needs the following external tools for model checking and LTL form
 - Pono-RT (https://github.com/osankur/pono-rt/) (executable `pono-rt`)
 
 These can be installed for Linux x86_64 by running the scripts `scripts/setup_*.sh`.
+
+## Input Formats
+1. Simplified Universal Patterns (SUP)
+    The main input format is simplified universal patterns (SUP). These are interpreted as timed automata as described in the paper.
+    The input format defines the list `REQ_SET` of requirements in the following format:
+
+    ```python
+    on = Bool('on')
+    blink = Bool('blink')
+    REQ_SET = [
+            [ on , True , True , 0, 0, 0, 0, True, on, Not(on), 10, 10],
+            [ And(blink, Not(on)), Not(on), True, 10, 10, 0, 0, True, True, on, 0, 0]
+        ]
+    ```
+
+    The first two lines declare two variables `on`, and `blink`. The list `REQ_SET` contains a list of SUP requirements.
+    Each element specifies the tuple `(TSE, TC, TEE, Tmin, Tmax, Lmin, Lmax, ASE, AC, AEE, Amin, Amax)`. Here Boolean 
+    expressions use Z3 constructs, while time bounds are integers.
+
+    The definition above comes from `examples/flashing1.py`. One can see that there is an import statement so that Z3 constructs are in the scope.
+    In addition, the parameter `AlPHA` specifies the unfolding bound for bounded model checking (but this is overriden by the command line option `--bmc-bound` which is preferable). Parameters `BETA` and `MAX_PTRACE` are only used for repair and can be set to these default values.
+    `COND_INIT` can be used to set the initial values of the variables but it is often kept empty.
+
+    Other examples can be found in `examples/*.py`.
+
+2. Structured English
+    The second input format we support is a fragment of structured English used in other tools such as Hanfor.
+    The list of all patterns supported are given in the folder `lib/translator/tests/patterns`. Each pattern is translated to SUP;
+    these translations are given in the Cram test file `lib/translator/tests/req_patterns.t`.
+    This file thus defines the semantics of these patterns in our tool as SUP patterns to which they are converted.
+
+    Examples can be found in `examples/*.req`.
 
 ## Usage and Examples
 ### Examples from the paper
@@ -94,7 +126,7 @@ Note that this is an experimental feature and there is no termination guarantee.
 
         ./reqkit -a ltl --algorithm ic3ia --formula 'G( !on & (X on) -> X (X on))' -f examples/flashing_fix1.py
 
-### Examples with the structued English format
+### Examples with the structured English format
 - Consider `sample1.req`
 
       ID000: Globally, it is always the case that if "x0000" holds, then "x0001" holds after at most 25 time units
@@ -237,10 +269,9 @@ The first three consist in fixing rt-consistency by adding a freshly generated r
 The last one consists in minimally modifying a requirement:
   - `modify`: attempt to modify the first requirement in the list
 
-Give here simple and easy to understand examples.
-
 Note that if the original set is vacuous, the repair algorithm cannot fix vacuity by adding a fresh requirement.
 
+Some examples:
     ./reqkit -a repair -f examples/sup/cruise_add.py
     ./reqkit -a repair -f examples/sup/carriage_add.py
 
