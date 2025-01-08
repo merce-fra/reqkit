@@ -8,11 +8,10 @@ Verification conditions in SMV or VMTLIB formats are generated and discharged by
 ## Installation
 This program is written partly in OCaml and in Python, and works on Linux.
 
-All requirements can be installed and compiled by running 
+On a x86_64 system under Ubuntu 20.04 or 22.04, all requirements listed below can be installed by
 
-        ./scripts/install.sh
-
-assuming opam and pip3 installed.
+        cd scripts
+        ./install.sh
 
 Python (>=3.10) requirements are as follows:
 - timeout-decorator
@@ -25,12 +24,10 @@ Ocaml (=5.1) requirements as follows:
 - ppx_inline_test
 - bisect_ppx
 
-The tool also needs the following external tools for model checking and LTL formula manipulation:
+The following external tools are used for model checking and LTL formula manipulation:
 - Spot 2.12.1 (http://www.lrde.epita.fr) (executables `ltlfilt`, `ltl2tgba`)
 - NuSMV 2.6.0 (https://nusmv.fbk.eu/downloads.html) (executable `NuSMV`)
 - Pono-RT (https://github.com/osankur/pono-rt/) (executable `pono-rt`)
-
-These can be installed for Linux x86_64 by running the scripts `scripts/setup_*.sh`. 
 
 ## Input Formats
 1. Simplified Universal Patterns (SUP)
@@ -304,11 +301,13 @@ Examples:
         ./reqkit -a vacuity -r 0 -f examples/cruise.py
 
 - Landing Gear
+  
         ./reqkit -a rtc -f examples/landing_inconsistent.py
         ./reqkit -a rtc -f examples/landing.py
         ./reqkit -a vacuity -r 0 -f examples/landing.py
 
 - Turn Signal 
+  
         ./reqkit -a rtc -f examples/light_inconsistent.py
         ./reqkit -a rtc -f examples/light.py
         ./reqkit -a vacuity -r 0 -f examples/light.py
