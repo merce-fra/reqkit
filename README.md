@@ -311,3 +311,8 @@ Examples:
         ./reqkit -a rtc -f examples/light_inconsistent.py
         ./reqkit -a rtc -f examples/light.py
         ./reqkit -a vacuity -r 0 -f examples/light.py
+
+## Contributors
+- Reiya Noguchi
+- François Cellier
+- Ocan Sankur
