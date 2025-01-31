@@ -251,10 +251,14 @@ let%expect_test "1.req" =
     (define-fun ase_ID004_0 () Bool true)
     (define-fun ac_ID004_0 () Bool intermediate1_n )
     (define-fun aee_ID004_0 () Bool true)
+
+    ; Clock invariant at trigger
+    (define-fun .clock_invar_ID004 () Bool (! (=> is_state_ID004_0_TRIG (<= c_ID004_0 0 )) :locinvar true))
     ; guards of the SUP transitions + clock reset/not changed
     (define-fun stay_idle_state_ID004_0 () Bool ( and (not tse_ID004_0) c_ID004_0_unchanged ))
     (define-fun idle_to_trig_state_ID004_0 () Bool ( and tse_ID004_0 c_ID004_0_reset  ))
     (define-fun trig_to_idle_state_ID004_0 () Bool ( and ( or ( and (not tee_ID004_0) (not tc_ID004_0)) (and (not tc_ID004_0) (< c_ID004_0 0 ) ) (and (not tee_ID004_0) (>= c_ID004_0 0 )) (> c_ID004_0 0 )) c_ID004_0_reset))
+    (define-fun trig_to_idle_no_clock_state_ID004_0 () Bool ( or ( and (not tee_ID004_0) (not tc_ID004_0)) (and (not tc_ID004_0) (< c_ID004_0 0 ) ) (and (not tee_ID004_0) (>= c_ID004_0 0 )) (> c_ID004_0 0 )))
     (define-fun stay_trig_state_ID004_0 () Bool  ( and (  and tc_ID004_0 (< c_ID004_0 0 ) ( or ( not tee_ID004_0)  (< c_ID004_0 0 ))) c_ID004_0_unchanged ))
     (define-fun trig_to_delay_state_ID004_0 () Bool ( and (and tee_ID004_0 (>= c_ID004_0 0 ) (<= c_ID004_0 0 )) c_ID004_0_reset ))
     (define-fun stay_delay_state_ID004_0 () Bool (  and (and (< c_ID004_0 0 ) ( or (not ase_ID004_0) (< c_ID004_0 0 ))) c_ID004_0_unchanged ))
@@ -293,10 +297,14 @@ let%expect_test "1.req" =
     (and is_state_ID004_0_TRIG  trig_to_delay_state_ID004_0  delay_to_act_no_clock_state_ID004_0   act_to_idle_no_clock_state_ID004_0 (or (not tse_ID004_0) (not tee_ID004_0)) set_state_ID004_0_IDLE)
     ; TRIG -> DELAY -> ACT
     (and is_state_ID004_0_TRIG  trig_to_delay_state_ID004_0  delay_to_act_no_clock_state_ID004_0   ac_ID004_0 set_state_ID004_0_ACTION)
+    ; TRIG -> DELAY -> ACT -> ERR
+    (and is_state_ID004_0_TRIG  trig_to_delay_state_ID004_0  delay_to_act_no_clock_state_ID004_0  act_to_err_no_clock_state_ID004_0  set_state_ID004_0_ERR)
     ; TRIG -> DELAY -> ERR
     (and is_state_ID004_0_TRIG  trig_to_delay_state_ID004_0  delay_to_err_no_clock_state_ID004_0  set_state_ID004_0_ERR)
     ; TRIG -> DELAY
     (and is_state_ID004_0_TRIG  trig_to_delay_state_ID004_0  false  set_state_ID004_0_ERR)
+    ; TRIG -> IDLE -> TRIG
+    (and is_state_ID004_0_TRIG  trig_to_idle_no_clock_state_ID004_0 idle_to_trig_state_ID004_0 (and tee_ID004_0 (not trig_to_delay_no_clock_state_ID004_0)) set_state_ID004_0_TRIG)
     ; DELAY -> ACT -> IDLE -> TRIG -> DELAY
     (and is_state_ID004_0_DELAY  delay_to_act_state_ID004_0   act_to_idle_no_clock_state_ID004_0   idle_to_trig_state_ID004_0  trig_to_delay_no_clock_state_ID004_0   set_state_ID004_0_DELAY )
     ; DELAY -> ACT -> IDLE -> TRIG
@@ -336,10 +344,14 @@ let%expect_test "1.req" =
     (define-fun ase_ID004_1 () Bool true)
     (define-fun ac_ID004_1 () Bool true)
     (define-fun aee_ID004_1 () Bool (not intermediate1_n ))
+
+    ; Clock invariant at trigger
+    (define-fun .clock_invar_ID004 () Bool (! (=> is_state_ID004_1_TRIG (<= c_ID004_1 0 )) :locinvar true))
     ; guards of the SUP transitions + clock reset/not changed
     (define-fun stay_idle_state_ID004_1 () Bool ( and (not tse_ID004_1) c_ID004_1_unchanged ))
     (define-fun idle_to_trig_state_ID004_1 () Bool ( and tse_ID004_1 c_ID004_1_reset  ))
     (define-fun trig_to_idle_state_ID004_1 () Bool ( and ( or ( and (not tee_ID004_1) (not tc_ID004_1)) (and (not tc_ID004_1) (< c_ID004_1 0 ) ) (and (not tee_ID004_1) (>= c_ID004_1 0 )) (> c_ID004_1 0 )) c_ID004_1_reset))
+    (define-fun trig_to_idle_no_clock_state_ID004_1 () Bool ( or ( and (not tee_ID004_1) (not tc_ID004_1)) (and (not tc_ID004_1) (< c_ID004_1 0 ) ) (and (not tee_ID004_1) (>= c_ID004_1 0 )) (> c_ID004_1 0 )))
     (define-fun stay_trig_state_ID004_1 () Bool  ( and (  and tc_ID004_1 (< c_ID004_1 0 ) ( or ( not tee_ID004_1)  (< c_ID004_1 0 ))) c_ID004_1_unchanged ))
     (define-fun trig_to_delay_state_ID004_1 () Bool ( and (and tee_ID004_1 (>= c_ID004_1 0 ) (<= c_ID004_1 0 )) c_ID004_1_reset ))
     (define-fun stay_delay_state_ID004_1 () Bool (  and (and (< c_ID004_1 0 ) ( or (not ase_ID004_1) (< c_ID004_1 0 ))) c_ID004_1_unchanged ))
@@ -378,10 +390,14 @@ let%expect_test "1.req" =
     (and is_state_ID004_1_TRIG  trig_to_delay_state_ID004_1  delay_to_act_no_clock_state_ID004_1   act_to_idle_no_clock_state_ID004_1 (or (not tse_ID004_1) (not tee_ID004_1)) set_state_ID004_1_IDLE)
     ; TRIG -> DELAY -> ACT
     (and is_state_ID004_1_TRIG  trig_to_delay_state_ID004_1  delay_to_act_no_clock_state_ID004_1   ac_ID004_1 set_state_ID004_1_ACTION)
+    ; TRIG -> DELAY -> ACT -> ERR
+    (and is_state_ID004_1_TRIG  trig_to_delay_state_ID004_1  delay_to_act_no_clock_state_ID004_1  act_to_err_no_clock_state_ID004_1  set_state_ID004_1_ERR)
     ; TRIG -> DELAY -> ERR
     (and is_state_ID004_1_TRIG  trig_to_delay_state_ID004_1  delay_to_err_no_clock_state_ID004_1  set_state_ID004_1_ERR)
     ; TRIG -> DELAY
     (and is_state_ID004_1_TRIG  trig_to_delay_state_ID004_1  false  set_state_ID004_1_ERR)
+    ; TRIG -> IDLE -> TRIG
+    (and is_state_ID004_1_TRIG  trig_to_idle_no_clock_state_ID004_1 idle_to_trig_state_ID004_1 (and tee_ID004_1 (not trig_to_delay_no_clock_state_ID004_1)) set_state_ID004_1_TRIG)
     ; DELAY -> ACT -> IDLE -> TRIG -> DELAY
     (and is_state_ID004_1_DELAY  delay_to_act_state_ID004_1   act_to_idle_no_clock_state_ID004_1   idle_to_trig_state_ID004_1  trig_to_delay_no_clock_state_ID004_1   set_state_ID004_1_DELAY )
     ; DELAY -> ACT -> IDLE -> TRIG
@@ -421,10 +437,14 @@ let%expect_test "1.req" =
     (define-fun ase_ID004_2 () Bool true)
     (define-fun ac_ID004_2 () Bool intermediate0_n )
     (define-fun aee_ID004_2 () Bool true)
+
+    ; Clock invariant at trigger
+    (define-fun .clock_invar_ID004 () Bool (! (=> is_state_ID004_2_TRIG (<= c_ID004_2 0 )) :locinvar true))
     ; guards of the SUP transitions + clock reset/not changed
     (define-fun stay_idle_state_ID004_2 () Bool ( and (not tse_ID004_2) c_ID004_2_unchanged ))
     (define-fun idle_to_trig_state_ID004_2 () Bool ( and tse_ID004_2 c_ID004_2_reset  ))
     (define-fun trig_to_idle_state_ID004_2 () Bool ( and ( or ( and (not tee_ID004_2) (not tc_ID004_2)) (and (not tc_ID004_2) (< c_ID004_2 0 ) ) (and (not tee_ID004_2) (>= c_ID004_2 0 )) (> c_ID004_2 0 )) c_ID004_2_reset))
+    (define-fun trig_to_idle_no_clock_state_ID004_2 () Bool ( or ( and (not tee_ID004_2) (not tc_ID004_2)) (and (not tc_ID004_2) (< c_ID004_2 0 ) ) (and (not tee_ID004_2) (>= c_ID004_2 0 )) (> c_ID004_2 0 )))
     (define-fun stay_trig_state_ID004_2 () Bool  ( and (  and tc_ID004_2 (< c_ID004_2 0 ) ( or ( not tee_ID004_2)  (< c_ID004_2 0 ))) c_ID004_2_unchanged ))
     (define-fun trig_to_delay_state_ID004_2 () Bool ( and (and tee_ID004_2 (>= c_ID004_2 0 ) (<= c_ID004_2 0 )) c_ID004_2_reset ))
     (define-fun stay_delay_state_ID004_2 () Bool (  and (and (< c_ID004_2 0 ) ( or (not ase_ID004_2) (< c_ID004_2 0 ))) c_ID004_2_unchanged ))
@@ -463,10 +483,14 @@ let%expect_test "1.req" =
     (and is_state_ID004_2_TRIG  trig_to_delay_state_ID004_2  delay_to_act_no_clock_state_ID004_2   act_to_idle_no_clock_state_ID004_2 (or (not tse_ID004_2) (not tee_ID004_2)) set_state_ID004_2_IDLE)
     ; TRIG -> DELAY -> ACT
     (and is_state_ID004_2_TRIG  trig_to_delay_state_ID004_2  delay_to_act_no_clock_state_ID004_2   ac_ID004_2 set_state_ID004_2_ACTION)
+    ; TRIG -> DELAY -> ACT -> ERR
+    (and is_state_ID004_2_TRIG  trig_to_delay_state_ID004_2  delay_to_act_no_clock_state_ID004_2  act_to_err_no_clock_state_ID004_2  set_state_ID004_2_ERR)
     ; TRIG -> DELAY -> ERR
     (and is_state_ID004_2_TRIG  trig_to_delay_state_ID004_2  delay_to_err_no_clock_state_ID004_2  set_state_ID004_2_ERR)
     ; TRIG -> DELAY
     (and is_state_ID004_2_TRIG  trig_to_delay_state_ID004_2  false  set_state_ID004_2_ERR)
+    ; TRIG -> IDLE -> TRIG
+    (and is_state_ID004_2_TRIG  trig_to_idle_no_clock_state_ID004_2 idle_to_trig_state_ID004_2 (and tee_ID004_2 (not trig_to_delay_no_clock_state_ID004_2)) set_state_ID004_2_TRIG)
     ; DELAY -> ACT -> IDLE -> TRIG -> DELAY
     (and is_state_ID004_2_DELAY  delay_to_act_state_ID004_2   act_to_idle_no_clock_state_ID004_2   idle_to_trig_state_ID004_2  trig_to_delay_no_clock_state_ID004_2   set_state_ID004_2_DELAY )
     ; DELAY -> ACT -> IDLE -> TRIG
@@ -506,10 +530,14 @@ let%expect_test "1.req" =
     (define-fun ase_ID004_3 () Bool true)
     (define-fun ac_ID004_3 () Bool true)
     (define-fun aee_ID004_3 () Bool (not intermediate0_n ))
+
+    ; Clock invariant at trigger
+    (define-fun .clock_invar_ID004 () Bool (! (=> is_state_ID004_3_TRIG (<= c_ID004_3 0 )) :locinvar true))
     ; guards of the SUP transitions + clock reset/not changed
     (define-fun stay_idle_state_ID004_3 () Bool ( and (not tse_ID004_3) c_ID004_3_unchanged ))
     (define-fun idle_to_trig_state_ID004_3 () Bool ( and tse_ID004_3 c_ID004_3_reset  ))
     (define-fun trig_to_idle_state_ID004_3 () Bool ( and ( or ( and (not tee_ID004_3) (not tc_ID004_3)) (and (not tc_ID004_3) (< c_ID004_3 0 ) ) (and (not tee_ID004_3) (>= c_ID004_3 0 )) (> c_ID004_3 0 )) c_ID004_3_reset))
+    (define-fun trig_to_idle_no_clock_state_ID004_3 () Bool ( or ( and (not tee_ID004_3) (not tc_ID004_3)) (and (not tc_ID004_3) (< c_ID004_3 0 ) ) (and (not tee_ID004_3) (>= c_ID004_3 0 )) (> c_ID004_3 0 )))
     (define-fun stay_trig_state_ID004_3 () Bool  ( and (  and tc_ID004_3 (< c_ID004_3 0 ) ( or ( not tee_ID004_3)  (< c_ID004_3 0 ))) c_ID004_3_unchanged ))
     (define-fun trig_to_delay_state_ID004_3 () Bool ( and (and tee_ID004_3 (>= c_ID004_3 0 ) (<= c_ID004_3 0 )) c_ID004_3_reset ))
     (define-fun stay_delay_state_ID004_3 () Bool (  and (and (< c_ID004_3 0 ) ( or (not ase_ID004_3) (< c_ID004_3 0 ))) c_ID004_3_unchanged ))
@@ -548,10 +576,14 @@ let%expect_test "1.req" =
     (and is_state_ID004_3_TRIG  trig_to_delay_state_ID004_3  delay_to_act_no_clock_state_ID004_3   act_to_idle_no_clock_state_ID004_3 (or (not tse_ID004_3) (not tee_ID004_3)) set_state_ID004_3_IDLE)
     ; TRIG -> DELAY -> ACT
     (and is_state_ID004_3_TRIG  trig_to_delay_state_ID004_3  delay_to_act_no_clock_state_ID004_3   ac_ID004_3 set_state_ID004_3_ACTION)
+    ; TRIG -> DELAY -> ACT -> ERR
+    (and is_state_ID004_3_TRIG  trig_to_delay_state_ID004_3  delay_to_act_no_clock_state_ID004_3  act_to_err_no_clock_state_ID004_3  set_state_ID004_3_ERR)
     ; TRIG -> DELAY -> ERR
     (and is_state_ID004_3_TRIG  trig_to_delay_state_ID004_3  delay_to_err_no_clock_state_ID004_3  set_state_ID004_3_ERR)
     ; TRIG -> DELAY
     (and is_state_ID004_3_TRIG  trig_to_delay_state_ID004_3  false  set_state_ID004_3_ERR)
+    ; TRIG -> IDLE -> TRIG
+    (and is_state_ID004_3_TRIG  trig_to_idle_no_clock_state_ID004_3 idle_to_trig_state_ID004_3 (and tee_ID004_3 (not trig_to_delay_no_clock_state_ID004_3)) set_state_ID004_3_TRIG)
     ; DELAY -> ACT -> IDLE -> TRIG -> DELAY
     (and is_state_ID004_3_DELAY  delay_to_act_state_ID004_3   act_to_idle_no_clock_state_ID004_3   idle_to_trig_state_ID004_3  trig_to_delay_no_clock_state_ID004_3   set_state_ID004_3_DELAY )
     ; DELAY -> ACT -> IDLE -> TRIG
@@ -591,18 +623,20 @@ let%expect_test "1.req" =
     (define-fun ase_ID004_4 () Bool true)
     (define-fun ac_ID004_4 () Bool true)
     (define-fun aee_ID004_4 () Bool intermediate0_n )
+
+    ; Clock invariant at trigger
+    (define-fun .clock_invar_ID004 () Bool (! (=> is_state_ID004_4_TRIG (<= c_ID004_4 0 )) :locinvar true))
     ; guards of the SUP transitions + clock reset/not changed
     (define-fun stay_idle_state_ID004_4 () Bool ( and (not tse_ID004_4) c_ID004_4_unchanged ))
     (define-fun idle_to_trig_state_ID004_4 () Bool ( and tse_ID004_4 c_ID004_4_reset  ))
     (define-fun trig_to_idle_state_ID004_4 () Bool ( and ( or ( and (not tee_ID004_4) (not tc_ID004_4)) (and (not tc_ID004_4) (< c_ID004_4 0 ) ) (and (not tee_ID004_4) (>= c_ID004_4 0 )) (> c_ID004_4 0 )) c_ID004_4_reset))
+    (define-fun trig_to_idle_no_clock_state_ID004_4 () Bool ( or ( and (not tee_ID004_4) (not tc_ID004_4)) (and (not tc_ID004_4) (< c_ID004_4 0 ) ) (and (not tee_ID004_4) (>= c_ID004_4 0 )) (> c_ID004_4 0 )))
     (define-fun stay_trig_state_ID004_4 () Bool  ( and (  and tc_ID004_4 (< c_ID004_4 0 ) ( or ( not tee_ID004_4)  (< c_ID004_4 0 ))) c_ID004_4_unchanged ))
     (define-fun trig_to_delay_state_ID004_4 () Bool ( and (and tee_ID004_4 (>= c_ID004_4 0 ) (<= c_ID004_4 0 )) c_ID004_4_reset ))
-    (define-fun trig_to_delay_no_clock_state_ID004_4 () Bool ( and tee_ID004_4 c_ID004_4_reset ))
     (define-fun stay_delay_state_ID004_4 () Bool (  and (and (< c_ID004_4 0 ) ( or (not ase_ID004_4) (< c_ID004_4 0 ))) c_ID004_4_unchanged ))
     (define-fun delay_to_err_state_ID004_4 () Bool ( and (and (not ase_ID004_4) (>= c_ID004_4 0 )) c_ID004_4_unchanged ))
     (define-fun stay_act_state_ID004_4 () Bool ( and (and ac_ID004_4  (< c_ID004_4 0 ) (or (not aee_ID004_4) (< c_ID004_4 0 ))) c_ID004_4_unchanged ))
     (define-fun act_to_err_state_ID004_4 () Bool ( and (or (and (not ac_ID004_4) (not aee_ID004_4)) (and (not ac_ID004_4) (< c_ID004_4 0 )) (and (not aee_ID004_4) (>= c_ID004_4 0 )) (> c_ID004_4 0 )) c_ID004_4_unchanged ))
-    (define-fun act_to_err_no_clock_state_ID004_4 () Bool ( and ( not aee_ID004_4 ) c_ID004_4_unchanged ))
     (define-fun act_to_idle_state_ID004_4 () Bool ( and (and aee_ID004_4 (>= c_ID004_4 0 ) (<= c_ID004_4 0 ))  c_ID004_4_reset ))
     (define-fun delay_to_act_state_ID004_4 () Bool ( and ( and ase_ID004_4 (>= c_ID004_4 0 ) (<= c_ID004_4 0 )) c_ID004_4_reset ))
     ; guards of the SUP transitions without clock delay
