@@ -6,9 +6,8 @@ cd spot-2.12.1
 ./configure --prefix ~/local/
 make
 make install
-export PATH=$PATH:~/local/bin/
-echo 'export PATH='$PATH:~/local/bin/ >> ~/.bashrc
-source ~/.bashrc
+#export PATH=$PATH:~/local/bin/
+echo 'export PATH=$PATH':~/local/bin/ >> ~/.bashrc
 
 # The Debian package can be installed instead of compiling from source on Ubuntu 24.04
 #

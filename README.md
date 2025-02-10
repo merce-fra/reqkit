@@ -12,6 +12,7 @@ On a x86_64 system under Ubuntu 20.04 or 22.04, all requirements listed below ca
 
         cd scripts
         ./install.sh
+        source ~/.bashrc
 
 Python (>=3.10) requirements are as follows:
 - timeout-decorator

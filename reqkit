@@ -249,6 +249,7 @@ function generate_smv {
 
   # calling req_verification
   cd ${OUTPUT_DIR}
+  cp ../$REPAIR_DIR/template.smv .
   python3 ../$REPAIR_DIR/supreq.py ${VC_SUP_FILE} > $TMP_OUTPUT_FILE
 
   #take only first half of the result file
