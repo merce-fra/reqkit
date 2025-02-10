@@ -25,7 +25,8 @@ eval $(opam env --switch=ocaml.5.1.0)
 opam install -y dune menhir alcotest ppx_inline_test bisect_ppx ppx_expect
 cd ../lib/translator
 opam install . -y
-eval $(opam env)
+eval $(opam env --switch=ocaml.5.1.0)
+echo 'eval $(opam env --switch=ocaml.5.1.0)' >> ~/.bashrc
 pip3 install timeout-decorator z3-solver
 cd ../../scripts
 mkdir -p ../contrib

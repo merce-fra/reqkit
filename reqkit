@@ -278,7 +278,7 @@ function repair_sup {
     exit -1
   fi
   cd $REPAIR_DIR
-  python $exec $VC_SUP_FILE
+  python3 $exec $VC_SUP_FILE
 }
 
 function check_rtc_smv {
@@ -374,7 +374,7 @@ function check_ltl {
       DisplayError "Pono-RT engine can only be used with the safety fragment of LTL"
       exit 1
     fi
-    ltl2tgba -B -C -f "${LTL_FORMULA}" | python lib/hoa2vmt.py >> $VC_VMT_FILE
+    ltl2tgba -B -C -f "${LTL_FORMULA}" | python3 lib/hoa2vmt.py >> $VC_VMT_FILE
     # ltl2tgba -B -C -d -f "${LTL_FORMULA}" > /tmp/a.dot
     # xdg-open /tmp/a.dot
     ta=-ta
