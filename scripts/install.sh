@@ -28,6 +28,7 @@ opam install . -y
 eval $(opam env)
 pip3 install timeout-decorator z3-solver
 cd ../../scripts
+mkdir -p ../contrib
 ./setup_nusmv.sh
-./setup_pono.sh
+./setup_pono-rt.sh
 ./setup_spot.sh

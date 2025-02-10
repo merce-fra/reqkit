@@ -8,7 +8,6 @@ _build/
 _coverage/
 *.coverage
 
-lib/translator/req2something.opam
 *__pycache__*
 output/*
 req2something.exe
